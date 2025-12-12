@@ -1,0 +1,70 @@
+// lib/constants/communes.ts
+
+// Pour faire fonctionner le test, j'ai mis le chef-lieu pour chaque Wilaya.
+// Vous pourrez compléter les listes petit à petit.
+const COMMUNES_DB: Record<string, string[]> = {
+    "01": ["Adrar", "Tamest", "Charouine", "Reggane", "Timimoun", "Tsabit", "Fenoughil"],
+    "02": ["Chlef", "Tenes", "El Karimia", "Ouled Fares", "Boukadir", "Chettia"],
+    "03": ["Laghouat", "Ksar El Hirane", "Aflou", "Ain Madhi", "Hassi R'Mel"],
+    "04": ["Oum El Bouaghi", "Ain Beida", "Ain M'Lila", "Ain Fakroun", "Sigus"],
+    "05": ["Batna", "Barika", "Merouana", "Ain Touta", "Arris", "Timgad"],
+    "06": ["Béjaïa", "Amizour", "Akbou", "Seddouk", "Tichy", "Kherrata", "Sidi Aich"],
+    "07": ["Biskra", "Tolga", "Ouled Djellal", "Sidi Okba", "Zeribet El Oued"],
+    "08": ["Béchar", "Abadla", "Beni Abbes", "Taghit", "Kenadsa"],
+    "09": ["Blida", "Boufarik", "Bouinan", "El Affroun", "Larbaa", "Ouled Yaich"],
+    "10": ["Bouira", "Lakhdaria", "Sour El Ghozlane", "M'Chedallah", "Ain Bessem"],
+    "11": ["Tamanrasset", "Ain Salah", "Ain Guezzam", "Abalessa"],
+    "12": ["Tébessa", "Bir El Ater", "Cheria", "El Ouenza"],
+    "13": ["Tlemcen", "Maghnia", "Remchi", "Hennaya", "Ghazaouet", "Sebdou"],
+    "14": ["Tiaret", "Sougueur", "Frenda", "Mahdia", "Rahouia"],
+    "15": ["Tizi Ouzou", "Azazga", "Dra El Mizan", "Ouadhias", "Boghni", "Tigzirt"],
+    "16": ["Alger-Centre", "Sidi M'Hamed", "El Biar", "Bab El Oued", "Kouba", "Hussein Dey", "Hydra", "Birkhadem", "Draria", "Cheraga", "Zeralda", "Rouiba", "Reghaia", "Dar El Beida", "Bab Ezzouar", "Baraki"],
+    "17": ["Djelfa", "Ain Oussara", "Messaad", "Hassi Bahbah", "Dar Chioukh"],
+    "18": ["Jijel", "Taher", "El Milia", "Chekfa", "Jimla"],
+    "19": ["Sétif", "El Eulma", "Ain Oulmene", "Ain Arnat", "Bougaa", "Ain Azel"],
+    "20": ["Saïda", "Ain El Hadjar", "Youb", "Sidi Boubekeur"],
+    "21": ["Skikda", "Collo", "Azzaba", "El Harrouch", "Tamalous"],
+    "22": ["Sidi Bel Abbès", "Sfisef", "Telagh", "Ben Badis", "Ras El Ma"],
+    "23": ["Annaba", "El Bouni", "Sidi Amar", "Berrahal", "El Hadjar"],
+    "24": ["Guelma", "Oued Zenati", "Bouchegouf", "Heliopolis"],
+    "25": ["Constantine", "El Khroub", "Hamma Bouziane", "Didouche Mourad", "Ain Smara", "Zighoud Youcef"],
+    "26": ["Médéa", "Berrouaghia", "Ksar El Boukhari", "Beni Slimane"],
+    "27": ["Mostaganem", "Ain Tedles", "Bouguirat", "Sidi Ali", "Mazagran"],
+    "28": ["M'Sila", "Bou Saada", "Sidi Aissa", "Magra", "Chellal"],
+    "29": ["Mascara", "Sig", "Tighennif", "Ghriss", "Mohammadia"],
+    "30": ["Ouargla", "Touggourt", "Hassi Messaoud", "Ain Beida"],
+    "31": ["Oran", "Es Senia", "Bir El Djir", "Arzew", "Gdyel", "Ain Turk", "Bethioua", "Oued Tlelat"],
+    "32": ["El Bayadh", "Rogassa", "Brezina", "El Abiodh Sidi Cheikh"],
+    "33": ["Illizi", "Djanet", "In Amenas"],
+    "34": ["Bordj Bou Arréridj", "Ras El Oued", "Bordj Zemoura", "Mansoura"],
+    "35": ["Boumerdès", "Boudouaou", "Dellys", "Thenia", "Zemmouri", "Khemis El Khechna"],
+    "36": ["El Tarf", "Drean", "El Kala", "Ben M'Hidi", "Bouhadjar"],
+    "37": ["Tindouf", "Oum El Assel"],
+    "38": ["Tissemsilt", "Theniet El Had", "Lardjem", "Bordj Bounaama"],
+    "39": ["El Oued", "El Meghaier", "Djamaa", "Robbah", "Guemar"],
+    "40": ["Khenchela", "Kais", "Chechar", "Ouled Rechache"],
+    "41": ["Souk Ahras", "Sedrata", "Medaourouch", "Taoura"],
+    "42": ["Tipaza", "Kolea", "Bou Ismail", "Cherchell", "Hadjout", "Gouraya"],
+    "43": ["Mila", "Chelghoum Laid", "Tadjenanet", "Ferdjioua", "Grarem Gouga"],
+    "44": ["Aïn Defla", "Khemis Miliana", "Miliana", "El Attaf", "Djendel"],
+    "45": ["Naâma", "Mecheria", "Ain Sefra", "Sfissifa"],
+    "46": ["Aïn Témouchent", "Hammam Bou Hadjar", "Beni Saf", "El Amria"],
+    "47": ["Ghardaïa", "Metlili", "El Menia", "Berriane", "Guerrara"],
+    "48": ["Relizane", "Oued Rhiou", "Mazouna", "Ammi Moussa"],
+    "49": ["Timimoun", "Tinerkouk", "Ouled Said"],
+    "50": ["Bordj Badji Mokhtar", "Timiaouine"],
+    "51": ["Ouled Djellal", "Sidi Khaled"],
+    "52": ["Béni Abbès", "Kerzaz", "El Ouata"],
+    "53": ["In Salah", "Foggaret Ezzoua"],
+    "54": ["In Guezzam"],
+    "55": ["Touggourt", "Temacine", "Megarine"],
+    "56": ["Djanet", "Bordj El Haouas"],
+    "57": ["El M'Ghair", "Djamaa"],
+    "58": ["El Meniaa", "Hassi Gara"]
+  };
+  
+  export function getCommunesByWilaya(wilayaCode: string): string[] {
+    // Debug: Afficher ce qui est demandé
+    console.log("Demande communes pour Wilaya:", wilayaCode);
+    return COMMUNES_DB[wilayaCode] || [];
+  }
