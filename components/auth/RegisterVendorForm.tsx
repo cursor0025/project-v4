@@ -1,145 +1,148 @@
-// components/auth/RegisterVendorForm.tsx
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { registerVendor, verifyOTP } from '@/app/actions/auth'
-import { WILAYAS } from '@/lib/constants/wilayas'
 import Link from 'next/link'
+import { Eye, EyeOff, Store } from 'lucide-react'
+import { createBrowserClient } from '@supabase/ssr'
+import { useRouter } from 'next/navigation'
 
 export default function RegisterVendorForm() {
   const router = useRouter()
-  const [step, setStep] = useState<'form' | 'otp'>('form')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [phone, setPhone] = useState('')
+  
+  // États du formulaire
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    phone: '' // On ajoute souvent le téléphone pour les vendeurs
+  })
 
-  // 1. SOUMISSION FORMULAIRE
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Client Supabase
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
 
-    const formData = new FormData(e.currentTarget)
-    const result = await registerVendor(formData)
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          // C'EST ICI LA CLÉ : On force le rôle "vendeur"
+          data: {
+            full_name: formData.fullName,
+            role: 'vendeur', 
+            phone: formData.phone
+          },
+        },
+      })
 
-    if (result.error) {
-      setError(result.error)
-      setLoading(false)
-      return
-    }
+      if (error) throw error
 
-    if (result.requires_otp && result.phone) {
-      setPhone(result.phone)
-      setStep('otp') // Passage à l'étape SMS
+      alert('Compte Vendeur créé ! Vérifiez vos emails pour confirmer.')
+      router.push('/login') // Ou vers une page "Vérifiez vos mails"
+
+    } catch (error: any) {
+      console.error(error)
+      alert('Erreur lors de l\'inscription : ' + error.message)
+    } finally {
       setLoading(false)
     }
   }
 
-  // 2. SOUMISSION CODE OTP
-  const handleOTPSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    const formData = new FormData(e.currentTarget)
-    formData.append('phone', phone)
-    formData.append('purpose', 'registration')
-
-    const result = await verifyOTP(formData)
-
-    if (result.error) {
-      setError(result.error)
-      setLoading(false)
-      return
-    }
-
-    if (result.redirect) {
-      router.push(result.redirect)
-    }
-  }
-
-  // ÉTAPE 2 : CODE SMS
-  if (step === 'otp') {
-    return (
-      <div className="w-full max-w-md mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-green-200">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Vérification Téléphone</h2>
-            <p className="text-gray-600 mt-2">
-              Un code a été envoyé au <span className="font-bold">{phone}</span>
-            </p>
-          </div>
-
-          {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
-
-          <form onSubmit={handleOTPSubmit} className="space-y-4">
-            <input
-              type="text"
-              name="code"
-              maxLength={6}
-              placeholder="Ex: 123456"
-              className="w-full px-4 py-3 text-center text-2xl tracking-widest border-2 border-green-500 rounded-lg focus:ring-4 focus:ring-green-200 focus:outline-none"
-              autoFocus
-              required
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition"
-            >
-              {loading ? 'Vérification...' : 'Confirmer le code'}
-            </button>
-          </form>
-        </div>
-      </div>
-    )
-  }
-
-  // ÉTAPE 1 : FORMULAIRE
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="bg-white rounded-2xl shadow-xl p-8 border-t-4 border-green-500">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Devenir Vendeur</h2>
-        <p className="text-gray-600 mb-6">Créez votre boutique et commencez à vendre dans 58 wilayas.</p>
+    <div className="w-full max-w-md mx-auto p-6">
+      
+      {/* En-tête spécial Vendeur */}
+      <div className="text-center mb-8">
+        <div className="mx-auto w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-3">
+          <Store className="w-6 h-6 text-[#ff6b1a]" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Devenir Vendeur</h2>
+        <p className="text-gray-500 text-sm mt-1">Créez votre boutique sur BZMarket</p>
+      </div>
 
-        {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100">{error}</div>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        
+        {/* Nom complet */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet (ou nom de la boutique)</label>
+          <input 
+            type="text" 
+            required
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#ff6b1a] focus:border-transparent outline-none transition-all"
+            placeholder="Ex: Boutique Zine"
+            onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Section Perso */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Informations Gérant</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="text" name="first_name" placeholder="Prénom" className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
-              <input type="text" name="last_name" placeholder="Nom" className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
-              <input type="tel" name="phone" placeholder="Téléphone (Sera vérifié par SMS)" className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
-              <input type="email" name="email" placeholder="Email" className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
-              <input type="password" name="password" placeholder="Mot de passe" className="w-full px-4 py-3 border border-gray-300 rounded-lg" required minLength={8} />
-              
-              <select name="wilaya" className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white" required>
-                <option value="">Wilaya de résidence</option>
-                {WILAYAS.map(w => <option key={w.code} value={w.name}>{w.code} - {w.name}</option>)}
-              </select>
-            </div>
+        {/* Email */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email professionnel</label>
+          <input 
+            type="email" 
+            required
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#ff6b1a] focus:border-transparent outline-none transition-all"
+            placeholder="contact@boutique.com"
+            onChange={(e) => setFormData({...formData, email: e.target.value})}
+          />
+        </div>
+
+        {/* Téléphone (Optionnel mais utile pour les vendeurs) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de téléphone</label>
+          <input 
+            type="tel" 
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#ff6b1a] focus:border-transparent outline-none transition-all"
+            placeholder="05 50 ..."
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+          />
+        </div>
+
+        {/* Mot de passe */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+          <div className="relative">
+            <input 
+              type={showPassword ? "text" : "password"} 
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#ff6b1a] focus:border-transparent outline-none transition-all"
+              placeholder="••••••••"
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+            />
+            <button 
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
+        </div>
 
-          {/* Section Boutique */}
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="text-sm font-bold text-green-800 uppercase tracking-wide mb-3">Informations Boutique</h3>
-            <div className="space-y-4">
-              <input type="text" name="shop_name" placeholder="Nom de la boutique (Ex: Electro Oran)" className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-green-500" required />
-              
-              <select name="shop_wilaya" className="w-full px-4 py-3 border border-green-300 rounded-lg bg-white" required>
-                <option value="">Wilaya de la boutique</option>
-                {WILAYAS.map(w => <option key={w.code} value={w.name}>{w.code} - {w.name}</option>)}
-              </select>
-            </div>
-          </div>
+        <button 
+          type="submit" 
+          disabled={loading}
+          className="w-full bg-[#ff6b1a] hover:bg-[#e55a0f] text-white font-bold py-3.5 rounded-lg transition-colors mt-4 shadow-lg shadow-orange-500/20"
+        >
+          {loading ? 'Création de la boutique...' : 'Ouvrir ma boutique'}
+        </button>
 
-          <button type="submit" disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg shadow-lg transform transition hover:-translate-y-0.5">
-            {loading ? 'Traitement...' : 'Suivant : Vérification SMS'}
-          </button>
-        </form>
+      </form>
+
+      <div className="text-center mt-6">
+        <p className="text-sm text-gray-500">
+          Vous voulez juste acheter ?{' '}
+          <Link href="/register" className="text-[#ff6b1a] font-semibold hover:underline">
+            Compte Client
+          </Link>
+        </p>
       </div>
     </div>
   )

@@ -1,20 +1,43 @@
-import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
-// Cette route est appelée par Supabase après une action d'authentification (ex: vérification d'email)
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  // Si "next" est présent dans l'URL, on l'utilise comme destination, sinon on va à la racine "/"
+  const next = searchParams.get('next') ?? '/'
 
   if (code) {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const cookieStore = await cookies()
 
-    // Échange le code temporaire contre une session utilisateur
-    await supabase.auth.exchangeCodeForSession(code);
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.delete({ name, ...options })
+          },
+        },
+      }
+    )
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error) {
+      // Si tout est bon, on redirige l'utilisateur connecté vers la page voulue
+      return NextResponse.redirect(`${origin}${next}`)
+    }
   }
 
-  // Redirige l'utilisateur vers la page d'accueil ou toute autre page après l'authentification réussie
-  return NextResponse.redirect(requestUrl.origin);
+  // Si erreur ou pas de code, on renvoie vers une page d'erreur auth (optionnel)
+  // ou simplement vers la page de login
+  return NextResponse.redirect(`${origin}/login?error=Could not authenticate user`)
 }

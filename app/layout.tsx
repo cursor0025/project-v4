@@ -1,11 +1,14 @@
-// app/layout.tsx
-import type { Metadata } from 'next'
 import './globals.css'
-import Nav from '@/components/Nav'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 
+// Configuration de la police
+const inter = Inter({ subsets: ['latin'] })
+
+// Les infos pour le référencement (SEO)
 export const metadata: Metadata = {
   title: 'BZMarket',
-  description: 'Le marché qui unit l\'Algérie',
+  description: 'Votre marketplace préférée',
 }
 
 export default function RootLayout({
@@ -15,9 +18,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body className="bg-gray-50 text-gray-900 antialiased">
-        <Nav />
-        <main>{children}</main>
+      <head>
+        {/* 👇 C'EST ICI LA MAGIE POUR LES ICÔNES DU DASHBOARD 👇 */}
+        {/* Sans cette ligne, vous verrez des carrés vides à la place des icônes */}
+        <link 
+          rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+        />
+      </head>
+      <body className={inter.className}>
+        {children}
       </body>
     </html>
   )
