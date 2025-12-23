@@ -1,34 +1,31 @@
-import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
-// Configuration de la police
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
-// Les infos pour le référencement (SEO)
 export const metadata: Metadata = {
-  title: 'BZMarket',
-  description: 'Votre marketplace préférée',
-}
+  title: "BZMarket - Dashboard Vendeur",
+  description: "Gérez votre boutique sur BZMarket",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="fr">
-      <head>
-        {/* 👇 C'EST ICI LA MAGIE POUR LES ICÔNES DU DASHBOARD 👇 */}
-        {/* Sans cette ligne, vous verrez des carrés vides à la place des icônes */}
-        <link 
-          rel="stylesheet" 
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
-        />
-      </head>
       <body className={inter.className}>
-        {children}
+        {/* On enveloppe toute l'application avec AuthProvider.
+          Cela permet à la ligne 'const { user } = useAuth();' 
+          de fonctionner dans votre page dashboard.
+        */}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
-  )
+  );
 }

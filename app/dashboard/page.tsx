@@ -1,584 +1,255 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
-import { useRouter } from 'next/navigation'
-import './dashboard.css'
+import { useEffect, useState } from 'react';
+import {
+  Eye,
+  MousePointerClick,
+  Users,
+  Clock,
+  Plus,
+  ExternalLink,
+  TrendingUp,
+  CheckCircle2,
+  AlertCircle,
+  MessageSquare,
+  Package,
+  LogOut,
+  ChevronRight
+} from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
 
-export default function DashboardPage() {
-  const router = useRouter()
-  // Gestion des onglets
-  const [activeTab, setActiveTab] = useState('dashboard')
-  // Gestion de la modale d'avis
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  
-  // État utilisateur Supabase
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+export default function OverviewPage() {
+  const { logout } = useAuth();
+  const router = useRouter();
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/login') 
-      } else {
-        setUser(session.user)
-      }
-      setLoading(false)
-    }
-    getUser()
-  }, [router, supabase])
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.refresh()
-    router.push('/login')
-  }
-
-  if (loading) {
-    return (
-        <div className="dashboard-body" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh'}}>
-            <div style={{color: '#ff6b1a', fontSize: '20px', fontWeight: 'bold'}}>Chargement...</div>
-        </div>
-    )
-  }
+    const timer = setTimeout(() => {
+      setStats({
+        dailyVisits: 1240,
+        productClicks: 856,
+        shopSubscribers: 234,
+        subscriptionDaysLeft: 45,
+        revenue: 450000,
+        averageBasket: 3400
+      });
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <div className="dashboard-body">
+    // FOND NOIR UNI (#0c0c0c)
+    <div className="min-h-screen bg-[#0c0c0c] text-white p-6 space-y-8">
       
-      {/* SIDEBAR */}
-      <aside className="sidebar">
-        <div className="logo-section">
-            <div className="logo">
-                <div className="logo-icon">BZ</div>
-                <span className="logo-text">BZMarket</span>
-            </div>
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold tracking-tight">Tableau de Bord</h1>
+            <span className="bg-cyan-500/20 text-cyan-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-500/30">PRO</span>
+          </div>
+          <p className="text-gray-500 text-sm mt-1 flex items-center gap-2 font-medium">
+            <Clock size={14} /> Aujourd'hui, mardi 23 décembre 2025
+          </p>
         </div>
-
-        <div className="sidebar-menu">
-            <div className={`menu-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-                <i className="fas fa-th-large"></i>
-                <span>Dashboard</span>
-            </div>
-            <div className={`menu-item ${activeTab === 'purchases' ? 'active' : ''}`} onClick={() => setActiveTab('purchases')}>
-                <i className="fas fa-shopping-bag"></i>
-                <span>Mes Achats</span>
-            </div>
-            <div className={`menu-item ${activeTab === 'shops' ? 'active' : ''}`} onClick={() => setActiveTab('shops')}>
-                <i className="fas fa-store"></i>
-                <span>Boutiques Suivies</span>
-                <span className="menu-badge">8</span>
-            </div>
-            <div className={`menu-item ${activeTab === 'messages' ? 'active' : ''}`} onClick={() => setActiveTab('messages')}>
-                <i className="fas fa-envelope"></i>
-                <span>Messagerie</span>
-                <span className="menu-badge">3</span>
-            </div>
-            <div className={`menu-item ${activeTab === 'favorites' ? 'active' : ''}`} onClick={() => setActiveTab('favorites')}>
-                <i className="fas fa-heart"></i>
-                <span>Favoris</span>
-            </div>
-
-            <div className="menu-divider"></div>
-
-            <div className="menu-item">
-                <i className="fas fa-wallet"></i>
-                <span>Portefeuille</span>
-            </div>
-            <div className="menu-item">
-                <i className="fas fa-map-marker-alt"></i>
-                <span>Adresses</span>
-            </div>
-            <div className="menu-item">
-                <i className="fas fa-cog"></i>
-                <span>Paramètres</span>
-            </div>
-
-            <div className="menu-divider"></div>
-
-            <div className="menu-item" style={{color: '#ef4444'}} onClick={handleLogout}>
-                <i className="fas fa-sign-out-alt"></i>
-                <span>Déconnexion</span>
-            </div>
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT */}
-      <main className="main-content">
         
-        {/* HEADER */}
-        <div className="top-header">
-            <div className="header-left">
-                <h1>Bonjour, {user?.user_metadata?.full_name?.split(' ')[0] || 'Client'} 👋</h1>
-                <p>Bienvenue sur votre espace BZMarket</p>
+        <div className="flex items-center gap-3">
+          {/* NOUVEAU PRODUIT - Couleur Émeraude */}
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-sm font-bold hover:bg-emerald-500 hover:text-black transition-all duration-300 shadow-lg shadow-emerald-500/10">
+            <Plus size={18} /> Nouveau Produit
+          </button>
+          
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-black text-sm font-bold hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/20">
+            <ExternalLink size={18} /> Voir Boutique
+          </button>
+
+          {/* DÉCONNEXION - Discret */}
+          <button 
+            onClick={() => logout()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/5 bg-white/[0.03] text-gray-400 text-sm font-semibold hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20 transition-all duration-300"
+          >
+            <LogOut size={18} />
+            <span className="hidden sm:inline">Déconnexion</span>
+          </button>
+        </div>
+      </div>
+
+      {/* KYB ALERT */}
+      <div className="bg-[#1a150e] border border-amber-900/30 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+            <AlertCircle className="text-amber-500" size={20} />
+          </div>
+          <div>
+            <h4 className="text-amber-500 font-bold text-sm uppercase tracking-wider">Validation KYB requise</h4>
+            <p className="text-gray-400 text-xs mt-0.5 font-medium">Veuillez soumettre vos documents pour activer tous les paiements.</p>
+          </div>
+        </div>
+        <button className="bg-amber-500 hover:bg-amber-400 text-black px-6 py-2 rounded-xl text-xs font-black transition-colors uppercase tracking-tight">
+          VÉRIFIER MAINTENANT
+        </button>
+      </div>
+
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard title="VISITES" value={stats?.dailyVisits} trend="+12.5%" icon={<Eye size={20} />} color="blue" />
+        <StatCard title="CLICS PRODUITS" value={stats?.productClicks} trend="+4.2%" icon={<MousePointerClick size={20} />} color="purple" />
+        <StatCard title="ABONNÉS" value={stats?.shopSubscribers} trend="+8%" icon={<Users size={20} />} color="teal" />
+        
+        <div className="bg-[#161618] border border-white/5 rounded-[24px] p-6 relative overflow-hidden group shadow-xl">
+          <div className="flex justify-between items-start mb-6">
+            <div className="bg-orange-500 p-2.5 rounded-xl text-white shadow-lg shadow-orange-500/20">
+              <Clock size={22} />
             </div>
+          </div>
+          <p className="text-gray-500 text-[10px] font-black tracking-widest uppercase">ABONNEMENT</p>
+          <p className="text-3xl font-black mt-1 text-white tracking-tighter">{stats?.subscriptionDaysLeft} Jours</p>
+          <div className="mt-6">
+            <div className="flex justify-between text-[9px] font-black text-gray-500 uppercase mb-2">
+              <span>Cycle mensuel</span>
+              <span>50%</span>
+            </div>
+            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full bg-orange-500 w-1/2 rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-            <div className="header-right">
-                <div className="search-box">
-                    <input type="text" placeholder="Rechercher..." />
-                    <i className="fas fa-search"></i>
+      {/* PERFORMANCE & CATEGORIES */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-[#161618] border border-white/5 rounded-[32px] p-8 shadow-2xl">
+          <h3 className="text-xl font-bold text-white tracking-tight mb-8">Performance Commerciale</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="flex flex-col items-center">
+              <div className="relative w-40 h-40 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
+                  <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="10" fill="transparent" strokeDasharray={440} strokeDashoffset={440 - (440 * 82) / 100} strokeLinecap="round" className="text-emerald-500" />
+                </svg>
+                <div className="absolute text-center">
+                  <span className="text-4xl font-black block text-white tracking-tighter">82%</span>
+                  <span className="text-[10px] text-gray-500 uppercase font-black">validé</span>
                 </div>
-
-                <div className="notification-btn">
-                    <i className="far fa-bell"></i>
-                    <span className="notification-badge"></span>
+              </div>
+            </div>
+            <div className="md:col-span-2 space-y-4 justify-center flex flex-col">
+                <div className="bg-[#1a1a1c] border border-white/5 rounded-[20px] p-5 shadow-inner">
+                  <p className="text-emerald-400 text-[9px] font-black uppercase tracking-[2px] mb-1">Chiffre d'affaire</p>
+                  <p className="text-2xl font-black text-white">{stats?.revenue.toLocaleString()} DA</p>
                 </div>
-
-                <div className="cart-btn">
-                    <i className="fas fa-shopping-cart"></i>
-                    <span className="cart-count">3</span>
-                </div>
-
-                <div className="user-profile">
-                     <div className="user-avatar">
-                        {user?.user_metadata?.avatar_url ? (
-                            <img src={user.user_metadata.avatar_url} alt="Avatar" style={{width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%'}} />
-                        ) : (
-                            user?.email?.substring(0, 2).toUpperCase()
-                        )}
-                    </div>
-                    <div className="user-info" style={{marginLeft: '10px'}}>
-                        <h4 style={{fontSize: '14px', color: 'white'}}>{user?.user_metadata?.full_name || 'Utilisateur'}</h4>
-                        <p style={{fontSize: '11px', color: '#9ca3af'}}>Client Premium</p>
-                    </div>
+                <div className="bg-[#1a1a1c] border border-white/5 rounded-[20px] p-5 shadow-inner">
+                  <p className="text-purple-500 text-[9px] font-black uppercase tracking-[2px] mb-1">Panier Moyen</p>
+                  <p className="text-2xl font-black text-white">{stats?.averageBasket.toLocaleString()} DA</p>
                 </div>
             </div>
+          </div>
         </div>
 
-        {/* --- SECTION 1: DASHBOARD --- */}
-        {activeTab === 'dashboard' && (
-            <div className="content-section active">
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <div className="stat-title">Total Dépensé</div>
-                            <div className="stat-icon orange">
-                                <i className="fas fa-money-bill-wave"></i>
-                            </div>
-                        </div>
-                        <div className="stat-value">350,776 DA</div>
-                        <div className="stat-change positive">
-                            <i className="fas fa-arrow-up"></i>
-                            <span>12.95%</span>
-                            <span style={{color: '#9ca3af', marginLeft: '5px'}}>vs mois dernier</span>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <div className="stat-title">Achats Totaux</div>
-                            <div className="stat-icon blue">
-                                <i className="fas fa-shopping-cart"></i>
-                            </div>
-                        </div>
-                        <div className="stat-value">142</div>
-                        <div className="stat-change positive">
-                            <i className="fas fa-arrow-up"></i>
-                            <span>8.3%</span>
-                            <span style={{color: '#9ca3af', marginLeft: '5px'}}>ce mois</span>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <div className="stat-title">Boutiques Suivies</div>
-                            <div className="stat-icon green">
-                                <i className="fas fa-store"></i>
-                            </div>
-                        </div>
-                        <div className="stat-value">8</div>
-                        <div className="stat-change positive">
-                            <i className="fas fa-arrow-up"></i>
-                            <span>+2</span>
-                            <span style={{color: '#9ca3af', marginLeft: '5px'}}>cette semaine</span>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <div className="stat-title">Messages</div>
-                            <div className="stat-icon purple">
-                                <i className="fas fa-envelope"></i>
-                            </div>
-                        </div>
-                        <div className="stat-value">12</div>
-                        <div className="stat-change positive">
-                            <i className="fas fa-arrow-up"></i>
-                            <span>3 non lus</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* CHARTS ROW */}
-                <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '25px'}}>
-                    {/* CANDLESTICK CHART */}
-                    <div className="section">
-                        <div className="section-header">
-                            <div>
-                                <div className="section-title">Activité d'Achats</div>
-                                <div className="section-subtitle">Évolution des 7 derniers jours</div>
-                            </div>
-                        </div>
-
-                        <div className="candlestick-chart">
-                            <div className="candlestick-container">
-                                <div className="candlestick">
-                                    <div className="wick" style={{height: '60px', background: '#10b981'}}></div>
-                                    <div className="candle-body bullish" style={{height: '80px'}}></div>
-                                    <div className="wick" style={{height: '40px', background: '#10b981'}}></div>
-                                    <div className="candle-label">Lun</div>
-                                </div>
-                                <div className="candlestick">
-                                    <div className="wick" style={{height: '50px', background: '#ef4444'}}></div>
-                                    <div className="candle-body bearish" style={{height: '60px'}}></div>
-                                    <div className="wick" style={{height: '70px', background: '#ef4444'}}></div>
-                                    <div className="candle-label">Mar</div>
-                                </div>
-                                <div className="candlestick">
-                                    <div className="wick" style={{height: '70px', background: '#10b981'}}></div>
-                                    <div className="candle-body bullish" style={{height: '110px'}}></div>
-                                    <div className="wick" style={{height: '30px', background: '#10b981'}}></div>
-                                    <div className="candle-label">Mer</div>
-                                </div>
-                                <div className="candlestick">
-                                    <div className="wick" style={{height: '40px', background: '#10b981'}}></div>
-                                    <div className="candle-body bullish" style={{height: '90px'}}></div>
-                                    <div className="wick" style={{height: '50px', background: '#10b981'}}></div>
-                                    <div className="candle-label">Jeu</div>
-                                </div>
-                                <div className="candlestick">
-                                    <div className="wick" style={{height: '55px', background: '#ef4444'}}></div>
-                                    <div className="candle-body bearish" style={{height: '70px'}}></div>
-                                    <div className="wick" style={{height: '65px', background: '#ef4444'}}></div>
-                                    <div className="candle-label">Ven</div>
-                                </div>
-                                <div className="candlestick">
-                                    <div className="wick" style={{height: '80px', background: '#10b981'}}></div>
-                                    <div className="candle-body bullish" style={{height: '130px'}}></div>
-                                    <div className="wick" style={{height: '20px', background: '#10b981'}}></div>
-                                    <div className="candle-label">Sam</div>
-                                </div>
-                                <div className="candlestick">
-                                    <div className="wick" style={{height: '60px', background: '#10b981'}}></div>
-                                    <div className="candle-body bullish" style={{height: '95px'}}></div>
-                                    <div className="wick" style={{height: '45px', background: '#10b981'}}></div>
-                                    <div className="candle-label">Dim</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* DONUT CHART */}
-                    <div className="section">
-                        <div className="section-header">
-                            <div>
-                                <div className="section-title">Par Catégorie</div>
-                                <div className="section-subtitle">Répartition</div>
-                            </div>
-                        </div>
-
-                        <div className="donut-container">
-                            <div className="donut-chart">
-                                <svg width="200" height="200" viewBox="0 0 200 200">
-                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#0f1419" strokeWidth="40"/>
-                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#ff6b1a" strokeWidth="40" strokeDasharray="175 327" strokeDashoffset="0"/>
-                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#3b82f6" strokeWidth="40" strokeDasharray="125 377" strokeDashoffset="-175"/>
-                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#10b981" strokeWidth="40" strokeDasharray="75 427" strokeDashoffset="-300"/>
-                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#8b5cf6" strokeWidth="40" strokeDasharray="127 375" strokeDashoffset="-375"/>
-                                </svg>
-                                <div className="donut-center">
-                                    <div className="donut-value">142</div>
-                                    <div className="donut-label">Achats</div>
-                                </div>
-                            </div>
-
-                            <div className="donut-legend">
-                                <div className="donut-legend-item">
-                                    <span className="donut-legend-color" style={{background: '#ff6b1a'}}></span>
-                                    <span className="donut-legend-text">Électronique</span>
-                                    <span className="donut-legend-value">35%</span>
-                                </div>
-                                <div className="donut-legend-item">
-                                    <span className="donut-legend-color" style={{background: '#3b82f6'}}></span>
-                                    <span className="donut-legend-text">Mode</span>
-                                    <span className="donut-legend-value">25%</span>
-                                </div>
-                                <div className="donut-legend-item">
-                                    <span className="donut-legend-color" style={{background: '#10b981'}}></span>
-                                    <span className="donut-legend-text">Maison</span>
-                                    <span className="donut-legend-value">15%</span>
-                                </div>
-                                <div className="donut-legend-item">
-                                    <span className="donut-legend-color" style={{background: '#8b5cf6'}}></span>
-                                    <span className="donut-legend-text">Autres</span>
-                                    <span className="donut-legend-value">25%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* --- SECTION 2: MES ACHATS --- */}
-        {activeTab === 'purchases' && (
-            <div className="content-section active">
-                <div className="section">
-                    <div className="section-header">
-                        <div>
-                            <div className="section-title">Mes Achats</div>
-                            <div className="section-subtitle">Tous vos produits achetés</div>
-                        </div>
-                    </div>
-
-                    <div className="purchases-grid">
-                        <div className="purchase-card">
-                            <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300" className="purchase-image" alt="Casque" />
-                            <div className="purchase-info">
-                                <div className="purchase-title">Casque Audio Bluetooth Premium</div>
-                                <div className="purchase-date">Acheté le 15 Déc 2025</div>
-                                <div className="purchase-price">12,500 DA</div>
-                                <button className="btn-rate" onClick={() => setIsModalOpen(true)}>Laisser un avis détaillé</button>
-                            </div>
-                        </div>
-                        <div className="purchase-card">
-                             <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300" className="purchase-image" alt="Shoes" />
-                            <div className="purchase-info">
-                                <div className="purchase-title">Chaussures de Sport Nike Air</div>
-                                <div className="purchase-date">Acheté le 5 Déc 2025</div>
-                                <div className="purchase-price">9,500 DA</div>
-                                <button className="btn-rate" onClick={() => setIsModalOpen(true)}>Laisser un avis détaillé</button>
-                            </div>
-                        </div>
-                         <div className="purchase-card">
-                            <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300" className="purchase-image" alt="Montre" />
-                            <div className="purchase-info">
-                                <div className="purchase-title">Montre Intelligente Sport</div>
-                                <div className="purchase-date">Acheté le 1 Déc 2025</div>
-                                <div className="purchase-price">8,900 DA</div>
-                                <button className="btn-rate" onClick={() => setIsModalOpen(true)}>Laisser un avis détaillé</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* --- SECTION 3: BOUTIQUES SUIVIES --- */}
-        {activeTab === 'shops' && (
-            <div className="content-section active">
-                <div className="section">
-                    <div className="section-header">
-                        <div>
-                            <div className="section-title">Boutiques Suivies</div>
-                            <div className="section-subtitle">8 boutiques dans vos favoris</div>
-                        </div>
-                    </div>
-
-                    <div className="shops-grid">
-                        <div className="shop-card">
-                            <div className="shop-header">
-                                <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100" className="shop-logo" alt="Shop" />
-                                <div className="shop-info">
-                                    <h3>Tech Store DZ</h3>
-                                    <div className="shop-rating">
-                                        <i className="fas fa-star"></i> 4.8
-                                    </div>
-                                    <div style={{fontSize: '12px', color: '#9ca3af'}}>Électronique</div>
-                                </div>
-                            </div>
-                            <div className="shop-stats">
-                                <div className="shop-stat">
-                                    <div className="shop-stat-value">24</div>
-                                    <div className="shop-stat-label">Achats</div>
-                                </div>
-                                <div className="shop-stat">
-                                    <div className="shop-stat-value">156</div>
-                                    <div className="shop-stat-label">Produits</div>
-                                </div>
-                                <div className="shop-stat">
-                                    <div className="shop-stat-value">2K</div>
-                                    <div className="shop-stat-label">Followers</div>
-                                </div>
-                            </div>
-                            <button className="btn-unfollow">Ne plus suivre</button>
-                        </div>
-
-                         <div className="shop-card">
-                            <div className="shop-header">
-                                <img src="https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=100" className="shop-logo" alt="Shop" />
-                                <div className="shop-info">
-                                    <h3>Fashion Hub</h3>
-                                    <div className="shop-rating">
-                                        <i className="fas fa-star"></i> 5.0
-                                    </div>
-                                    <div style={{fontSize: '12px', color: '#9ca3af'}}>Mode & Vêtements</div>
-                                </div>
-                            </div>
-                            <div className="shop-stats">
-                                <div className="shop-stat">
-                                    <div className="shop-stat-value">18</div>
-                                    <div className="shop-stat-label">Achats</div>
-                                </div>
-                                <div className="shop-stat">
-                                    <div className="shop-stat-value">342</div>
-                                    <div className="shop-stat-label">Produits</div>
-                                </div>
-                                <div className="shop-stat">
-                                    <div className="shop-stat-value">5K</div>
-                                    <div className="shop-stat-label">Followers</div>
-                                </div>
-                            </div>
-                            <button className="btn-unfollow">Ne plus suivre</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* --- SECTION 4: MESSAGERIE --- */}
-        {activeTab === 'messages' && (
-            <div className="content-section active">
-                <div className="section">
-                    <div className="section-title">Messagerie</div>
-                    <div className="section-subtitle" style={{marginBottom: '20px'}}>Communiquez avec les vendeurs</div>
-                    
-                    <div className="messages-container">
-                        <div className="conversations-list">
-                            <div className="conversation-item active">
-                                <div className="conv-avatar">TS</div>
-                                <div className="conv-info">
-                                    <div className="conv-name">Tech Store DZ</div>
-                                    <div className="conv-last-msg">Votre commande est prête</div>
-                                </div>
-                                <div className="conv-badge">2</div>
-                            </div>
-                            <div className="conversation-item">
-                                <div className="conv-avatar">FH</div>
-                                <div className="conv-info">
-                                    <div className="conv-name">Fashion Hub</div>
-                                    <div className="conv-last-msg">Nouvelle collection disponible</div>
-                                </div>
-                            </div>
-                             <div className="conversation-item">
-                                <div className="conv-avatar">HD</div>
-                                <div className="conv-info">
-                                    <div className="conv-name">Home Décor</div>
-                                    <div className="conv-last-msg">Merci pour votre achat !</div>
-                                </div>
-                                <div className="conv-badge">1</div>
-                            </div>
-                        </div>
-
-                        <div className="chat-window">
-                            <div className="chat-header">
-                                <div className="chat-header-info">
-                                    <div className="conv-avatar">TS</div>
-                                    <div>
-                                        <div style={{fontSize: '16px', fontWeight: 600, color: 'white'}}>Tech Store DZ</div>
-                                        <div style={{fontSize: '12px', color: '#10b981'}}>En ligne</div>
-                                    </div>
-                                </div>
-                                <div><i className="fas fa-ellipsis-v" style={{color: '#9ca3af', cursor: 'pointer'}}></i></div>
-                            </div>
-
-                            <div className="chat-messages">
-                                <div className="message">
-                                    <div className="message-avatar">TS</div>
-                                    <div className="message-content">
-                                        <div className="message-text">Bonjour ! Comment puis-je vous aider ?</div>
-                                        <div className="message-time">14:30</div>
-                                    </div>
-                                </div>
-                                <div className="message sent">
-                                    <div className="message-avatar">AM</div>
-                                    <div className="message-content">
-                                        <div className="message-text">Bonjour, je voudrais avoir des infos sur le casque Bluetooth</div>
-                                        <div className="message-time">14:32</div>
-                                    </div>
-                                </div>
-                                <div className="message">
-                                    <div className="message-avatar">TS</div>
-                                    <div className="message-content">
-                                        <div className="message-text">Bien sûr ! Le casque a une autonomie de 30h et la réduction de bruit active.</div>
-                                        <div className="message-time">14:33</div>
-                                    </div>
-                                </div>
-                                 <div className="message sent">
-                                    <div className="message-avatar">AM</div>
-                                    <div className="message-content">
-                                        <div className="message-text">Parfait ! Quand est-ce que ma commande sera livrée ?</div>
-                                        <div className="message-time">14:35</div>
-                                    </div>
-                                </div>
-                                 <div className="message">
-                                    <div className="message-avatar">TS</div>
-                                    <div className="message-content">
-                                        <div className="message-text">Votre commande sera livrée demain entre 10h et 14h !</div>
-                                        <div className="message-time">14:36</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="chat-input">
-                                <input type="text" placeholder="Tapez votre message..." />
-                                <button className="btn-send"><i className="fas fa-paper-plane"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-      </main>
-
-      {/* --- RATING MODAL --- */}
-      {isModalOpen && (
-        <div className="modal-overlay open" onClick={(e) => {
-            if(e.target === e.currentTarget) setIsModalOpen(false)
-        }}>
-            <div className="modal">
-                <div className="modal-header">
-                    <div className="modal-title">Laisser un avis détaillé</div>
-                    <button className="btn-close" onClick={() => setIsModalOpen(false)}>
-                        <i className="fas fa-times"></i>
-                    </button>
-                </div>
-                <form className="rating-form" onSubmit={(e) => e.preventDefault()}>
-                    <div className="form-group">
-                        <div className="form-label">Note du produit</div>
-                        <div className="stars-rating">
-                            {[1,2,3,4,5].map(i => <i key={i} className="fas fa-star star" style={{fontSize: '28px'}}></i>)}
-                        </div>
-                    </div>
-                     <div className="form-group">
-                        <div className="form-label">Note de la boutique</div>
-                        <div className="stars-rating">
-                            {[1,2,3,4,5].map(i => <i key={i} className="fas fa-star star" style={{fontSize: '28px'}}></i>)}
-                        </div>
-                    </div>
-                     <div className="form-group">
-                         <div className="form-label">Délai de livraison</div>
-                         <div className="stars-rating">
-                            {[1,2,3,4,5].map(i => <i key={i} className="fas fa-star star" style={{fontSize: '28px'}}></i>)}
-                        </div>
-                    </div>
-                    <div className="form-group">
-                        <label className="form-label">Votre commentaire</label>
-                        <textarea className="form-textarea" placeholder="Partagez votre expérience avec ce produit..."></textarea>
-                    </div>
-                    <button type="submit" className="btn-submit">
-                        <i className="fas fa-paper-plane"></i> Publier mon avis
-                    </button>
-                </form>
-            </div>
+        {/* TOP SOUS-CATÉGORIES - Mis à jour pour Téléphonie */}
+        <div className="bg-[#161618] border border-white/5 rounded-[32px] p-8 flex flex-col h-full shadow-2xl">
+          <h3 className="text-xl font-bold text-white mb-8 tracking-tight">Top Sous-catégories</h3>
+          <div className="space-y-8 flex-1">
+            <CategoryRow label="Téléphones" sales={124} percent={65} color="bg-cyan-400" />
+            <CategoryRow label="Coques" sales={82} percent={45} color="bg-purple-500" />
+            <CategoryRow label="Chargeurs" sales={48} percent={30} color="bg-orange-500" />
+            <CategoryRow label="Écouteurs" sales={24} percent={15} color="bg-emerald-500" />
+          </div>
+          <button className="mt-10 w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-400 text-[10px] font-black uppercase tracking-[3px] hover:bg-white/10 hover:text-white transition-all">
+            DÉTAILS DES VENTES
+          </button>
         </div>
-      )}
+      </div>
+
+      {/* SECTION RÉCENTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+        <div className="bg-[#161618] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
+          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+            <div className="flex items-center gap-3">
+              <Package className="text-cyan-400" size={18} />
+              <h3 className="font-bold text-lg text-white">Commandes Récentes</h3>
+            </div>
+            <button className="text-cyan-400 text-xs font-bold uppercase tracking-widest">Voir tout</button>
+          </div>
+          <div className="divide-y divide-white/5">
+            <OrderRow refNo="#ORD-7721" name="Amine K." price="12 500 DA" time="Il y a 2 heures" status="done" />
+            <OrderRow refNo="#ORD-7722" name="Sara M." price="4 200 DA" time="Il y a 2 heures" status="pending" />
+            <OrderRow refNo="#ORD-7723" name="Yacine B." price="8 900 DA" time="Il y a 2 heures" status="done" />
+          </div>
+        </div>
+
+        <div className="bg-[#161618] border border-white/5 rounded-[32px] overflow-hidden flex flex-col shadow-2xl">
+          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="text-purple-400" size={18} />
+              <h3 className="font-bold text-lg text-white">Messages Clients</h3>
+            </div>
+            <span className="text-[10px] bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full font-black uppercase tracking-wider">2 Nouveaux</span>
+          </div>
+          <div className="flex-1 text-gray-400 p-6 text-center italic text-sm">
+            Vos messages s'afficheront ici...
+          </div>
+        </div>
+      </div>
     </div>
-  )
+  );
+}
+
+// --- SOUS-COMPOSANTS ---
+
+function StatCard({ title, value, trend, icon, color }: any) {
+  const colorMap: any = {
+    blue: 'bg-blue-600 shadow-blue-600/20',
+    purple: 'bg-purple-600 shadow-purple-600/20',
+    teal: 'bg-emerald-500 shadow-emerald-500/20',
+  };
+  return (
+    <div className="bg-[#161618] border border-white/5 rounded-[24px] p-6 relative overflow-hidden group hover:border-white/20 transition-all shadow-xl">
+      <div className="flex justify-between items-start mb-6">
+        <div className={`${colorMap[color]} p-2.5 rounded-xl text-white shadow-lg`}>{icon}</div>
+        <div className="flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-500 text-[10px] font-black tracking-tighter">
+          <TrendingUp size={10} /> {trend}
+        </div>
+      </div>
+      <p className="text-gray-500 text-[10px] font-black tracking-[2px] uppercase">{title}</p>
+      <p className="text-4xl font-black mt-1 text-white tracking-tighter">{value?.toLocaleString() || '0'}</p>
+    </div>
+  );
+}
+
+function CategoryRow({ label, sales, percent, color }: any) {
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-end text-sm">
+        <span className="font-black text-gray-200 uppercase tracking-wide text-xs">{label}</span>
+        <span className="text-[11px] text-gray-500 font-medium"><b className="text-white font-black">{sales} ventes</b> {percent}%</span>
+      </div>
+      <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden shadow-inner">
+        <div className={`h-full ${color} rounded-full transition-all duration-700`} style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function OrderRow({ refNo, name, price, time, status }: any) {
+  return (
+    <div className="flex items-center justify-between p-5 hover:bg-white/[0.03] transition-all cursor-pointer group">
+      <div className="flex items-center gap-4">
+        <div className={`p-2.5 rounded-xl border ${status === 'done' ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5' : 'border-amber-500/20 text-amber-500 bg-amber-500/5'}`}>
+          {status === 'done' ? <CheckCircle2 size={18} /> : <Clock size={18} />}
+        </div>
+        <div>
+          <p className="text-white font-black text-sm tracking-wide">{refNo}</p>
+          <p className="text-gray-500 text-xs font-bold">{name}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-white font-black text-base tracking-tight">{price}</p>
+        <p className="text-gray-600 text-[10px] mt-1 uppercase font-black tracking-widest">{time}</p>
+      </div>
+    </div>
+  );
 }
