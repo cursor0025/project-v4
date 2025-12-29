@@ -1,102 +1,157 @@
 'use client';
 
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { 
+  Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, UserPlus, ShoppingBag, Globe, ArrowLeft 
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
+
+const IMAGES = [
+  "https://images.unsplash.com/photo-1616070829624-884057de0b29?q=80&w=1000",
+  "https://images.unsplash.com/photo-1556656793-062ff9878273?q=80&w=1000",
+  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1000",
+  "https://images.unsplash.com/photo-1491933382434-500287f9b54b?q=80&w=1000",
+  "https://images.unsplash.com/photo-1512428559083-a401a30c9550?q=80&w=1000"
+];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [showPass, setShowPass] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [lang, setLang] = useState('FR');
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentSlide(s => (s + 1) % IMAGES.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
+    setIsLoading(true);
     try {
-      // 1. Nettoyage préventif du cache pour éviter les erreurs de jetons
-      localStorage.clear();
-
-      // 2. Tentative de connexion officielle
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password,
+        email: formData.email,
+        password: formData.password,
       });
-
       if (error) throw error;
-
-      if (data.user) {
-        toast.success("Heureux de vous revoir !");
-        // 3. Redirection vers le dossier dashboard que nous avons vu
-        router.push('/dashboard');
-        router.refresh();
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Erreur de connexion");
+      toast.success("Bienvenue sur BZMarket");
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err: any) {
+      toast.error("Identifiants incorrects");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-[450px] bg-white rounded-[35px] shadow-2xl p-10 border border-slate-100">
-        <div className="text-center mb-10">
-          <img src="/images/bzm-logo.png" className="h-14 mx-auto mb-2" alt="BZMarket" />
-          <p className="text-[#f97316] font-bold text-xs uppercase tracking-widest">Espace Vendeur Algérie</p>
+    <div className="min-h-screen w-full bg-gradient-to-t from-[#0b1120] via-[#1e293b] to-[#f0f9ff] p-5 pb-20 flex flex-col items-center justify-center font-sans text-slate-800">
+      
+      <div className="max-w-[650px] w-full bg-white rounded-[35px] overflow-hidden shadow-2xl border border-white/20">
+        
+        {/* CARROUSEL : Hauteur 280px pour plus de blanc */}
+        <div className="relative w-full h-[280px] bg-[#0f172a] flex items-center justify-center overflow-hidden">
+          {IMAGES.map((img, i) => (
+            <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
+              <img src={img} className="w-full h-full object-cover opacity-40" alt="Slide" />
+            </div>
+          ))}
+          
+          {/* LOGO : Lien vers l'accueil */}
+          <Link href="/" className="absolute top-8 left-8 z-30 hover:opacity-80 transition-opacity">
+            <img src="/images/bzm-logo.png" className="h-9 w-auto" alt="Logo BZMarket" />
+          </Link>
+
+          <div className="absolute top-8 right-8 z-30">
+            <button type="button" onClick={() => setLang(lang === 'FR' ? 'AR' : 'FR')} className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-white text-xs font-bold border border-white/30">
+              <Globe size={14} className="text-orange-500" /> {lang}
+            </button>
+          </div>
+
+          <div className="relative z-10 text-center px-10">
+            <h1 className="text-5xl font-black text-white uppercase tracking-tighter drop-shadow-xl">
+              Espace <span className="text-blue-500">Connexion</span>
+            </h1>
+            <p className="text-white/70 text-sm font-bold mt-2 uppercase tracking-widest">Le marché qui unit l'Algérie</p>
+          </div>
+          
+          <div className="absolute inset-0 bg-black/30"></div>
+
+          <div className="absolute bottom-6 flex gap-1.5 z-20">
+            {IMAGES.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all ${i === currentSlide ? 'w-8 bg-blue-500' : 'w-2 bg-white/30'}`} />
+            ))}
+          </div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700">Email professionnel</label>
+        <div className="p-8 md:p-14 space-y-10">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="farah@gmail.com"
                 required
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-[#f97316] outline-none transition-all"
+                placeholder="Email professionnel" 
+                className="w-full p-4.5 pl-12 border-2 border-slate-200 rounded-[18px] outline-none focus:border-blue-500 font-semibold text-slate-700 bg-[#f8fafc] transition-all"
+                onChange={e => setFormData({...formData, email: e.target.value})}
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700">Mot de passe</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                type={showPass ? "text" : "password"} 
                 required
-                className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-[#f97316] outline-none transition-all"
+                placeholder="Mot de passe" 
+                className="w-full p-4.5 pl-12 border-2 border-slate-200 rounded-[18px] outline-none focus:border-blue-500 font-semibold text-slate-700 bg-[#f8fafc] transition-all"
+                onChange={e => setFormData({...formData, password: e.target.value})}
               />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500">
+                {showPass ? <EyeOff size={20}/> : <Eye size={20}/>}
               </button>
             </div>
-          </div>
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full py-5 bg-[#f97316] text-white rounded-2xl text-lg font-black shadow-lg shadow-orange-100 hover:bg-orange-600 active:scale-[0.98] transition-all disabled:opacity-50"
-          >
-            {loading ? "Connexion..." : "Se connecter"}
-          </button>
-        </form>
+            <div className="flex justify-end px-1">
+              <Link href="/forgot-password" size={12} className="text-[12px] font-bold text-blue-700 hover:underline uppercase tracking-tight">Mot de passe oublié ?</Link>
+            </div>
+
+            {/* BOUTON : Bleu uni */}
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full p-5 bg-blue-600 text-white rounded-full text-xl font-bold uppercase shadow-xl hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-3"
+            >
+              {isLoading ? <Loader2 className="animate-spin" /> : <>Se connecter <ArrowRight size={22}/></>}
+            </button>
+          </form>
+
+          {/* FOOTER : Texte "Nouveau" agrandi et remonté */}
+          <div className="pt-4 border-t border-slate-100 text-center space-y-6">
+            <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">Nouveau sur BZMarket ?</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              <Link href="/register/client" className="p-4 border-2 border-slate-100 rounded-2xl text-[11px] font-bold uppercase flex items-center justify-center gap-3 hover:bg-blue-50 hover:border-blue-200 transition-all text-blue-700 shadow-sm">
+                <UserPlus size={16}/> S'inscrire (Client)
+              </Link>
+              
+              <Link href="/register/vendor" className="p-4 border-2 border-slate-100 rounded-2xl text-[11px] font-bold uppercase flex items-center justify-center gap-3 hover:bg-orange-50 hover:border-orange-200 transition-all text-orange-600 shadow-sm">
+                <ShoppingBag size={16}/> Devenir Vendeur
+              </Link>
+              
+            </div>
+          </div>
+        </div>
       </div>
+      
+      {/* RETOUR : Accueil */}
+      <Link href="/" className="mt-12 text-slate-400 hover:text-blue-700 text-[11px] font-bold uppercase tracking-[0.3em] flex items-center gap-3 transition-all">
+        <ArrowLeft size={16}/> Retour à la page d'accueil
+      </Link>
     </div>
   );
 }
