@@ -3,65 +3,104 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   Search, ShoppingCart, Heart, Bell, User, ChevronDown, 
-  Menu, ArrowRight, ArrowLeft, Star, Facebook, Instagram, Twitter,
-  UserPlus, LifeBuoy, X, ChevronRight
+  Menu, ArrowRight, ArrowLeft, X, ChevronRight, Star, 
+  LogIn, UserPlus, LifeBuoy, Package 
 } from 'lucide-react';
 import Link from 'next/link';
 
-// DONNÉES DES 44 CATÉGORIES (Extraites du PDF) 
+// 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES ET SOUS-CATÉGORIES
 const BZM_DATA = [
-  { id: 1, name: "Téléphones & Accessoires", subs: ["Smartphones", "Téléphones basiques", "Écouteurs & Casques", "Chargeurs & Cables", "Batteries", "Coques & Protection", "Montres connectées"] }, // [cite: 2-11]
-  { id: 2, name: "Accessoires Auto & Moto", subs: ["Accessoires voiture", "Accessoires moto", "Sécurité", "Entretien", "Casques & Gants", "Éclairage"] }, // [cite: 12-19]
-  { id: 3, name: "Véhicules", subs: ["Voitures", "Motos", "Camions", "Utilitaires", "Camping-cars"] }, // [cite: 20-26]
-  { id: 4, name: "Immobilier", subs: ["Appartements", "Villas", "Terrains", "Locaux commerciaux", "Promotion immobilière"] }, // [cite: 27-36]
-  { id: 5, name: "Informatique & IT", subs: ["PC portables", "PC de bureau", "Composants", "Stockage", "Imprimantes", "Réseau", "Écrans"] }, // [cite: 37-47]
-  { id: 6, name: "Électronique", subs: ["Appareils photo", "Caméscopes", "Home cinéma", "Audio & Enceintes"] }, // [cite: 48-54]
-  { id: 7, name: "Électroménager", subs: ["Machines à laver", "Réfrigérateurs", "Télévisions", "Fours", "Climatisation", "Aspirateurs"] }, // [cite: 55-72]
-  { id: 8, name: "Gaming", subs: ["Consoles", "Jeux vidéo", "Manettes", "Casques gaming", "PC Gaming"] }, // [cite: 73-83]
-  { id: 9, name: "Vêtements Femme", subs: ["Robes", "Tops", "Pantalons", "Abayas", "Chaussures", "Bijoux"] }, // [cite: 84-95]
-  { id: 10, name: "Vêtements Homme", subs: ["T-shirts", "Chemises", "Pantalons", "Vestes", "Chaussures"] }, // [cite: 96-107]
-  { id: 11, name: "Vêtements Homme Classique", subs: ["Costumes", "Chemises classiques", "Blazers", "Cravates"] }, // [cite: 108-117]
-  { id: 12, name: "Sportswear", subs: ["T-shirts", "Survêtements", "Leggings", "Chaussures sport"] }, // [cite: 118-128]
-  { id: 13, name: "Vêtements Bébé", subs: ["Bodies", "Pyjamas", "Ensembles", "Chaussures bébé"] }, // [cite: 129-138]
-  { id: 14, name: "Santé & Beauté", subs: ["Parfums", "Maquillage", "Soin visage", "Soin cheveux", "Appareils beauté"] }, // [cite: 139-147]
-  { id: 15, name: "Cosmétiques", subs: ["Fond de teint", "Rouge à lèvres", "Mascara", "Soins corps"] }, // [cite: 148-161]
-  { id: 16, name: "Meubles & Maison", subs: ["Salon", "Chambre", "Bureau", "Cuisine", "Salle de bain", "Déco"] }, // [cite: 194-205]
-  { id: 17, name: "Textiles Maison", subs: ["Parures", "Couvertures", "Serviettes", "Rideaux", "Tapis"] }, // [cite: 206-217]
-  { id: 18, name: "Ustensiles de Cuisine", subs: ["Poêles", "Casseroles", "Couteaux", "Boîtes alimentaires", "Moules"] }, // [cite: 227-239]
-  { id: 19, name: "Bricolage", subs: ["Outils manuels", "Outils électriques", "Visserie", "Peinture"] }, // [cite: 288-297]
-  { id: 20, name: "Pièces Détachées", subs: ["Pièces moteur", "Carrosserie", "Pneus & Jantes", "Batteries"] }, // [cite: 307-314]
-  // ... (La liste continue pour les 44 catégories)
+  { id: 1, name: "Téléphones & Accessoires", subs: ["Smartphones", "Téléphones basiques", "Écouteurs & Casques", "Chargeurs & Cables", "Batteries", "Coques & Protection", "Accessoires divers", "Montres connectées"] },
+  { id: 2, name: "Accessoires Auto & Moto", subs: ["Accessoires voiture", "Accessoires moto", "Sécurité", "Entretien", "Casques & Gants", "Éclairage"] },
+  { id: 3, name: "Véhicules", subs: ["Voitures", "Motos", "Camions", "Utilitaires", "Camping-cars"] },
+  { id: 4, name: "Immobilier", subs: ["À vendre", "À louer", "Appartements", "Villas", "Terrains", "Locaux commerciaux", "Promotion immobilière", "Colocation"] },
+  { id: 5, name: "Informatique & IT", subs: ["PC portables", "PC de bureau", "Composants", "Stockage", "Imprimantes & Scanners", "Accessoires PC", "Réseau", "Écrans", "Mobilier informatique"] },
+  { id: 6, name: "Électronique", subs: ["Appareils photo", "Caméscopes", "Home cinéma", "Audio & Enceintes", "Accessoires électroniques"] },
+  { id: 7, name: "Électroménager", subs: ["Machines à laver", "Réfrigérateurs", "Télévisions", "Fours", "Micro-ondes", "Lave-vaisselle", "Cuisinières & Plaques", "Climatisation & Chauffage", "Aspirateurs", "Congélateurs", "Mixeurs / Blenders"] },
+  { id: 8, name: "Gaming", subs: ["Consoles", "Jeux vidéo", "Manettes", "Casques gaming", "Souris & Claviers gaming", "Tapis de souris", "Chaises gaming", "Matériel de streaming", "PC Gaming"] },
+  { id: 9, name: "Vêtements Femme", subs: ["Robes", "Tops & Chemisiers", "Pantalons", "Jupes", "Abayas", "Chaussures", "Sacs & Accessoires", "Lingerie", "Sportswear femme", "Bijoux"] },
+  { id: 10, name: "Vêtements Homme", subs: ["T-shirts", "Chemises", "Pantalons", "Jeans", "Pulls", "Vestes & Manteaux", "Chaussures", "Accessoires", "Sportswear homme", "Tenues traditionnelles"] },
+  { id: 11, name: "Vêtements Homme Classique", subs: ["Costumes", "Chemises classiques", "Pantalons classiques", "Vestes & Blazers", "Chaussures habillées", "Cravates", "Ceintures"] },
+  { id: 12, name: "Sportswear", subs: ["T-shirts", "Survêtements", "Shorts", "Leggings", "Brassières", "Vestes", "Chaussures", "Accessoires", "Tenues sport"] },
+  { id: 13, name: "Vêtements Bébé", subs: ["Bodies", "Pyjamas", "Ensembles", "Pulls & Gilets", "Chaussures bébé", "Bonnets & Gants", "Tenues nouveau-né", "Couvertures"] },
+  { id: 14, name: "Santé & Beauté", subs: ["Parfums", "Maquillage", "Soin visage", "Soin cheveux", "Hygiène", "Bien-être", "Appareils beauté"] },
+  { id: 15, name: "Cosmétiques", subs: ["Fond de teint", "Rouge à lèvres", "Mascara", "Eyeliner", "Correcteurs", "Poudres", "Palettes", "Soin visage", "Soin cheveux", "Soin corps"] },
+  { id: 16, name: "Salon de Coiffure Homme", subs: ["Coupe homme", "Dégradé / Fade", "Rasage & Taille de barbe", "Coloration homme", "Lissage / Soin cheveux", "Coiffure événementielle", "Produits capillaires"] },
+  { id: 17, name: "Salon de Coiffure & Esthétique - Femme", subs: ["Coupe femme", "Brushing", "Coloration / Mèches", "Balayage / Ombré", "Lissage", "Maquillage", "Manucure & Pédicure", "Épilation", "Extensions"] },
+  { id: 18, name: "Produits Naturels & Herboristerie", subs: ["Plantes médicinales", "Tisanes", "Huiles essentielles", "Savons naturels", "Produits de la ruche", "Compléments naturels", "Épices naturelles"] },
+  { id: 19, name: "Meubles & Maison", subs: ["Salon", "Chambre", "Bureau", "Cuisine", "Salle de bain", "Déco intérieure", "Déco extérieure", "Jardin", "Textiles maison", "Éclairage"] },
+  { id: 20, name: "Textiles Maison", subs: ["Parures", "Couvertures", "Protège-matelas", "Serviettes", "Rideaux", "Nappes", "Stores", "Tapis", "Coussins", "Plaids"] },
+  { id: 21, name: "Décoration Maison", subs: ["Objets déco", "Tableaux", "Bougies", "Décoration saisonnière", "Plantes & pots", "Tapis", "Accessoires design"] },
+  { id: 22, name: "Ustensiles de Cuisine", subs: ["Poêles", "Casseroles", "Cocottes", "Couteaux", "Ustensiles", "Bols / Saladiers", "Plats & Plateaux", "Boîtes alimentaires", "Moules", "Passoires", "Grills BBQ"] },
+  { id: 23, name: "Services Alimentaires", subs: ["Restaurants", "Fast-food", "Cafés", "Pâtisseries", "Boulangeries", "Traiteurs", "Livraison repas", "Grillades", "Cuisine traditionnelle"] },
+  { id: 24, name: "Équipement Magasin & Pro", subs: ["Frigos professionnels", "Chambres froides", "Tables inox", "Vitrines & Comptoirs", "Matériel boulangerie", "Cuisine pro", "Matériel pizzeria", "Caisse & POS", "Boucherie"] },
+  { id: 25, name: "Cuisinistes & Cuisines Complètes", subs: ["Cuisines équipées", "Cuisines sur mesure", "Plans de travail", "Rangements", "Installation", "Électroménagers intégrés", "Conception 3D"] },
+  { id: 26, name: "Sport & Matériel Sportif", subs: ["Musculation", "Cardio", "Yoga", "Boxe", "Natation", "Accessoires fitness", "Sports individuels", "Sports collectifs"] },
+  { id: 27, name: "Bricolage", subs: ["Outils manuels", "Outils électriques", "Visserie", "Serrurerie", "Colles", "Peinture", "Éclairage technique", "Matériel professionnel"] },
+  { id: 28, name: "Matériaux & Équipements Construction", subs: ["Matériaux", "Outils", "Équipement industriel", "Plomberie", "Électricité", "Peinture", "Sécurité"] },
+  { id: 29, name: "Pièces Détachées", subs: ["Pièces moteur", "Carrosserie", "Batteries", "Pneus & Jantes", "Pièces moto", "Accessoires auto"] },
+  { id: 30, name: "Équipement Bébé", subs: ["Poussettes", "Sièges auto", "Lits bébé", "Biberons", "Jouets bébé", "Hygiène bébé", "Accessoires repas"] },
+  { id: 31, name: "Artisanat", subs: ["Produits faits main", "Broderie", "Bijoux artisanaux", "Poterie", "Tapis", "Décoration traditionnelle"] },
+  { id: 32, name: "Loisirs & Divertissement", subs: ["Livres", "Jouets", "Musique", "Films", "Arts créatifs", "Jeux vidéo", "Consoles"] },
+  { id: 33, name: "Alimentation & Épicerie", subs: ["Épicerie", "Frais", "Bio", "Boissons", "Boulangerie", "Produits laitiers", "Viandes & Poissons"] },
+  { id: 34, name: "Agences de Voyage", subs: ["Voyages", "Hajj & Omra", "Hôtels", "Circuits", "Locations voitures", "Assurance voyage"] },
+  { id: 35, name: "Éducation", subs: ["Cours particuliers", "Écoles privées", "Garderies", "Soutien scolaire", "Cours en ligne", "Cours de langues", "Cours de musique"] },
+  { id: 36, name: "Bijoux", subs: ["Colliers", "Bracelets", "Bagues", "Boucles d'oreilles", "Argent", "Or", "Parures", "Piercings", "Bijoux fantaisie"] },
+  { id: 37, name: "Montres & Lunettes", subs: ["Montres homme", "Montres femme", "Smartwatches", "Bracelets", "Lunettes de soleil", "Lunettes mode", "Étuis"] },
+  { id: 38, name: "Vape & Cigarettes Électroniques", subs: ["E-cigarettes", "Pods", "Clearomiseurs", "Résistances", "Batteries", "Chargeurs", "DIY"] },
+  { id: 39, name: "Matériel Médical", subs: ["Fauteuils roulants", "Déambulateurs", "Orthèses", "Tensiomètres", "Thermomètres", "Matelas médicaux", "Rééducation", "Béquilles"] },
+  { id: 40, name: "Promoteurs Immobiliers", subs: ["Projets immobiliers", "Programmes neufs", "Résidences en construction", "Appartements promo", "Villas promo", "Terrains promo", "Plans"] },
+  { id: 41, name: "Engins de Travaux Publics", subs: ["Rét chargeuses", "Grues", "Excavatrices", "Bulldozers", "Camions", "Chargeurs", "Compacteurs", "Pelles mini"] },
+  { id: 42, name: "Fête & Mariage", subs: ["Robes de soirée", "Robes de mariage", "Tenues traditionnelles", "Accessoires mariage", "Décoration", "Salles", "Traiteurs", "Photographes", "DJ & Animation"] },
+  { id: 43, name: "Kaba", subs: ["Articles Kaba", "Importations Directes"] },
+  { id: 44, name: "Divers", subs: ["Articles variés", "Objets insolites", "Accessoires divers", "Produits généraux"] }
+];
+
+const AMAZON_OVERLAY_CARDS = [
+  { title: "Ventes Flash du Jour", items: [{n:'Cuisine', img:'101'}, {n:'Maison', img:'102'}, {n:'Déco', img:'103'}, {n:'Outils', img:'104'}], link: "Voir les offres", color: "blue" },
+  { title: "Nouveauté BZM", items: [{n:'Beauté', img:'105'}, {n:'Tech', img:'106'}, {n:'Gaming', img:'107'}, {n:'Mode', img:'108'}], link: "DÉCOUVRIR", color: "orange" },
+  { title: "Maison & Confort", items: [{n:'Électro', img:'109'}, {n:'Cuisine', img:'110'}, {n:'Salon', img:'111'}, {n:'Rangement', img:'112'}], link: "EXPLORER", color: "blue" },
+  { title: "Tendances 2025", items: [{n:'Literie', img:'113'}, {n:'Luminaire', img:'114'}, {n:'Jardin', img:'115'}, {n:'Organisation', img:'116'}], link: "VOIR PLUS", color: "orange" }
 ];
 
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [lang, setLang] = useState('AR'); 
-  const [showLangMenu, setShowLangMenu] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [lang, setLang] = useState('FR');
   const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
-  const [activeCat, setActiveCat] = useState(0); // Index de la catégorie sélectionnée (Temu style)
-
-  const langMenuRef = useRef<HTMLDivElement>(null);
+  const [activeCatIdx, setActiveCatIdx] = useState(0);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const slides = [
-    { title: "Grandes Ventes", subtitle: "Jusqu'à 70% de réduction", img: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1200" },
-    { title: "Nouveautés 2025", subtitle: "Les meilleures marques arrivent", img: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1200" }
+    { title: "L'Ère du", word: "Numérique", color: "text-blue-500", subtitle: "Équipez-vous avec les dernières technologies", img: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1600" },
+    { title: "Devenez", word: "Vendeur Pro", color: "text-[#ff7011]", subtitle: "Vendez vos produits sur BZMarket dès aujourd'hui", img: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=1600" },
+    { title: "Mode &", word: "Tendances", color: "text-blue-500", subtitle: "Découvrez nos nouvelles collections exclusives", img: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600" },
+    { title: "Univers", word: "Gaming", color: "text-[#ff7011]", subtitle: "Tout le matériel pour les vrais gamers", img: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1600" },
+    { title: "Maison &", word: "Déco", color: "text-blue-500", subtitle: "Sublimez votre intérieur avec style", img: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=1600" }
   ];
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentSlide(s => (s + 1) % slides.length), 6000);
+    const timer = setInterval(() => setCurrentSlide(s => (s + 1) % slides.length), 8000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900">
+    <div className="min-h-screen bg-[#f0f2f5] font-sans text-slate-900">
       
-      {/* 1. HEADER (Design final validé) */}
+      {/* 1. HEADER GLOBAL */}
       <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <div className="max-w-[1440px] mx-auto px-4 h-20 flex items-center gap-6">
           <Link href="/"><img src="/images/bzm-logo.png" className="h-10 w-auto" alt="Logo" /></Link>
-          
           <div className="flex-1 flex items-center">
             <div className="flex-1 flex border-2 border-[#ff7011] rounded-l-md overflow-hidden bg-white h-[42px]">
               <input type="text" placeholder="Rechercher des produits..." className="flex-1 px-4 outline-none text-sm font-medium" />
@@ -69,220 +108,156 @@ export default function HomePage() {
             <button className="bg-[#ff7011] text-white px-6 h-[42px] rounded-r-md hover:bg-[#e6630f] transition-all"><Search size={20} /></button>
           </div>
 
-          <div className="flex items-center gap-5">
-            {/* SÉLECTEUR LANGUE */}
-            <div className="relative" ref={langMenuRef}>
-              <button onClick={() => setShowLangMenu(!showLangMenu)} className="flex items-center gap-2 border border-slate-200 px-3 py-1.5 rounded-md min-w-[115px] bg-white text-xs font-bold text-slate-700">
-                <img src={lang === 'AR' ? "https://flagcdn.com/w40/dz.png" : "https://flagcdn.com/w40/fr.png"} className="w-5 h-auto" alt="Flag" />
-                <span>{lang === 'AR' ? 'العربية' : 'Français'}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-              </button>
-              {showLangMenu && (
-                <div className="absolute top-full mt-1 right-0 w-full bg-white border border-slate-100 shadow-xl rounded-md py-1 z-50">
-                  <button onClick={() => {setLang('FR'); setShowLangMenu(false)}} className="w-full px-4 py-2 text-xs font-bold text-slate-700 text-left flex items-center gap-3 hover:bg-slate-100">
-                    <img src="https://flagcdn.com/w20/fr.png" className="w-5 h-auto" alt="FR" /> Français
-                  </button>
-                  <button onClick={() => {setLang('AR'); setShowLangMenu(false)}} className="w-full px-4 py-2 text-xs font-bold text-slate-700 text-left flex items-center gap-3 hover:bg-slate-100 border-t border-slate-50">
-                    <img src="https://flagcdn.com/w40/dz.png" className="w-5 h-auto" alt="DZ" /> العربية
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <Link href="/register/vendor" className="bg-[#ff791f] text-white px-5 py-2 rounded-md text-sm font-bold shadow-md hover:scale-105 transition-all">Devenir vendeur</Link>
-
-            {/* ICÔNES GRIS FONCÉ ET PLUS PETITES */}
-            <div className="flex items-center gap-4 text-slate-600">
-              <Heart size={22} fill="currentColor" className="cursor-pointer hover:text-red-500 transition-colors" />
-              <div className="relative cursor-pointer">
-                <Bell size={22} fill="currentColor" />
-                <span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
-              </div>
-              <div className="relative cursor-pointer">
-                <ShoppingCart size={22} fill="currentColor" />
-                <span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">0</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <img src={lang === 'FR' ? "https://flagcdn.com/w40/fr.png" : "https://flagcdn.com/w40/dz.png"} className="h-4 w-6 object-cover" alt="Flag" />
+              <div className="relative border border-[#ff7011] rounded-lg px-2 py-1 bg-white flex items-center">
+                <select className="text-sm font-normal bg-transparent outline-none cursor-pointer appearance-none pr-6" value={lang} onChange={(e) => setLang(e.target.value)}>
+                  <option value="FR">Français</option>
+                  <option value="AR">العربية</option>
+                </select>
+                <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
-
-            {/* MENU SE CONNECTER */}
-            <div className="relative border-l pl-4 ml-2" ref={userMenuRef}>
-              <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-[#ff7011] py-2">
-                <div className="bg-slate-600 p-1 rounded-full text-white"><User size={16} fill="currentColor" /></div>
-                <span>Se connecter</span>
-                <ChevronDown size={14} className="text-slate-600" />
-              </button>
-              {showUserMenu && (
-                <div className="absolute top-full mt-1 right-0 w-64 bg-white border border-slate-100 shadow-2xl rounded-xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <Link href="/login" className="flex items-center gap-4 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:translate-x-1 transition-all">
-                    <ArrowRight size={18} className="text-slate-400" /> Se connecter
-                  </Link>
-                  <Link href="/register/client" className="flex items-center gap-4 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:translate-x-1 transition-all">
-                    <UserPlus size={18} className="text-slate-400" /> S'inscrire
-                  </Link>
-                  <div className="border-t border-slate-100 my-2"></div>
-                  <Link href="#" className="flex items-center gap-4 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:translate-x-1 transition-all">
-                    <LifeBuoy size={18} className="text-slate-400" /> Support
-                  </Link>
-                  <Link href="#" className="flex items-center gap-4 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:translate-x-1 transition-all">
-                    <Heart size={18} className="text-slate-400" /> Mes listes de souhaits
-                  </Link>
-                  <Link href="#" className="flex items-center gap-4 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:translate-x-1 transition-all">
-                    <Star size={18} className="text-slate-400" /> Avis
-                  </Link>
+            <Link href="/register/vendor" className="bg-[#ff7011] text-white px-5 py-2.5 rounded-lg font-black text-sm shadow-md hover:bg-orange-600 transition-all uppercase flex items-center justify-center">Devenir vendeur</Link>
+            <div className="flex items-center gap-5 text-slate-600">
+              <Heart size={22} className="cursor-pointer hover:text-red-500" />
+              <div className="relative cursor-pointer"><Bell size={22} /><span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span></div>
+              <div className="relative cursor-pointer"><ShoppingCart size={22} /><span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-bold">0</span></div>
+              <div className="relative" ref={userMenuRef}>
+                <div className="flex items-center gap-1 cursor-pointer hover:text-orange-600 transition-colors" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}>
+                  <User size={22} /><span className="text-sm font-bold">Se connecter</span><ChevronDown size={14} className={`transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                 </div>
-              )}
+                {isUserMenuOpen && (
+                  <div className="absolute top-full right-0 mt-3 w-64 bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+                    <div className="p-2 space-y-1">
+                      <Link href="/login" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><LogIn size={18} className="text-slate-400 group-hover:text-orange-500" /> Se connecter</Link>
+                      <Link href="/register/client" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><UserPlus size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Client</Link>
+                      <Link href="/register/vendor" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><Package size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Vendeur</Link>
+                      <div className="border-t border-slate-100 my-1"></div>
+                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200 hover:translate-x-1"><LifeBuoy size={18} /> Support</Link>
+                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><Heart size={18} className="text-slate-400 group-hover:text-red-500" /> Mes listes de souhaits</Link>
+                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><Star size={18} className="text-slate-400 group-hover:text-yellow-500" /> Avis</Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* 2. BARRE NOIRE & MÉGA-MENU TEMU STYLE */}
         <div className="bg-[#0f172a] text-white relative">
           <div className="max-w-[1440px] mx-auto px-4 flex items-center h-[52px]">
-            <button 
-              onClick={() => setIsCatMenuOpen(!isCatMenuOpen)}
-              className="bg-white text-slate-800 px-6 h-[40px] flex items-center justify-center gap-3 font-bold text-sm rounded-sm mr-8"
-            >
-              {isCatMenuOpen ? <X size={18}/> : <Menu size={18} />} Toutes les catégories
-            </button>
-            <nav className="flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-300">
-              <Link href="#" className="hover:text-white transition-all">Informatique</Link>
-              <Link href="#" className="hover:text-white transition-all">Téléphones</Link>
-              <Link href="#" className="hover:text-white transition-all">Immobilier</Link>
-              <Link href="#" className="hover:text-white transition-all">Véhicules</Link>
-            </nav>
-          </div>
-
-          {/* MÉGA-MENU TEMU (Overlay) */}
-          {isCatMenuOpen && (
-            <div className="fixed inset-0 top-32 bg-black/50 z-40 flex justify-center animate-in fade-in duration-300">
-              <div className="bg-white w-[1100px] h-[600px] rounded-b-lg shadow-2xl flex overflow-hidden">
-                
-                {/* Sidebar Gauche (Main Categories) */}
-                <div className="w-[280px] bg-slate-50 border-r border-slate-100 overflow-y-auto custom-scrollbar">
-                  {BZM_DATA.map((cat, idx) => (
-                    <button
-                      key={cat.id}
-                      onMouseEnter={() => setActiveCat(idx)}
-                      className={`w-full text-left px-6 py-4 text-[13px] font-bold flex items-center justify-between transition-all ${activeCat === idx ? 'bg-white text-orange-600 border-l-4 border-orange-500 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-                    >
-                      {cat.name}
-                      <ChevronRight size={14} className={activeCat === idx ? 'opacity-100' : 'opacity-0'} />
-                    </button>
-                  ))}
-                </div>
-
-                {/* Content Droite (Sub-categories with circular images) */}
-                <div className="flex-1 p-8 overflow-y-auto bg-white custom-scrollbar">
-                  <div className="flex items-center justify-between mb-8 border-b border-slate-50 pb-4">
-                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{BZM_DATA[activeCat].name}</h3>
-                    <Link href="#" className="text-orange-500 text-xs font-bold hover:underline">Tout voir</Link>
-                  </div>
-                  
-                  <div className="grid grid-cols-4 gap-y-10 gap-x-6">
-                    {BZM_DATA[activeCat].subs.map((sub, i) => (
-                      <div key={i} className="flex flex-col items-center group cursor-pointer">
-                        <div className="w-24 h-24 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden mb-3 group-hover:shadow-md transition-all">
-                          <img 
-                            src={`https://picsum.photos/seed/${sub}/150/150`} 
-                            className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500" 
-                            alt={sub} 
-                          />
-                        </div>
-                        <span className="text-[11px] font-bold text-slate-700 text-center leading-tight group-hover:text-orange-600 transition-colors">
-                          {sub}
-                        </span>
-                      </div>
+            <div onMouseEnter={() => setIsCatMenuOpen(true)} onMouseLeave={() => setIsCatMenuOpen(false)} className="h-full flex items-center relative">
+              <button className="bg-white text-slate-800 px-6 h-[40px] flex items-center justify-center gap-3 font-bold text-sm rounded-sm mr-8">{isCatMenuOpen ? <X size={18}/> : <Menu size={18} />} Toutes les catégories</button>
+              {isCatMenuOpen && (
+                <div className="absolute top-full left-0 bg-white w-[1150px] h-[650px] rounded-b-lg shadow-2xl flex overflow-hidden z-50 border-t border-slate-100">
+                  <div className="w-[300px] bg-slate-50 border-r border-slate-100 overflow-y-auto text-slate-800">
+                    {BZM_DATA.map((cat, idx) => (
+                      <button key={cat.id} onMouseEnter={() => setActiveCatIdx(idx)} className={`w-full text-left px-6 py-4 text-[12px] font-bold border-b border-slate-100/50 flex justify-between items-center transition-all ${activeCatIdx === idx ? 'bg-white text-orange-600 border-l-4 border-orange-500 shadow-sm' : 'text-slate-600'}`}><span className="truncate uppercase tracking-tight">{cat.id}. {cat.name}</span><ChevronRight size={14} /></button>
                     ))}
                   </div>
+                  <div className="flex-1 p-10 bg-white overflow-y-auto text-slate-800">
+                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 border-b pb-4">{BZM_DATA[activeCatIdx].name}</h3>
+                    <div className="grid grid-cols-4 gap-8">
+                       {BZM_DATA[activeCatIdx].subs.map(s => (
+                         <div key={s} className="flex flex-col items-center gap-3 cursor-pointer group">
+                           <div className="w-24 h-24 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden group-hover:border-orange-500 transition-all shadow-inner"><img src={`https://picsum.photos/seed/${s}/100/100`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={s} /></div>
+                           <span className="text-[10px] font-bold text-center text-slate-600 group-hover:text-orange-600 uppercase tracking-tighter">{s}</span>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
                 </div>
-
-              </div>
+              )}
             </div>
-          )}
+            <nav className="flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-300"><Link href="#">Informatique</Link><Link href="#">Téléphones</Link><Link href="#">Immobilier</Link><Link href="#">Véhicules</Link></nav>
+          </div>
         </div>
       </header>
 
-      {/* 3. CONTENU (Reste de la page inchangé) */}
-      <section className="max-w-[1440px] mx-auto px-4 mt-6">
-        <h2 className="text-center text-slate-700 font-bold mb-4">Recommandé pour vous</h2>
-        <div className="relative h-[400px] rounded-2xl overflow-hidden shadow-xl group">
+      {/* --- 3. BANNIÈRE PRINCIPALE --- */}
+      <section className="relative w-full overflow-hidden bg-[#f0f2f5] pb-6">
+        <div className="relative h-[750px]">
           {slides.map((s, i) => (
-            <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
-              <img src={s.img} className="w-full h-full object-cover" alt="Slide" />
-              <div className="absolute inset-0 bg-black/20 flex items-center px-20">
-                <div className="text-white space-y-4 max-w-lg">
-                  <h1 className="text-5xl font-black">{s.title}</h1>
-                  <p className="text-lg font-bold opacity-90">{s.subtitle}</p>
-                  <button className="bg-[#ff7011] text-white px-8 py-3 rounded-md font-bold text-sm shadow-lg hover:scale-105 transition-all">Acheter Maintenant</button>
-                </div>
+            <div key={i} className={`absolute inset-0 transition-all duration-1000 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+              <img src={s.img} className="w-full h-full object-cover brightness-75 animate-kenburns" alt="Banner" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#f0f2f5] via-transparent to-black/40"></div>
+              <div className="absolute top-[20%] left-0 right-0 mx-auto text-center space-y-6 max-w-4xl drop-shadow-2xl px-4">
+                <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-none text-white">{s.title} <span className={s.color}>{s.word}</span></h1>
+                <p className="text-2xl md:text-4xl font-bold tracking-tight opacity-90 text-white">{s.subtitle}</p>
               </div>
+              <button className="absolute top-10 right-10 bg-white text-[#0f172a] px-12 py-5 rounded-full font-black uppercase tracking-widest hover:bg-[#ff7011] hover:text-white transition-all shadow-2xl z-40">Explorer maintenant</button>
             </div>
           ))}
-          <button className="absolute left-6 top-1/2 -translate-y-1/2 bg-black/40 p-2.5 rounded-full text-white hover:bg-[#ff7011] opacity-0 group-hover:opacity-100 transition-all"><ArrowLeft size={20}/></button>
-          <button className="absolute right-6 top-1/2 -translate-y-1/2 bg-black/40 p-2.5 rounded-full text-white hover:bg-[#ff7011] opacity-0 group-hover:opacity-100 transition-all"><ArrowRight size={20}/></button>
         </div>
-      </section>
-
-      {/* GRILLE PRODUITS (Restaurée) */}
-      <section className="max-w-[1440px] mx-auto px-4 mt-20 pb-20">
-        <h2 className="text-2xl font-black text-slate-800 mb-10 border-b pb-4">Les meilleures offres</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-          {[1,2,3,4,5,6,7,8,9,10].map((p) => (
-             <div key={p} className="bg-white rounded-xl overflow-hidden border border-slate-100 group hover:shadow-xl transition-all duration-300">
-                <div className="aspect-[4/5] bg-slate-50 relative overflow-hidden">
-                  <img src={`https://picsum.photos/seed/${p+20}/400/500`} className="w-full h-full object-cover group-hover:scale-105 transition-all" alt="Prod" />
-                  <button className="absolute bottom-3 right-3 bg-white p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all"><ShoppingCart size={18} /></button>
+        
+        {/* OPACITÉ À 40% ET EFFET VERRE */}
+        <div className="max-w-[1440px] mx-auto px-4 -mt-[320px] relative z-30 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+           {AMAZON_OVERLAY_CARDS.map((card, i) => (
+             <div key={i} className={`bg-white/40 backdrop-blur-md p-8 rounded-[40px] shadow-2xl flex flex-col h-[520px] border-t-4 ${card.color === 'blue' ? 'border-blue-500 bg-blue-50/50' : 'border-[#ff7011] bg-orange-50/50'} group transition-all duration-500 hover:-translate-y-2`}>
+                <h3 className="text-2xl font-black text-[#0f172a] mb-8 tracking-tight uppercase">{card.title}</h3>
+                <div className="grid grid-cols-2 gap-6 flex-1">
+                   {card.items.map((it, idx) => (
+                     <div key={idx} className="cursor-pointer flex flex-col items-center gap-3">
+                        <div className="aspect-square w-full bg-white rounded-2xl overflow-hidden flex items-center justify-center p-1 border border-slate-100 shadow-sm">
+                           <img src={`https://picsum.photos/seed/bzm_${it.img}/300/300`} className="w-full h-full object-contain mix-blend-multiply hover:scale-110 transition-transform duration-500" alt={it.n} />
+                        </div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center truncate w-full">{it.n}</p>
+                     </div>
+                   ))}
                 </div>
-                <div className="p-4">
-                  <h3 className="text-sm font-bold text-slate-800 line-clamp-2 leading-tight">Produit BZMarket Édition Spéciale</h3>
-                  <span className="text-lg font-black text-slate-900 block mt-2">14,500 DA</span>
-                </div>
+                <Link href="#" className={`mt-auto w-full py-4 rounded-2xl text-center font-black uppercase tracking-[0.1em] text-[10px] transition-all flex items-center justify-center gap-2 ${card.color === 'blue' ? 'bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white' : 'bg-orange-100 text-[#ff7011] hover:bg-[#ff7011] hover:text-white'}`}>
+                  {card.link} <ArrowRight size={14}/>
+                </Link>
              </div>
-          ))}
+           ))}
         </div>
       </section>
 
-      {/* FOOTER (Restauré) */}
-      <footer className="bg-[#0f172a] text-slate-300 pt-20 pb-10">
-        <div className="max-w-[1440px] mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12 border-b border-slate-800 pb-16">
-          <div className="space-y-6">
-            <img src="/images/bzm-logo.png" className="h-12 w-auto brightness-0 invert" alt="Logo" />
-            <p className="text-sm opacity-80">BZMarket connecte acheteurs et vendeurs à travers les 58 wilayas en toute confiance.</p>
-          </div>
-          <div><h4 className="font-bold text-white mb-6 uppercase text-sm">Liens Rapides</h4><ul className="space-y-3 text-sm"><li>Accueil</li><li>Boutiques</li><li>Devenir Vendeur</li></ul></div>
-          <div><h4 className="font-bold text-white mb-6 uppercase text-sm">Service Client</h4><ul className="space-y-3 text-sm"><li>Centre d'aide</li><li>Contact</li><li>Retour</li></ul></div>
-          <div><h4 className="font-bold text-white mb-6 uppercase text-sm">Newsletter</h4><div className="flex gap-2 bg-slate-800 p-1 rounded-lg border border-slate-700"><input type="email" className="bg-transparent border-none outline-none px-3 py-2 flex-1 text-sm text-white" placeholder="Votre email..."/><button className="bg-[#ff7011] text-white p-2 rounded-md hover:bg-[#e6630f]"><ArrowRight size={18}/></button></div></div>
+      {/* --- 5. SECTION CATÉGORIES POPULAIRES (OPACITÉ 40%) --- */}
+      <section className="max-w-[1440px] mx-auto px-4 mt-4 mb-24 text-center">
+        <h2 className="text-3xl font-black text-slate-900 mb-16 uppercase tracking-tighter">Catégories les plus populaires</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <CategoryCard title="Informatique" color="blue" items={[{n:'Bureau'},{n:'Portables'},{n:'Audio'},{n:'Accessoires'}]} />
+          <CategoryCard title="Téléphones" color="orange" items={[{n:'Smartphones'},{n:'Étuis'},{n:'Chargeurs'},{n:'Tablettes'}]} />
+          <CategoryCard title="Auto et Motos" color="blue" items={[{n:'Voitures'},{n:'Motos'},{n:'Pièces'},{n:'Outillage'}]} />
+          <CategoryCard title="Beauté et Soins" color="orange" items={[{n:'Visage'},{n:'Maquillage'},{n:'Cheveux'},{n:'Parfums'}]} />
         </div>
-        <p className="text-center text-xs font-bold uppercase tracking-widest opacity-60 mt-8">© 2025 BZMarket. Tous droits réservés.</p>
-      </footer>
+      </section>
 
-      {/* STYLES CSS POUR LE SCROLLBAR DANS LE MENU */}
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
-      `}</style>
+      {/* --- 6. SECTION PRODUITS --- */}
+      <section className="max-w-[1440px] mx-auto px-4 mb-32">
+        <div className="flex justify-between items-end mb-12 border-b border-white pb-8"><h2 className="text-4xl font-black text-[#0f172a] uppercase tracking-tighter">Sélectionnés pour vous</h2><Link href="/boutique" className="text-[#ff7011] font-black text-sm uppercase tracking-widest hover:underline flex items-center gap-2">Tout explorer <ArrowRight size={16}/></Link></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+           {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(p => (
+             <div key={p} className="bg-white rounded-2xl border border-slate-100 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden">
+                <div className="aspect-[4/5] bg-[#f8fafc] relative overflow-hidden p-6"><img src={`https://picsum.photos/seed/p${p+70}/500/600`} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt="Produit" /><button className="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-[#ff7011] hover:text-white"><ShoppingCart size={20} /></button></div>
+                <div className="p-5"><h3 className="text-sm font-bold text-slate-800 line-clamp-2 h-10">Produit Premium BZMarket - Pack {p}</h3><div className="flex items-center gap-1 text-orange-400 mt-2"><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/></div><p className="text-2xl font-black text-slate-900 mt-3 tracking-tighter">14,500 DA</p></div>
+             </div>
+           ))}
+        </div>
+      </section>
+
+      <footer className="bg-[#131a22] text-slate-400 py-24 text-center"><img src="/images/bzm-logo.png" className="h-10 mx-auto brightness-0 invert opacity-20 mb-10" alt="Logo" /><p className="text-[10px] font-black uppercase tracking-[0.5em]">© 2025 BZMARKET ALGERIA - TOUS DROITS RÉSERVÉS</p></footer>
     </div>
   );
 }
 
-// COMPOSANT CARTE CATÉGORIE (Identique Turn précédent)
-function CategoryCard({ title, items }: { title: string, items: {n:string}[] }) {
+function CategoryCard({ title, items, color }: { title: string, items: {n:string}[], color: 'blue' | 'orange' }) {
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center hover:shadow-md transition-all">
-      <h3 className="font-bold text-slate-800 mb-6 text-sm">{title}</h3>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-6 w-full px-2 mb-8">
+    <div className={`bg-white/40 backdrop-blur-md p-8 rounded-[40px] shadow-sm border-2 ${color === 'blue' ? 'border-blue-100 hover:border-blue-400' : 'border-orange-100 hover:border-orange-400'} flex flex-col items-center hover:shadow-2xl transition-all duration-500`}>
+      <h3 className={`font-black mb-10 text-base uppercase tracking-tighter ${color === 'blue' ? 'text-blue-600' : 'text-[#ff7011]'}`}>{title}</h3>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-10 w-full px-2 mb-12">
         {items.map((it, i) => (
-          <div key={i} className="flex flex-col items-center gap-2 cursor-pointer group">
-            <div className="aspect-square w-full bg-[#f8fafc] rounded-xl flex items-center justify-center p-2 border border-slate-50 group-hover:border-orange-200 transition-all">
-               <img src={`https://picsum.photos/seed/${it.n}small/100/100`} alt={it.n} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-all" />
+          <div key={i} className="flex flex-col items-center gap-3 group">
+            <div className={`aspect-square w-full bg-[#f8fafc] rounded-[28px] flex items-center justify-center p-1 border border-slate-50 transition-all duration-500 shadow-inner ${color === 'blue' ? 'group-hover:bg-blue-50' : 'group-hover:bg-orange-50'}`}>
+               <img src={`https://picsum.photos/seed/${it.n}/200/200`} alt={it.n} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-all duration-700" />
             </div>
-            <p className="text-[10px] font-bold text-slate-500 text-center leading-tight h-6 flex items-center group-hover:text-slate-800 transition-all">{it.n}</p>
+            <p className={`text-[10px] font-black text-slate-500 text-center uppercase h-6 flex items-center transition-colors ${color === 'blue' ? 'group-hover:text-blue-600' : 'group-hover:text-[#ff7011]'}`}>{it.n}</p>
           </div>
         ))}
       </div>
-      <button className="w-full bg-[#ff7011] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-[#e6630f] shadow-md shadow-orange-100/50">Découvrir</button>
+      <button className={`w-full text-white py-4 rounded-2xl text-xs font-black uppercase shadow-xl transition-all hover:scale-105 ${color === 'blue' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-[#ff7011] hover:bg-[#e6630f]'}`}>Découvrir</button>
     </div>
   );
 }
