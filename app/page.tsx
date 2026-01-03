@@ -4,11 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Search, ShoppingCart, Heart, Bell, User, ChevronDown, 
   Menu, ArrowRight, ArrowLeft, X, ChevronRight, Star, 
-  LogIn, UserPlus, LifeBuoy, Package 
+  LogIn, UserPlus, LifeBuoy, Package, LayoutDashboard, LogOut
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+// Utilisation de votre instance Supabase globale
+import { supabase } from '@/lib/supabase';
 
-// 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES ET SOUS-CATÉGORIES
+// 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES (CONSERVÉE À 100%)
 const BZM_DATA = [
   { id: 1, name: "Téléphones & Accessoires", subs: ["Smartphones", "Téléphones basiques", "Écouteurs & Casques", "Chargeurs & Cables", "Batteries", "Coques & Protection", "Accessoires divers", "Montres connectées"] },
   { id: 2, name: "Accessoires Auto & Moto", subs: ["Accessoires voiture", "Accessoires moto", "Sécurité", "Entretien", "Casques & Gants", "Éclairage"] },
@@ -30,10 +33,10 @@ const BZM_DATA = [
   { id: 18, name: "Produits Naturels & Herboristerie", subs: ["Plantes médicinales", "Tisanes", "Huiles essentielles", "Savons naturels", "Produits de la ruche", "Compléments naturels", "Épices naturelles"] },
   { id: 19, name: "Meubles & Maison", subs: ["Salon", "Chambre", "Bureau", "Cuisine", "Salle de bain", "Déco intérieure", "Déco extérieure", "Jardin", "Textiles maison", "Éclairage"] },
   { id: 20, name: "Textiles Maison", subs: ["Parures", "Couvertures", "Protège-matelas", "Serviettes", "Rideaux", "Nappes", "Stores", "Tapis", "Coussins", "Plaids"] },
-  { id: 21, name: "Décoration Maison", subs: ["Objets déco", "Tableaux", "Bougies", "Décoration saisonnière", "Plantes & pots", "Tapis", "Accessoires design"] },
+  { id: 21, name: "Déoration Maison", subs: ["Objets déco", "Tableaux", "Bougies", "Décoration saisonnière", "Plantes & pots", "Tapis", "Accessoires design"] },
   { id: 22, name: "Ustensiles de Cuisine", subs: ["Poêles", "Casseroles", "Cocottes", "Couteaux", "Ustensiles", "Bols / Saladiers", "Plats & Plateaux", "Boîtes alimentaires", "Moules", "Passoires", "Grills BBQ"] },
-  { id: 23, name: "Services Alimentaires", subs: ["Restaurants", "Fast-food", "Cafés", "Pâtisseries", "Boulangeries", "Traiteurs", "Livraison repas", "Grillades", "Cuisine traditionnelle"] },
-  { id: 24, name: "Équipement Magasin & Pro", subs: ["Frigos professionnels", "Chambres froides", "Tables inox", "Vitrines & Comptoirs", "Matériel boulangerie", "Cuisine pro", "Matériel pizzeria", "Caisse & POS", "Boucherie"] },
+  { id: 23, name: "Services Alimentaires", subs: ["Restaurants", "Fast-food", "Cafés", "Pâtisseries", "Boulangeries", "Traiteurs", "Livraison repas", "Grillades", "Cuisine traditionnelle", "Healthy food"] },
+  { id: 24, name: "Équipement Magasin & Pro", subs: ["Frigos professionnels", "Chambres froides", "Tables inox", "Vitrines & Comptoirs", "Matériel boulangerie", "Cuisine pro", "Matériel pizzeria", "Rayonnages", "Caisse & POS", "Boucherie"] },
   { id: 25, name: "Cuisinistes & Cuisines Complètes", subs: ["Cuisines équipées", "Cuisines sur mesure", "Plans de travail", "Rangements", "Installation", "Électroménagers intégrés", "Conception 3D"] },
   { id: 26, name: "Sport & Matériel Sportif", subs: ["Musculation", "Cardio", "Yoga", "Boxe", "Natation", "Accessoires fitness", "Sports individuels", "Sports collectifs"] },
   { id: 27, name: "Bricolage", subs: ["Outils manuels", "Outils électriques", "Visserie", "Serrurerie", "Colles", "Peinture", "Éclairage technique", "Matériel professionnel"] },
@@ -64,12 +67,49 @@ const AMAZON_OVERLAY_CARDS = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [lang, setLang] = useState('FR');
   const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
   const [activeCatIdx, setActiveCatIdx] = useState(0);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // ÉTATS DE CONNEXION
+  const [user, setUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // LOGIQUE DE DÉTECTION (CORRECTED DEPENDENCY ARRAY)
+  useEffect(() => {
+    const fetchUserAndRole = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        setUser(authUser);
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', authUser.id).single();
+        if (profile) setUserRole(profile.role);
+      }
+    };
+
+    fetchUserAndRole();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+        if (profile) setUserRole(profile.role);
+      } else {
+        setUser(null);
+        setUserRole(null);
+      }
+    });
+
+    return () => authListener.subscription.unsubscribe();
+  }, [supabase]); // Ajout de supabase ici pour stabiliser le hook
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -97,7 +137,6 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#f0f2f5] font-sans text-slate-900">
       
-      {/* 1. HEADER GLOBAL */}
       <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <div className="max-w-[1440px] mx-auto px-4 h-20 flex items-center gap-6">
           <Link href="/"><img src="/images/bzm-logo.png" className="h-10 w-auto" alt="Logo" /></Link>
@@ -119,29 +158,49 @@ export default function HomePage() {
                 <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
-            <Link href="/register/vendor" className="bg-[#ff7011] text-white px-5 py-2.5 rounded-lg font-black text-sm shadow-md hover:bg-orange-600 transition-all uppercase flex items-center justify-center">Devenir vendeur</Link>
+
+            {userRole !== 'vendor' && (
+              <Link href="/register/vendor" className="bg-[#ff7011] text-white px-5 py-2.5 rounded-lg font-black text-sm shadow-md hover:bg-orange-600 transition-all uppercase flex items-center justify-center">Devenir vendeur</Link>
+            )}
+
             <div className="flex items-center gap-5 text-slate-600">
               <Heart size={22} className="cursor-pointer hover:text-red-500" />
               <div className="relative cursor-pointer"><Bell size={22} /><span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span></div>
               <div className="relative cursor-pointer"><ShoppingCart size={22} /><span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-bold">0</span></div>
+              
               <div className="relative" ref={userMenuRef}>
                 <div className="flex items-center gap-1 cursor-pointer hover:text-orange-600 transition-colors" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}>
-                  <User size={22} /><span className="text-sm font-bold">Se connecter</span><ChevronDown size={14} className={`transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  <User size={22} />
+                  <span className="text-sm font-bold uppercase">{user ? 'Mon Compte' : 'Se connecter'}</span>
+                  <ChevronDown size={14} className={`transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                 </div>
                 {isUserMenuOpen && (
                   <div className="absolute top-full right-0 mt-3 w-64 bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-3 duration-200">
                     <div className="p-2 space-y-1">
-                      <Link href="/login" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><LogIn size={18} className="text-slate-400 group-hover:text-orange-500" /> Se connecter</Link>
-                      <Link href="/register/client" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><UserPlus size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Client</Link>
-                      <Link href="/register/vendor" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><Package size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Vendeur</Link>
+                      {user ? (
+                        <button onClick={handleLogout} className="w-full group flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"><LogOut size={18} /> Se déconnecter</button>
+                      ) : (
+                        <>
+                          <Link href="/login" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200"><LogIn size={18} className="text-slate-400 group-hover:text-orange-500" /> Se connecter</Link>
+                          <Link href="/register/client" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200"><UserPlus size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Client</Link>
+                          <Link href="/register/vendor" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200"><Package size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Vendeur</Link>
+                        </>
+                      )}
                       <div className="border-t border-slate-100 my-1"></div>
-                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200 hover:translate-x-1"><LifeBuoy size={18} /> Support</Link>
-                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><Heart size={18} className="text-slate-400 group-hover:text-red-500" /> Mes listes de souhaits</Link>
-                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200 hover:translate-x-1"><Star size={18} className="text-slate-400 group-hover:text-yellow-500" /> Avis</Link>
+                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"><LifeBuoy size={18} /> Support</Link>
                     </div>
                   </div>
                 )}
               </div>
+
+              {user && (
+                <Link 
+                  href={userRole === 'vendor' ? '/dashboard/vendor' : '/dashboard/client'} 
+                  className="bg-blue-700 text-white px-5 py-2.5 rounded-lg font-black text-xs uppercase shadow-lg hover:bg-blue-800 hover:scale-105 transition-all flex items-center justify-center gap-2 ml-2"
+                >
+                  <LayoutDashboard size={18} /> Tableau de bord
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -175,7 +234,6 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* --- 3. BANNIÈRE PRINCIPALE --- */}
       <section className="relative w-full overflow-hidden bg-[#f0f2f5] pb-6">
         <div className="relative h-[750px]">
           {slides.map((s, i) => (
@@ -191,7 +249,6 @@ export default function HomePage() {
           ))}
         </div>
         
-        {/* OPACITÉ À 40% ET EFFET VERRE */}
         <div className="max-w-[1440px] mx-auto px-4 -mt-[320px] relative z-30 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
            {AMAZON_OVERLAY_CARDS.map((card, i) => (
              <div key={i} className={`bg-white/40 backdrop-blur-md p-8 rounded-[40px] shadow-2xl flex flex-col h-[520px] border-t-4 ${card.color === 'blue' ? 'border-blue-500 bg-blue-50/50' : 'border-[#ff7011] bg-orange-50/50'} group transition-all duration-500 hover:-translate-y-2`}>
@@ -214,7 +271,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* --- 5. SECTION CATÉGORIES POPULAIRES (OPACITÉ 40%) --- */}
       <section className="max-w-[1440px] mx-auto px-4 mt-4 mb-24 text-center">
         <h2 className="text-3xl font-black text-slate-900 mb-16 uppercase tracking-tighter">Catégories les plus populaires</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -225,7 +281,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* --- 6. SECTION PRODUITS --- */}
       <section className="max-w-[1440px] mx-auto px-4 mb-32">
         <div className="flex justify-between items-end mb-12 border-b border-white pb-8"><h2 className="text-4xl font-black text-[#0f172a] uppercase tracking-tighter">Sélectionnés pour vous</h2><Link href="/boutique" className="text-[#ff7011] font-black text-sm uppercase tracking-widest hover:underline flex items-center gap-2">Tout explorer <ArrowRight size={16}/></Link></div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">

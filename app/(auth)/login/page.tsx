@@ -30,18 +30,47 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // MODIFICATION DE LA LOGIQUE DE CONNEXION
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // 1. Authentification avec Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
+
       if (error) throw error;
-      toast.success("Bienvenue sur BZMarket");
-      router.push('/dashboard');
-      router.refresh();
+
+      if (data.user) {
+        // 2. Récupération du rôle dans la table "profiles"
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Erreur profil:", profileError);
+          // En cas d'erreur de profil, on redirige par défaut vers l'accueil pour ne pas bloquer l'utilisateur
+          router.push('/');
+          return;
+        }
+
+        toast.success("Bienvenue sur BZMarket");
+
+        // 3. Logique de redirection finale selon le rôle
+        if (profile?.role === 'vendor') {
+          // Si c'est un vendeur (monsieurz002@gmail.com) -> Dashboard Vendeur
+          router.push('/dashboard/vendor');
+        } else {
+          // Si c'est un client (zifa2524@gmail.com) -> Page d'accueil [/]
+          router.push('/');
+        }
+        
+        router.refresh();
+      }
     } catch (err: any) {
       toast.error("Identifiants incorrects");
     } finally {
@@ -54,7 +83,7 @@ export default function LoginPage() {
       
       <div className="max-w-[650px] w-full bg-white rounded-[35px] overflow-hidden shadow-2xl border border-white/20">
         
-        {/* CARROUSEL : Hauteur 280px pour plus de blanc */}
+        {/* CARROUSEL */}
         <div className="relative w-full h-[280px] bg-[#0f172a] flex items-center justify-center overflow-hidden">
           {IMAGES.map((img, i) => (
             <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
@@ -62,7 +91,6 @@ export default function LoginPage() {
             </div>
           ))}
           
-          {/* LOGO : Lien vers l'accueil */}
           <Link href="/" className="absolute top-8 left-8 z-30 hover:opacity-80 transition-opacity">
             <img src="/images/bzm-logo.png" className="h-9 w-auto" alt="Logo BZMarket" />
           </Link>
@@ -120,7 +148,6 @@ export default function LoginPage() {
               <Link href="/forgot-password" size={12} className="text-[12px] font-bold text-blue-700 hover:underline uppercase tracking-tight">Mot de passe oublié ?</Link>
             </div>
 
-            {/* BOUTON : Bleu uni */}
             <button 
               type="submit" 
               disabled={isLoading}
@@ -130,7 +157,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* FOOTER : Texte "Nouveau" agrandi et remonté */}
           <div className="pt-4 border-t border-slate-100 text-center space-y-6">
             <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">Nouveau sur BZMarket ?</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -148,7 +174,6 @@ export default function LoginPage() {
         </div>
       </div>
       
-      {/* RETOUR : Accueil */}
       <Link href="/" className="mt-12 text-slate-400 hover:text-blue-700 text-[11px] font-bold uppercase tracking-[0.3em] flex items-center gap-3 transition-all">
         <ArrowLeft size={16}/> Retour à la page d'accueil
       </Link>
