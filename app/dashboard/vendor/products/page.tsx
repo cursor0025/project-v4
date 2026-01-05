@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { 
-  Plus, Search, Edit, Trash2, Eye,
+  Plus, Search, Edit, Trash2, Eye, Filter,
   Package, TrendingUp, AlertCircle, Loader2, Archive,
-  CheckCircle, XCircle, Clock
+  CheckCircle, XCircle, Clock, ChevronDown
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast, { Toaster } from 'react-hot-toast'
@@ -19,6 +19,7 @@ interface Product {
   price: number
   old_price: number | null
   category: string
+  subcategory: string | null
   stock: number
   images: string[]
   metadata: Record<string, any>
@@ -27,6 +28,67 @@ interface Product {
   updated_at: string
   vendor_id: string
 }
+
+// ==================== 44 CATÉGORIES BZMarket ====================
+const CATEGORIES = [
+  { value: 'telephones_accessoires', label: '📱 Téléphones & Accessoires' },
+  { value: 'accessoires_auto_moto', label: '🏍️ Accessoires Auto & Moto' },
+  { value: 'vehicules', label: '🚗 Véhicules' },
+  { value: 'immobilier', label: '🏢 Immobilier' },
+  { value: 'informatique_it', label: '💻 Informatique & IT' },
+  { value: 'electronique', label: '📷 Électronique' },
+  { value: 'electromenager', label: '🏠 Électroménager' },
+  { value: 'gaming', label: '🎮 Gaming' },
+  { value: 'vetements_femme', label: '👗 Vêtements Femme' },
+  { value: 'vetements_homme', label: '👔 Vêtements Homme' },
+  { value: 'vetements_homme_classique', label: '🤵 Vêtements Homme Classique' },
+  { value: 'sportswear', label: '🏃 Sportswear' },
+  { value: 'vetements_bebe', label: '👶 Vêtements Bébé' },
+  { value: 'sante_beaute', label: '💄 Santé & Beauté' },
+  { value: 'cosmetiques', label: '💅 Cosmétiques' },
+  { value: 'salon_coiffure_homme', label: '💈 Salon de Coiffure – Homme' },
+  { value: 'salon_coiffure_esthetique_femme', label: '💇 Salon de Coiffure & Esthétique – Femme' },
+  { value: 'produits_naturels_herboristerie', label: '🌿 Produits Naturels & Herboristerie' },
+  { value: 'meubles_maison', label: '🛋️ Meubles & Maison' },
+  { value: 'textiles_maison', label: '🛏️ Textiles Maison' },
+  { value: 'decoration_maison', label: '🎨 Décoration Maison' },
+  { value: 'ustensiles_cuisine', label: '🍳 Ustensiles de Cuisine' },
+  { value: 'services_alimentaires', label: '🍽️ Services Alimentaires' },
+  { value: 'equipement_magasin_pro', label: '🏪 Équipement Magasin & Pro' },
+  { value: 'cuisinistes_cuisines_completes', label: '🔧 Cuisinistes & Cuisines Complètes' },
+  { value: 'sport_materiel_sportif', label: '⚽ Sport & Matériel Sportif' },
+  { value: 'bricolage', label: '🔨 Bricolage' },
+  { value: 'materiaux_equipements_construction', label: '🏗️ Matériaux & Équipements Construction' },
+  { value: 'pieces_detachees', label: '🔩 Pièces Détachées' },
+  { value: 'equipement_bebe', label: '🍼 Équipement Bébé' },
+  { value: 'artisanat', label: '🎭 Artisanat' },
+  { value: 'loisirs_divertissement', label: '🎪 Loisirs & Divertissement' },
+  { value: 'alimentation_epicerie', label: '🛒 Alimentation & Épicerie' },
+  { value: 'agences_voyage', label: '✈️ Agences de Voyage' },
+  { value: 'education', label: '📚 Éducation' },
+  { value: 'bijoux', label: '💎 Bijoux' },
+  { value: 'montres_lunettes', label: '⌚ Montres & Lunettes' },
+  { value: 'vape_cigarettes_electroniques', label: '💨 Vape & Cigarettes Électroniques' },
+  { value: 'materiel_medical', label: '⚕️ Matériel Médical' },
+  { value: 'promoteurs_immobiliers', label: '🏘️ Promoteurs Immobiliers' },
+  { value: 'engins_travaux_publics', label: '🚜 Engins de Travaux Publics' },
+  { value: 'fete_mariage', label: '💒 Fête & Mariage' },
+  { value: 'kaba', label: '🕋 Kaba' },
+  { value: 'divers', label: '📦 Divers' }
+]
+
+// ==================== COMPOSANT SKELETON ====================
+const ProductCardSkeleton = () => (
+  <div className="bg-[#161618] border border-white/5 rounded-2xl overflow-hidden animate-pulse">
+    <div className="aspect-square bg-white/5" />
+    <div className="p-5 space-y-3">
+      <div className="h-5 bg-white/5 rounded-lg w-3/4" />
+      <div className="h-4 bg-white/5 rounded-lg w-full" />
+      <div className="h-4 bg-white/5 rounded-lg w-2/3" />
+      <div className="h-8 bg-white/5 rounded-lg w-1/2 mt-4" />
+    </div>
+  </div>
+)
 
 // ==================== COMPOSANT PRINCIPAL ====================
 export default function ProductsPage() {
@@ -37,6 +99,7 @@ export default function ProductsPage() {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
+  // ==================== CHARGEMENT DES PRODUITS ====================
   useEffect(() => {
     fetchProducts()
   }, [])
@@ -73,10 +136,19 @@ export default function ProductsPage() {
     }
   }
 
+  // ==================== SUPPRESSION D'UN PRODUIT ====================
   const handleDelete = async (productId: string, productName: string) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${productName}" ?\n\nCette action est irréversible.`)) {
-      return
-    }
+    const confirmed = window.confirm(
+      `⚠️ ATTENTION - Action Irréversible\n\n` +
+      `Êtes-vous sûr de vouloir supprimer définitivement :\n` +
+      `"${productName}" ?\n\n` +
+      `• Le produit sera supprimé de la base de données\n` +
+      `• Toutes les images seront supprimées du stockage\n` +
+      `• Cette action ne peut pas être annulée\n\n` +
+      `Cliquez sur OK pour confirmer la suppression.`
+    )
+
+    if (!confirmed) return
 
     setIsDeleting(productId)
     toast.loading('Suppression en cours...', { id: 'delete' })
@@ -84,6 +156,7 @@ export default function ProductsPage() {
     try {
       const product = products.find(p => p.id === productId)
       
+      // Supprimer les images du Storage
       if (product && product.images && product.images.length > 0) {
         for (const imageUrl of product.images) {
           try {
@@ -97,6 +170,7 @@ export default function ProductsPage() {
         }
       }
 
+      // Supprimer le produit de la base de données
       const { error } = await supabase
         .from('products')
         .delete()
@@ -104,26 +178,38 @@ export default function ProductsPage() {
 
       if (error) throw error
 
-      toast.success('Produit supprimé avec succès !', { id: 'delete' })
+      toast.success('✅ Produit supprimé avec succès !', { id: 'delete', duration: 3000 })
+      
+      // Rafraîchir la liste
       fetchProducts()
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Erreur lors de la suppression', { id: 'delete' })
+      toast.error('❌ Erreur lors de la suppression', { id: 'delete' })
     } finally {
       setIsDeleting(null)
     }
   }
 
+  // ==================== CHANGEMENT DE STATUT ====================
   const handleStatusChange = async (productId: string, newStatus: 'active' | 'draft' | 'archived') => {
     try {
       const { error } = await supabase
         .from('products')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', productId)
 
       if (error) throw error
 
-      toast.success(`Statut modifié avec succès`)
+      toast.success(
+        newStatus === 'active' ? '✅ Produit activé' :
+        newStatus === 'draft' ? '📝 Produit mis en brouillon' :
+        '📦 Produit archivé',
+        { duration: 2000 }
+      )
+      
       fetchProducts()
     } catch (error) {
       console.error('Erreur:', error)
@@ -131,6 +217,7 @@ export default function ProductsPage() {
     }
   }
 
+  // ==================== FILTRAGE ====================
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -140,6 +227,7 @@ export default function ProductsPage() {
     return matchesSearch && matchesCategory && matchesStatus
   })
 
+  // ==================== STATISTIQUES EN TEMPS RÉEL ====================
   const stats = {
     total: products.length,
     active: products.filter(p => p.status === 'active').length,
@@ -149,13 +237,20 @@ export default function ProductsPage() {
     totalValue: products.reduce((sum, p) => sum + (p.price * p.stock), 0)
   }
 
+  // ==================== AFFICHAGE DU NOM DE CATÉGORIE ====================
+  const getCategoryLabel = (value: string) => {
+    const category = CATEGORIES.find(c => c.value === value)
+    return category ? category.label : value.replace(/_/g, ' ')
+  }
+
+  // ==================== RENDU ====================
   return (
     <div className="min-h-screen bg-[#0c0c0c] p-4 md:p-6 lg:p-8">
       <Toaster 
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1a1a1a',
+            background: '#161618',
             color: '#fff',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '12px'
@@ -175,6 +270,7 @@ export default function ProductsPage() {
         }}
       />
 
+      {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <motion.div
@@ -185,7 +281,7 @@ export default function ProductsPage() {
               Mes Produits
             </h1>
             <p className="text-gray-400">
-              Gérez votre catalogue de produits BZMarket
+              Gérez votre catalogue BZMarket en temps réel
             </p>
           </motion.div>
 
@@ -205,11 +301,12 @@ export default function ProductsPage() {
           </Link>
         </div>
 
+        {/* Statistiques en Temps Réel */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 
+            className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-5 
                      hover:border-blue-500/30 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
@@ -223,7 +320,7 @@ export default function ProductsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 
+            className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-5 
                      hover:border-green-500/30 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
@@ -237,7 +334,7 @@ export default function ProductsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 
+            className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-5 
                      hover:border-gray-500/30 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
@@ -251,7 +348,7 @@ export default function ProductsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 
+            className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-5 
                      hover:border-orange-500/30 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
@@ -265,7 +362,7 @@ export default function ProductsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 
+            className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-5 
                      hover:border-purple-500/30 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
@@ -279,7 +376,7 @@ export default function ProductsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 
+            className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-5 
                      hover:border-emerald-500/30 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
@@ -287,18 +384,20 @@ export default function ProductsPage() {
             </div>
             <p className="text-gray-400 text-xs mb-1">Valeur totale</p>
             <p className="text-white text-lg font-bold">
-              {(stats.totalValue / 1000).toFixed(0)}K DA
+              {stats.totalValue.toLocaleString('fr-DZ')} DA
             </p>
           </motion.div>
         </div>
 
+        {/* Filtres et Recherche */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5"
+          className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-5"
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Recherche */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -312,30 +411,32 @@ export default function ProductsPage() {
               />
             </div>
 
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white 
-                       focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 
-                       transition-all appearance-none cursor-pointer"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                backgroundSize: '1.25rem'
-              }}
-            >
-              <option value="all" className="bg-[#1a1a1a]">Toutes les catégories</option>
-              <option value="vehicules" className="bg-[#1a1a1a]">🚗 Véhicules</option>
-              <option value="telephonie" className="bg-[#1a1a1a]">📱 Téléphonie</option>
-              <option value="informatique" className="bg-[#1a1a1a]">💻 Informatique</option>
-              <option value="mode" className="bg-[#1a1a1a]">👕 Mode</option>
-              <option value="chaussures" className="bg-[#1a1a1a]">👟 Chaussures</option>
-              <option value="electromenager" className="bg-[#1a1a1a]">🏠 Électroménager</option>
-              <option value="immobilier" className="bg-[#1a1a1a]">🏢 Immobilier</option>
-              <option value="maison_deco" className="bg-[#1a1a1a]">🛋️ Maison & Déco</option>
-            </select>
+            {/* Filtre catégorie - 44 CATÉGORIES */}
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full pl-12 pr-10 py-3 bg-white/5 border border-white/10 rounded-xl text-white 
+                         focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 
+                         transition-all appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 1rem center',
+                  backgroundSize: '1.25rem'
+                }}
+              >
+                <option value="all" className="bg-[#161618]">Toutes les catégories</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value} className="bg-[#161618]">
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
+            {/* Filtre statut */}
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -349,17 +450,18 @@ export default function ProductsPage() {
                 backgroundSize: '1.25rem'
               }}
             >
-              <option value="all" className="bg-[#1a1a1a]">Tous les statuts</option>
-              <option value="active" className="bg-[#1a1a1a]">✅ Actif</option>
-              <option value="draft" className="bg-[#1a1a1a]">⏳ Brouillon</option>
-              <option value="archived" className="bg-[#1a1a1a]">📦 Archivé</option>
+              <option value="all" className="bg-[#161618]">Tous les statuts</option>
+              <option value="active" className="bg-[#161618]">✅ Actif</option>
+              <option value="draft" className="bg-[#161618]">📝 Brouillon</option>
+              <option value="archived" className="bg-[#161618]">📦 Archivé</option>
             </select>
           </div>
 
+          {/* Résultats */}
           {(searchQuery || selectedCategory !== 'all' || selectedStatus !== 'all') && (
             <div className="mt-4 pt-4 border-t border-white/10">
               <p className="text-sm text-gray-400">
-                {filteredProducts.length} produit(s) trouvé(s)
+                <span className="text-white font-semibold">{filteredProducts.length}</span> produit(s) trouvé(s)
                 {searchQuery && ` pour "${searchQuery}"`}
               </p>
             </div>
@@ -367,17 +469,19 @@ export default function ProductsPage() {
         </motion.div>
       </div>
 
+      {/* Liste des produits */}
       <div className="max-w-7xl mx-auto">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-4" />
-            <p className="text-gray-400">Chargement de vos produits...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-12 text-center"
+            className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl p-12 text-center"
           >
             <Package className="w-20 h-20 mx-auto text-gray-600 mb-4" />
             <h3 className="text-2xl font-bold text-white mb-2">
@@ -411,9 +515,10 @@ export default function ProductsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl 
+                className="bg-[#161618] backdrop-blur-xl border border-white/10 rounded-2xl 
                          overflow-hidden hover:border-blue-500/50 transition-all duration-300 group"
               >
+                {/* Image */}
                 <div className="relative aspect-square overflow-hidden bg-white/5">
                   {product.images && product.images.length > 0 ? (
                     <img
@@ -429,6 +534,7 @@ export default function ProductsPage() {
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
+                  {/* Badge réduction */}
                   {product.old_price && product.old_price > product.price && (
                     <motion.div
                       initial={{ scale: 0, rotate: -45 }}
@@ -442,6 +548,7 @@ export default function ProductsPage() {
                     </motion.div>
                   )}
 
+                  {/* Badge statut */}
                   <div className="absolute top-3 right-3">
                     <span className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg ${
                       product.status === 'active' 
@@ -450,10 +557,11 @@ export default function ProductsPage() {
                           ? 'bg-gray-500 text-white'
                           : 'bg-orange-500 text-white'
                     }`}>
-                      {product.status === 'active' ? '✓ Actif' : product.status === 'draft' ? '⏳ Brouillon' : '📦 Archivé'}
+                      {product.status === 'active' ? '✓ Actif' : product.status === 'draft' ? '📝 Brouillon' : '📦 Archivé'}
                     </span>
                   </div>
 
+                  {/* Badge stock faible */}
                   {product.stock < 5 && product.stock > 0 && product.status === 'active' && (
                     <motion.div
                       initial={{ x: -100 }}
@@ -467,6 +575,7 @@ export default function ProductsPage() {
                     </motion.div>
                   )}
 
+                  {/* Badge rupture de stock */}
                   {product.stock === 0 && (
                     <motion.div
                       initial={{ x: -100 }}
@@ -480,6 +589,7 @@ export default function ProductsPage() {
                     </motion.div>
                   )}
 
+                  {/* Nombre d'images */}
                   {product.images && product.images.length > 1 && (
                     <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 backdrop-blur-sm rounded-lg">
                       <span className="text-white text-xs font-semibold flex items-center gap-1">
@@ -490,6 +600,7 @@ export default function ProductsPage() {
                   )}
                 </div>
 
+                {/* Infos */}
                 <div className="p-5">
                   <h3 className="text-white font-bold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
                     {product.name}
@@ -503,12 +614,12 @@ export default function ProductsPage() {
 
                   <div className="flex items-baseline gap-2 mb-3">
                     <span className="text-2xl font-black text-white">
-                      {product.price.toLocaleString()}
+                      {product.price.toLocaleString('fr-DZ')}
                     </span>
                     <span className="text-sm text-gray-400">DA</span>
                     {product.old_price && product.old_price > product.price && (
                       <span className="text-gray-500 line-through text-sm ml-auto">
-                        {product.old_price.toLocaleString()} DA
+                        {product.old_price.toLocaleString('fr-DZ')} DA
                       </span>
                     )}
                   </div>
@@ -518,11 +629,12 @@ export default function ProductsPage() {
                       <Package className="w-4 h-4" />
                       Stock: <span className="text-white font-semibold">{product.stock}</span>
                     </span>
-                    <span className="text-gray-400 capitalize">
-                      {product.category.replace('_', ' ')}
+                    <span className="text-gray-400 text-xs">
+                      {getCategoryLabel(product.category)}
                     </span>
                   </div>
 
+                  {/* Menu de changement de statut */}
                   <div className="mb-3">
                     <label className="block text-xs text-gray-400 mb-2 font-semibold">
                       Changer le statut :
@@ -533,12 +645,13 @@ export default function ProductsPage() {
                       className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white 
                                text-sm focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
                     >
-                      <option value="active" className="bg-[#1a1a1a]">✅ Actif</option>
-                      <option value="draft" className="bg-[#1a1a1a]">⏳ Brouillon</option>
-                      <option value="archived" className="bg-[#1a1a1a]">📦 Archivé</option>
+                      <option value="active" className="bg-[#161618]">✅ Actif</option>
+                      <option value="draft" className="bg-[#161618]">📝 Brouillon</option>
+                      <option value="archived" className="bg-[#161618]">📦 Archivé</option>
                     </select>
                   </div>
 
+                  {/* Actions */}
                   <div className="flex items-center gap-2">
                     <Link href={`/dashboard/vendor/products/${product.id}/edit`} className="flex-1">
                       <motion.button
@@ -570,6 +683,7 @@ export default function ProductsPage() {
                     </motion.button>
                   </div>
 
+                  {/* Date de création */}
                   <div className="mt-3 pt-3 border-t border-white/10">
                     <p className="text-xs text-gray-500">
                       Créé le {new Date(product.created_at).toLocaleDateString('fr-FR', { 

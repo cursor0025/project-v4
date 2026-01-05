@@ -12,7 +12,7 @@ import {
 const menuItems = [
   { icon: <LayoutDashboard size={20} />, label: "Tableau de bord", href: "/dashboard/vendor" },
   { icon: <BarChart3 size={20} />, label: "Analyses & Perf.", href: "/dashboard/analytics" },
-  { icon: <Package size={20} />, label: "Gestion produits", href: "/dashboard/products" },
+  { icon: <Package size={20} />, label: "Gestion produits", href: "/dashboard/vendor/products" },
   { icon: <MessageSquare size={20} />, label: "Messages", href: "/dashboard/messages" },
   { icon: <UserCircle size={20} />, label: "Mon profil", href: "/dashboard/profile" },
   { icon: <ClipboardList size={20} />, label: "Commandes", href: "/dashboard/orders" },
@@ -28,7 +28,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 min-h-screen bg-[#0b0f1a] border-r border-white/5 flex flex-col p-4 hidden lg:flex sticky top-0 transition-all">
       
-      {/* LOGO SECTION - ENCORE PLUS GRAND ET CENTRÉ (cite: 1.1) */}
+      {/* LOGO SECTION - ENCORE PLUS GRAND ET CENTRÉ */}
       <div className="flex justify-center w-full mb-12 pt-6">
         <Link href="/" className="hover:opacity-80 transition-opacity cursor-pointer">
           <img 
