@@ -18,8 +18,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Nécessaire pour la navigation
 
-export default function OverviewPage() {
+export default function VendorDashboard() {
   const { logout } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
@@ -52,21 +53,24 @@ export default function OverviewPage() {
             <span className="bg-cyan-500/20 text-cyan-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-500/30">PRO</span>
           </div>
           <p className="text-gray-500 text-sm mt-1 flex items-center gap-2 font-medium">
-            <Clock size={14} /> Aujourd'hui, mardi 23 décembre 2025
+            <Clock size={14} /> Aujourd'hui, dimanche 4 janvier 2026
           </p>
         </div>
         
         <div className="flex items-center gap-3">
-          {/* NOUVEAU PRODUIT - Couleur Émeraude */}
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-sm font-bold hover:bg-emerald-500 hover:text-black transition-all duration-300 shadow-lg shadow-emerald-500/10">
+          {/* MODIFICATION ICI : Utilisation de Link pour aller vers /create */}
+          <Link 
+            href="/dashboard/vendor/products/create" 
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-sm font-bold hover:bg-emerald-500 hover:text-black transition-all duration-300 shadow-lg shadow-emerald-500/10"
+          >
             <Plus size={18} /> Nouveau Produit
-          </button>
+          </Link>
           
           <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 text-black text-sm font-bold hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/20">
             <ExternalLink size={18} /> Voir Boutique
           </button>
 
-          {/* DÉCONNEXION - Discret */}
+          {/* DÉCONNEXION */}
           <button 
             onClick={() => logout()}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/5 bg-white/[0.03] text-gray-400 text-sm font-semibold hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20 transition-all duration-300"
@@ -149,7 +153,7 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* TOP SOUS-CATÉGORIES - Mis à jour pour Téléphonie */}
+        {/* TOP SOUS-CATÉGORIES */}
         <div className="bg-[#161618] border border-white/5 rounded-[32px] p-8 flex flex-col h-full shadow-2xl">
           <h3 className="text-xl font-bold text-white mb-8 tracking-tight">Top Sous-catégories</h3>
           <div className="space-y-8 flex-1">

@@ -23,6 +23,7 @@ const categoriesList = [
   "41. Engins de Travaux Publics", "42. Fête & Mariage", "43. Kaba", "44. Divers"
 ];
 
+// LISTE COMPLÈTE DES 58 WILAYAS
 const wilayaData: { [key: string]: string[] } = {
   "01 — Adrar": ["Adrar", "Reggane", "In Zghmir", "Tsabit"],
   "02 — Chlef": ["Chlef", "Ténès", "Boukadir"],
@@ -168,7 +169,7 @@ export default function RegisterVendorForm() {
         email: formData.email,
         password: formData.password,
         options: { 
-          data: { first_name: formData.prenom, last_name: formData.nom }
+          data: { first_name: formData.prenom, last_name: formData.nom, role: 'vendor' }
         }
       });
       if (error) throw error;
@@ -194,25 +195,34 @@ export default function RegisterVendorForm() {
       if (vErr) throw vErr;
 
       if (data.user) {
+        const { error: profErr } = await supabase.from('profiles').upsert([{
+            id: data.user.id,
+            first_name: formData.prenom,
+            last_name: formData.nom,
+            role: 'vendor',
+            phone: formData.telephone
+        }]);
+
+        if (profErr) throw new Error("Profil utilisateur : " + profErr.message);
+
         const vendorData = {
           id: data.user.id,
           shop_name: formData.shopName,
           category: formData.category,
           wilaya: formData.wilaya,
           commune: formData.commune,
-          telephone: formData.telephone // Cette donnée correspond à la nouvelle colonne !
+          telephone: formData.telephone 
         };
         
         const { error: dbErr } = await supabase.from('vendors').insert([vendorData]);
         
         if (dbErr) {
-          console.error("Détail de l'erreur base de données :", dbErr);
-          throw new Error("Impossible de créer votre profil boutique : " + dbErr.message);
+          throw new Error("Profil boutique : " + dbErr.message);
         }
       }
 
       toast.success("Bienvenue sur BZMarket !");
-      router.push('/dashboard');
+      router.push('/dashboard/vendor');
     } catch (err: any) {
       toast.error("Erreur : " + err.message);
     } finally {
@@ -359,4 +369,3 @@ function UploadBox({ label, onFileChange }: { label: string, onFileChange: (has:
     </label>
   );
 }
-

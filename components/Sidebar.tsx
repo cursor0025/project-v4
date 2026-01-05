@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { icon: <LayoutDashboard size={20} />, label: "Tableau de bord", href: "/dashboard" },
+  { icon: <LayoutDashboard size={20} />, label: "Tableau de bord", href: "/dashboard/vendor" },
   { icon: <BarChart3 size={20} />, label: "Analyses & Perf.", href: "/dashboard/analytics" },
   { icon: <Package size={20} />, label: "Gestion produits", href: "/dashboard/products" },
   { icon: <MessageSquare size={20} />, label: "Messages", href: "/dashboard/messages" },
@@ -27,12 +27,16 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 min-h-screen bg-[#0b0f1a] border-r border-white/5 flex flex-col p-4 hidden lg:flex sticky top-0 transition-all">
-      {/* LOGO SECTION */}
-      <div className="flex items-center gap-3 mb-10 px-2 pt-2">
-        <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg shadow-orange-500/20">
-          BZ
-        </div>
-        <span className="text-xl font-black text-white tracking-tighter">BZMarket</span>
+      
+      {/* LOGO SECTION - ENCORE PLUS GRAND ET CENTRÉ (cite: 1.1) */}
+      <div className="flex justify-center w-full mb-12 pt-6">
+        <Link href="/" className="hover:opacity-80 transition-opacity cursor-pointer">
+          <img 
+            src="/images/bzm-logo.png" 
+            alt="Logo BZMarket" 
+            className="h-20 w-auto" // Taille augmentée à h-20 (80px)
+          />
+        </Link>
       </div>
 
       {/* NAVIGATION ITEMS */}

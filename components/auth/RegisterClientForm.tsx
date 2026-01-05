@@ -134,8 +134,10 @@ export default function RegisterClientForm() {
       if (vErr) throw vErr;
 
       if (data.user) {
+        // CORRECTION : Ajout de email: formData.email pour éviter le NULL en base de données
         const { error: dbErr } = await supabase.from('profiles').upsert([{
           id: data.user.id,
+          email: formData.email, // <--- LIGNE AJOUTÉE ICI
           first_name: formData.prenom,
           last_name: formData.nom,
           gender: formData.gender,
@@ -154,7 +156,7 @@ export default function RegisterClientForm() {
       }
 
       toast.success("Bienvenue sur BZMarket !");
-      router.push('/dashboard');
+      router.push('/'); 
     } catch (err: any) {
       toast.error(err.message || "Code invalide.");
     } finally {
@@ -186,13 +188,8 @@ export default function RegisterClientForm() {
   }
 
   return (
-    /* CORRECTION ARROW 1 : Utilisation de w-full et items-center pour un dégradé sans bords blancs */
     <div className="min-h-screen w-full bg-gradient-to-t from-[#0b1120] via-[#1e293b] to-[#f0f9ff] p-5 pb-20 font-sans text-black flex flex-col items-center">
-      
-      {/* Carte du formulaire centrée à 1000px */}
       <div className="max-w-[1000px] w-full bg-white rounded-[25px] overflow-hidden shadow-2xl relative border border-white/20">
-        
-        {/* HEADER SECTION */}
         <div className="relative w-full h-[320px] bg-[#0f172a] flex items-center justify-center overflow-hidden">
           {IMAGES.map((img, i) => (
             <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
@@ -206,7 +203,6 @@ export default function RegisterClientForm() {
           </div>
           <div className="absolute top-8 left-8 z-20"><img src="/images/bzm-logo.png" className="h-10 w-auto" alt="Logo" /></div>
           
-          {/* CORRECTION ARROW 2 : Titre harmonisé avec le style vendeur (plus de uppercase forcé) */}
           <h1 className="text-5xl font-black text-white text-center px-10 drop-shadow-xl z-10 tracking-tighter">
             Espace <span className="text-blue-500">Client</span> BZMarket
           </h1>

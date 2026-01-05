@@ -30,10 +30,10 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // MODIFICATION DE LA LOGIQUE DE CONNEXION
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
     try {
       // 1. Authentification avec Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -44,7 +44,7 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user) {
-        // 2. Récupération du rôle dans la table "profiles"
+        // 2. Récupération du rôle dans la table "profiles" pour redirection correcte
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
@@ -52,27 +52,32 @@ export default function LoginPage() {
           .single();
 
         if (profileError) {
-          console.error("Erreur profil:", profileError);
-          // En cas d'erreur de profil, on redirige par défaut vers l'accueil pour ne pas bloquer l'utilisateur
+          console.error("Erreur récupération profil:", profileError);
+          // Si le profil est introuvable, on redirige vers l'accueil par sécurité
           router.push('/');
           return;
         }
 
-        toast.success("Bienvenue sur BZMarket");
+        toast.success("Connexion réussie !");
 
-        // 3. Logique de redirection finale selon le rôle
+        // 3. Logique de redirection stricte selon le rôle (cite: 1.1, 1.3)
         if (profile?.role === 'vendor') {
-          // Si c'est un vendeur (monsieurz002@gmail.com) -> Dashboard Vendeur
+          // Redirection forcée vers le Dashboard Vendeur
           router.push('/dashboard/vendor');
+        } else if (profile?.role === 'client') {
+          // Redirection vers l'accueil pour les clients
+          router.push('/');
         } else {
-          // Si c'est un client (zifa2524@gmail.com) -> Page d'accueil [/]
+          // Par défaut vers l'accueil
           router.push('/');
         }
         
+        // Rafraîchir les données de la route pour mettre à jour l'état de session
         router.refresh();
       }
     } catch (err: any) {
-      toast.error("Identifiants incorrects");
+      console.error("Erreur login:", err);
+      toast.error("Identifiants incorrects ou compte non vérifié");
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +88,7 @@ export default function LoginPage() {
       
       <div className="max-w-[650px] w-full bg-white rounded-[35px] overflow-hidden shadow-2xl border border-white/20">
         
-        {/* CARROUSEL */}
+        {/* HEADER / CARROUSEL */}
         <div className="relative w-full h-[280px] bg-[#0f172a] flex items-center justify-center overflow-hidden">
           {IMAGES.map((img, i) => (
             <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
@@ -145,7 +150,7 @@ export default function LoginPage() {
             </div>
 
             <div className="flex justify-end px-1">
-              <Link href="/forgot-password" size={12} className="text-[12px] font-bold text-blue-700 hover:underline uppercase tracking-tight">Mot de passe oublié ?</Link>
+              <Link href="/forgot-password text-[12px] font-bold text-blue-700 hover:underline uppercase tracking-tight">Mot de passe oublié ?</Link>
             </div>
 
             <button 
