@@ -1080,9 +1080,11 @@
     cursor: pointer;
 }
 
+
 /* ===========================================
    🚀 OPTIMISATIONS PERFORMANCE & SKELETON SCREENS
    =========================================== */
+
 
 .gauge-value,
 .donut-chart circle,
@@ -1092,16 +1094,19 @@
     will-change: transform, opacity;
 }
 
+
 .logo-image {
     height: auto;
     width: auto;
     max-height: 65px;
 }
 
+
 .avatar-image {
     border-radius: 50%;
     object-fit: cover;
 }
+
 
 @keyframes skeleton-pulse {
     0%, 100% {
@@ -1111,6 +1116,7 @@
         opacity: 0.5;
     }
 }
+
 
 .skeleton {
     background: linear-gradient(
@@ -1124,6 +1130,7 @@
     border-radius: 8px;
 }
 
+
 @keyframes skeleton-loading {
     0% {
         background-position: 200% 0;
@@ -1133,17 +1140,20 @@
     }
 }
 
+
 .skeleton-text-small {
     height: 12px;
     width: 60%;
     margin-bottom: 8px;
 }
 
+
 .skeleton-text-large {
     height: 28px;
     width: 80%;
     margin-bottom: 12px;
 }
+
 
 .skeleton-text-inline {
     display: inline-block;
@@ -1153,11 +1163,13 @@
     border-radius: 4px;
 }
 
+
 .skeleton-icon {
     width: 38px;
     height: 38px;
     border-radius: 10px;
 }
+
 
 .skeleton-avatar {
     width: 100%;
@@ -1173,6 +1185,7 @@
     animation: skeleton-loading 1.5s ease-in-out infinite;
 }
 
+
 .skeleton-circle {
     width: 140px;
     height: 140px;
@@ -1180,11 +1193,13 @@
     margin-bottom: 15px;
 }
 
+
 .skeleton-chart {
     width: 100%;
     height: 220px;
     border-radius: 12px;
 }
+
 
 .skeleton-card {
     background: rgba(26, 31, 46, 0.4) !important;
@@ -1195,19 +1210,23 @@
     pointer-events: none;
 }
 
+
 .skeleton-card .stat-header {
     display: flex;
     justify-content: space-between;
     margin-bottom: 12px;
 }
 
+
 .skeleton-card::before {
     display: none;
 }
 
+
 .content-section {
     animation: fadeInUp 0.4s ease-out;
 }
+
 
 @keyframes fadeInUp {
     from {
@@ -1220,9 +1239,11 @@
     }
 }
 
+
 .stats-grid {
     animation: fadeIn 0.5s ease-out;
 }
+
 
 @keyframes fadeIn {
     from {
@@ -1233,18 +1254,22 @@
     }
 }
 
+
 .donut-chart {
     will-change: transform;
 }
+
 
 .donut-chart circle {
     will-change: stroke-dashoffset;
 }
 
+
 .gauge-value {
     will-change: stroke-dashoffset;
     transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 
 .sidebar,
 .top-header,
@@ -1256,6 +1281,7 @@
     perspective: 1000px;
 }
 
+
 .sidebar {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -1263,13 +1289,16 @@
     scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
 }
 
+
 .sidebar::-webkit-scrollbar {
     width: 6px;
 }
 
+
 .sidebar::-webkit-scrollbar-track {
     background: transparent;
 }
+
 
 .sidebar::-webkit-scrollbar-thumb {
     background: rgba(59, 130, 246, 0.3);
@@ -1277,9 +1306,11 @@
     transition: background 0.3s;
 }
 
+
 .sidebar::-webkit-scrollbar-thumb:hover {
     background: rgba(59, 130, 246, 0.5);
 }
+
 
 .conversations-list,
 .chat-messages {
@@ -1287,15 +1318,18 @@
     scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
 }
 
+
 .conversations-list::-webkit-scrollbar,
 .chat-messages::-webkit-scrollbar {
     width: 6px;
 }
 
+
 .conversations-list::-webkit-scrollbar-track,
 .chat-messages::-webkit-scrollbar-track {
     background: transparent;
 }
+
 
 .conversations-list::-webkit-scrollbar-thumb,
 .chat-messages::-webkit-scrollbar-thumb {
@@ -1303,20 +1337,24 @@
     border-radius: 3px;
 }
 
+
 .conversations-list::-webkit-scrollbar-thumb:hover,
 .chat-messages::-webkit-scrollbar-thumb:hover {
     background: rgba(59, 130, 246, 0.5);
 }
+
 
 @font-face {
     font-family: 'Segoe UI';
     font-display: swap;
 }
 
+
 img {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
 }
+
 
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -1328,9 +1366,11 @@ img {
     }
 }
 
+
 /* ===========================================
    🔥 REFONTE STRUCTURELLE - HEADER + DONUT UNIQUE
    =========================================== */
+
 
 /* TÂCHE 1 : HEADER RESTRUCTURÉ - Barre de recherche centrée */
 .top-header {
@@ -1340,10 +1380,12 @@ img {
     gap: 20px;
 }
 
+
 .header-left {
     flex: 0 0 auto;
     min-width: 200px;
 }
+
 
 .search-box-centered {
     position: relative;
@@ -1352,6 +1394,7 @@ img {
     display: flex;
     justify-content: center;
 }
+
 
 .search-box-centered input {
     background: #0f1419;
@@ -1364,11 +1407,13 @@ img {
     transition: all 0.3s;
 }
 
+
 .search-box-centered input:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
+
 
 .search-box-centered .search-icon {
     position: absolute;
@@ -1379,12 +1424,14 @@ img {
     pointer-events: none;
 }
 
+
 .header-right {
     display: flex;
     gap: 15px;
     align-items: center;
     flex: 0 0 auto;
 }
+
 
 /* TÂCHE 2 : DONUT CHART AGRANDI UNIQUE */
 .categories-wrapper-single {
@@ -1393,6 +1440,7 @@ img {
     align-items: center;
     padding: 40px 20px;
 }
+
 
 .donut-wrapper-large {
     display: flex;
@@ -1406,11 +1454,13 @@ img {
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+
 .donut-wrapper-large:hover {
     transform: scale(1.02);
     background: rgba(26, 31, 46, 0.5);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
+
 
 .donut-chart-large {
     width: 280px;
@@ -1418,11 +1468,13 @@ img {
     position: relative;
 }
 
+
 .donut-chart-large svg {
     width: 100%;
     height: 100%;
     filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.3));
 }
+
 
 .donut-center-large {
     position: absolute;
@@ -1432,6 +1484,7 @@ img {
     text-align: center;
 }
 
+
 .donut-value-large {
     font-size: 42px;
     font-weight: 800;
@@ -1439,6 +1492,7 @@ img {
     display: block;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
+
 
 .donut-label-large {
     font-size: 13px;
@@ -1448,6 +1502,7 @@ img {
     font-weight: 600;
 }
 
+
 .donut-legend-large {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1455,6 +1510,7 @@ img {
     width: 100%;
     max-width: 400px;
 }
+
 
 .donut-legend-item-large {
     display: flex;
@@ -1466,10 +1522,12 @@ img {
     transition: all 0.3s;
 }
 
+
 .donut-legend-item-large:hover {
     background: rgba(15, 20, 25, 0.8);
     transform: translateX(5px);
 }
+
 
 .donut-legend-color-large {
     width: 14px;
@@ -1479,6 +1537,7 @@ img {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+
 .donut-legend-text-large {
     flex: 1;
     color: #9ca3af;
@@ -1486,25 +1545,298 @@ img {
     font-weight: 500;
 }
 
+
 .donut-legend-value-large {
     font-weight: 700;
     color: white;
     font-size: 15px;
 }
 
+
 /* TÂCHE 3 : FINITION DORÉE - Récompenses */
 .stat-card.gold {
     border: 1px solid rgba(251, 191, 36, 0.2);
 }
+
 
 .stat-card.gold::before {
     background: linear-gradient(90deg, #fbbf24, #f59e0b);
     height: 4px;
 }
 
+
 .stat-card.gold:hover {
     box-shadow: 0 10px 30px rgba(251, 191, 36, 0.2);
 }
+
+
+/* ===========================================
+   ✨ HEADER MODERNE - RECHERCHE CENTRÉE + AVATAR
+   =========================================== */
+
+/* Barre de recherche agrandie centrée */
+.search-box-centered {
+  position: relative;
+  flex: 1;
+  max-width: 900px;
+  display: flex;
+  justify-content: center;
+}
+
+.search-input-large {
+  background: #0f1419;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 14px 20px 14px 50px;
+  border-radius: 12px;
+  color: white;
+  width: 100%;
+  font-size: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.search-input-large:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1),
+              0 4px 20px rgba(249, 115, 22, 0.2);
+  transform: translateY(-1px);
+}
+
+.search-input-large::placeholder {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.search-box-centered .search-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  transition: color 0.3s;
+}
+
+.search-input-large:focus ~ .search-icon,
+.search-box-centered:has(.search-input-large:focus) .search-icon {
+  color: #f97316;
+}
+
+/* ===========================================
+   🔔 NOTIFICATIONS BADGE MODERNE
+   =========================================== */
+
+.notification-btn-modern {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification-btn-modern:hover {
+  background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+  border-color: #ef4444;
+  color: #ef4444;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
+}
+
+.badge-notif {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 12px;
+  border: 2px solid #0f1419;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  animation: pulse-notif 2s ease-in-out infinite;
+}
+
+@keyframes pulse-notif {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* ===========================================
+   🛒 PANIER BADGE MODERNE
+   =========================================== */
+
+.cart-btn-modern {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+}
+
+.cart-btn-modern:hover {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.5);
+}
+
+.badge-cart {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #0f1419;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 12px;
+  border: 2px solid #0f1419;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+  animation: bounce-cart 3s ease-in-out infinite;
+}
+
+@keyframes bounce-cart {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* ===========================================
+   👤 AVATAR PROFIL MODERNE
+   =========================================== */
+
+.profile-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 8px 16px 8px 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-avatar-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.profile-avatar-btn:hover::before {
+  left: 100%;
+}
+
+.profile-avatar-btn:hover {
+  border-color: #f97316;
+  background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.15);
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 18px;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+  transition: all 0.3s;
+}
+
+.profile-avatar-btn:hover .user-avatar {
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5);
+  transform: scale(1.08);
+}
+
+.avatar-initial {
+  display: block;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.user-role {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-dropdown-icon {
+  color: #6b7280;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.profile-avatar-btn:hover .user-dropdown-icon {
+  color: #f97316;
+  transform: translateY(2px);
+}
+
 
 /* RESPONSIVE */
 @media (max-width: 1366px) {
@@ -1515,7 +1847,7 @@ img {
         width: 700px;
     }
     .search-box-centered {
-        max-width: 600px;
+        max-width: 650px;
     }
     .donut-chart-large {
         width: 240px;
@@ -1523,6 +1855,9 @@ img {
     }
     .donut-value-large {
         font-size: 36px;
+    }
+    .user-name {
+        max-width: 100px;
     }
 }
  
@@ -1557,6 +1892,11 @@ img {
     }
     .skeleton-text-small {
         width: 70%;
+    }
+    .notification-btn-modern,
+    .cart-btn-modern {
+        width: 46px;
+        height: 46px;
     }
 }
  
@@ -1597,7 +1937,26 @@ img {
     .donut-legend-large {
         max-width: 100%;
     }
+    .user-info {
+        display: none;
+    }
+    .user-dropdown-icon {
+        display: none;
+    }
+    .profile-avatar-btn {
+        padding: 8px;
+    }
+    .search-input-large {
+        font-size: 13px;
+        padding: 12px 16px 12px 42px;
+    }
+    .badge-notif,
+    .badge-cart {
+        font-size: 10px;
+        padding: 2px 5px;
+    }
 }
+
 
 @media (max-width: 480px) {
     .search-box,
@@ -1605,11 +1964,21 @@ img {
         display: none;
     }
     .notification-btn,
-    .cart-btn {
+    .cart-btn,
+    .notification-btn-modern,
+    .cart-btn-modern {
         width: 42px;
         height: 42px;
     }
     .user-info {
         display: none;
+    }
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    .header-right {
+        gap: 8px;
     }
 }
