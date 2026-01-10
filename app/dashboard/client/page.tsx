@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -20,6 +20,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('7days')
+  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' })
+  const chartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -55,9 +57,54 @@ export default function DashboardPage() {
     checkAccess()
   }, [])
 
+  // Animation progressive des gauges
+  useEffect(() => {
+    if (!loading) {
+      const gauges = document.querySelectorAll('.gauge-value')
+      gauges.forEach((gauge, index) => {
+        const circle = gauge as SVGCircleElement
+        const offset = circle.style.strokeDashoffset
+        circle.style.strokeDashoffset = '346.36' // Reset
+        setTimeout(() => {
+          circle.style.strokeDashoffset = offset
+        }, 100 + index * 100)
+      })
+    }
+  }, [loading])
+
+  // Header sticky effect
+  useEffect(() => {
+    const handleScroll = () => {
+      const header = document.querySelector('.top-header')
+      if (header) {
+        if (window.scrollY > 20) {
+          header.classList.add('scrolled')
+        } else {
+          header.classList.remove('scrolled')
+        }
+      }
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
+  }
+
+  const handleChartHover = (e: React.MouseEvent, day: string, value: string) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setTooltip({
+      visible: true,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10,
+      content: `${day}: ${value} DA`
+    })
+  }
+
+  const handleChartLeave = () => {
+    setTooltip({ ...tooltip, visible: false })
   }
 
   // --- COMPOSANTS DE CHARGEMENT (SKELETONS) ---
@@ -95,6 +142,7 @@ export default function DashboardPage() {
               cx="70" cy="70" r={radius} 
               strokeDasharray={circumference}
               strokeDashoffset={offset}
+              style={{ strokeDashoffset: circumference }}
             />
           </svg>
           <span className="gauge-percentage">{percent}%</span>
@@ -136,9 +184,10 @@ export default function DashboardPage() {
                   strokeDasharray={`${segmentLength} ${circumference}`}
                   strokeDashoffset={-offset}
                   style={{ 
-                    transition: 'stroke-dashoffset 1s ease',
+                    transition: 'all 0.3s ease',
                     transform: 'rotate(-90deg)',
-                    transformOrigin: '50% 50%'
+                    transformOrigin: '50% 50%',
+                    cursor: 'pointer'
                   }}
                 />
               )
@@ -166,7 +215,7 @@ export default function DashboardPage() {
     <div className="w-full">
       <main className="w-full">
         
-        {/* EN-TÊTE DE LA PAGE - VERSION MODERNISÉE */}
+        {/* EN-TÊTE DE LA PAGE - VERSION ULTRA-PREMIUM */}
         <div className="top-header">
           {/* GAUCHE : Titre de bienvenue */}
           <div className="header-left">
@@ -214,7 +263,6 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <>
-                  {/* Photo de profil circulaire */}
                   <div className="user-avatar">
                     {user?.user_metadata?.avatar_url ? (
                       <img 
@@ -229,7 +277,6 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Infos utilisateur */}
                   <div className="user-info">
                     <h4 className="user-name">
                       {user?.user_metadata?.full_name || 'Farah Zinou'}
@@ -237,7 +284,6 @@ export default function DashboardPage() {
                     <p className="user-role">Client BZMarket</p>
                   </div>
 
-                  {/* Icône dropdown */}
                   <User size={16} className="user-dropdown-icon" />
                 </>
               )}
@@ -256,29 +302,76 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <div className="stat-card blue">
-                    <div className="stat-header"><div className="stat-title">Total Dépensé</div><div className="stat-icon"><Wallet size={18} /></div></div>
+                    <div className="stat-header">
+                      <div className="stat-title">Total Dépensé</div>
+                      <div className="stat-icon"><Wallet size={18} /></div>
+                    </div>
                     <div className="stat-value">350,776 DA</div>
-                    <div className="stat-footer" style={{display:'flex', justifyContent:'space-between'}}><div className="stat-change positive">12.95%</div><div className="stat-label">Transactions</div></div>
+                    <div className="stat-footer" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <div className="stat-change positive">
+                        <TrendingUp size={14} />
+                        12.95%
+                      </div>
+                      <div className="stat-label">Transactions</div>
+                    </div>
+                    <svg className="stat-sparkline" viewBox="0 0 100 30">
+                      <polyline 
+                        points="0,20 20,15 40,18 60,10 80,8 100,5" 
+                        style={{ stroke: '#3b82f6' }}
+                      />
+                    </svg>
                   </div>
+
                   <div className="stat-card green">
-                    <div className="stat-header"><div className="stat-title">Achats Totaux</div><div className="stat-icon"><ShoppingBag size={18} /></div></div>
+                    <div className="stat-header">
+                      <div className="stat-title">Achats Totaux</div>
+                      <div className="stat-icon"><ShoppingBag size={18} /></div>
+                    </div>
                     <div className="stat-value">142</div>
-                    <div className="stat-footer" style={{textAlign:'right'}}><div className="stat-label">Produits</div></div>
+                    <div className="stat-footer" style={{textAlign:'right'}}>
+                      <div className="stat-label">Produits</div>
+                    </div>
+                    <svg className="stat-sparkline" viewBox="0 0 100 30">
+                      <polyline 
+                        points="0,25 20,20 40,22 60,15 80,12 100,10" 
+                        style={{ stroke: '#10b981' }}
+                      />
+                    </svg>
                   </div>
+
                   <div className="stat-card purple">
-                    <div className="stat-header"><div className="stat-title">Boutiques Suivies</div><div className="stat-icon"><Store size={18} /></div></div>
+                    <div className="stat-header">
+                      <div className="stat-title">Boutiques Suivies</div>
+                      <div className="stat-icon"><Store size={18} /></div>
+                    </div>
                     <div className="stat-value">8</div>
-                    <div className="stat-footer" style={{textAlign:'right'}}><div className="stat-label">Boutiques</div></div>
+                    <div className="stat-footer" style={{textAlign:'right'}}>
+                      <div className="stat-label">Boutiques</div>
+                    </div>
                   </div>
+
                   <div className="stat-card cyan">
-                    <div className="stat-header"><div className="stat-title">Messages</div><div className="stat-icon"><Mail size={18} /></div></div>
+                    <div className="stat-header">
+                      <div className="stat-title">Messages</div>
+                      <div className="stat-icon"><Mail size={18} /></div>
+                    </div>
                     <div className="stat-value">12</div>
-                    <div className="stat-footer" style={{textAlign:'right'}}><div className="stat-label">Non lus</div></div>
+                    <div className="stat-footer" style={{textAlign:'right'}}>
+                      <div className="stat-label">Non lus</div>
+                    </div>
                   </div>
+
                   <div className="stat-card gold">
-                    <div className="stat-header"><div className="stat-title">Récompenses BZM</div><div className="stat-icon"><Coins size={18} style={{color: '#fbbf24'}} /></div></div>
+                    <div className="stat-header">
+                      <div className="stat-title">Récompenses BZM</div>
+                      <div className="stat-icon"><Coins size={18} style={{color: '#fbbf24'}} /></div>
+                    </div>
                     <div className="stat-value">450 <span style={{fontSize: '12px'}}>Pts</span></div>
-                    <div className="stat-footer"><div className="progress-bar" style={{width: '100%', height: '4px', background: '#0f1419', borderRadius: '10px', overflow: 'hidden', marginTop:'5px'}}><div style={{width: '75%', height: '100%', background: '#fbbf24'}}></div></div></div>
+                    <div className="stat-footer">
+                      <div className="progress-bar" style={{width: '100%', height: '4px', background: '#0f1419', borderRadius: '10px', overflow: 'hidden', marginTop:'5px'}}>
+                        <div style={{width: '75%', height: '100%', background: 'linear-gradient(90deg, #fbbf24, #fcd34d)', transition: 'width 1s ease'}}></div>
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
@@ -293,7 +386,13 @@ export default function DashboardPage() {
                 {loading ? (
                   <><GaugeSkeleton /><GaugeSkeleton /><GaugeSkeleton /><GaugeSkeleton /><div className="donut-wrapper"><div className="skeleton skeleton-circle"></div></div></>
                 ) : (
-                  <><CategoryGauge name="Téléphones" percent={42} colorClass="gauge-blue" /><CategoryGauge name="Informatique" percent={28} colorClass="gauge-green" /><CategoryGauge name="Mode" percent={18} colorClass="gauge-purple" /><CategoryGauge name="Maison" percent={12} colorClass="gauge-orange" /><DonutChart /></>
+                  <>
+                    <CategoryGauge name="Téléphones" percent={42} colorClass="gauge-blue" />
+                    <CategoryGauge name="Informatique" percent={28} colorClass="gauge-green" />
+                    <CategoryGauge name="Mode" percent={18} colorClass="gauge-purple" />
+                    <CategoryGauge name="Maison" percent={12} colorClass="gauge-orange" />
+                    <DonutChart />
+                  </>
                 )}
               </div>
             </div>
@@ -314,11 +413,40 @@ export default function DashboardPage() {
               {loading ? (
                 <div className="skeleton skeleton-chart"></div>
               ) : (
-                <div className="chart-container" style={{height: '220px', width: '100%', position: 'relative'}}>
+                <div className="chart-container" style={{height: '220px', width: '100%', position: 'relative'}} ref={chartRef}>
                   <svg viewBox="0 0 800 200" style={{width: '100%', height: '100%'}}>
-                    <defs><linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" /><stop offset="100%" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
+                    <defs>
+                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
                     <path d="M 0 150 C 100 160, 150 80, 200 80 C 300 80, 350 140, 400 140 C 500 140, 550 90, 650 40 C 750 -10, 800 150, 800 150 L 800 200 L 0 200 Z" fill="url(#chartGradient)" />
                     <path d="M 0 150 C 100 160, 150 80, 200 80 C 300 80, 350 140, 400 140 C 500 140, 550 90, 650 40 C 750 -10, 800 150, 800 150" fill="none" stroke="#3b82f6" strokeWidth="3" />
+                    
+                    {/* Points interactifs */}
+                    {[
+                      { x: 0, y: 150, day: 'Lun', value: '25,000' },
+                      { x: 114, y: 114, day: 'Mar', value: '35,000' },
+                      { x: 228, y: 80, day: 'Mer', value: '50,000' },
+                      { x: 342, y: 140, day: 'Jeu', value: '28,000' },
+                      { x: 457, y: 115, day: 'Ven', value: '42,000' },
+                      { x: 571, y: 65, day: 'Sam', value: '58,000' },
+                      { x: 685, y: 95, day: 'Dim', value: '45,000' }
+                    ].map((point, i) => (
+                      <circle
+                        key={i}
+                        cx={point.x}
+                        cy={point.y}
+                        r="6"
+                        fill="#3b82f6"
+                        stroke="white"
+                        strokeWidth="2"
+                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                        onMouseEnter={(e) => handleChartHover(e, point.day, point.value)}
+                        onMouseLeave={handleChartLeave}
+                      />
+                    ))}
                   </svg>
                   <div className="flex justify-between px-5 text-xs text-gray-500 font-bold mt-2">
                     <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
@@ -329,7 +457,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* --- AUTRES ONGLETS --- */}
+        {/* AUTRES ONGLETS (inchangés) */}
         {activeTab === 'purchases' && (
           <div className="content-section active">
             <div className="section">
@@ -395,6 +523,20 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* TOOLTIP DYNAMIQUE */}
+      {tooltip.visible && (
+        <div 
+          className="chart-tooltip visible"
+          style={{
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`,
+            transform: 'translate(-50%, -100%)'
+          }}
+        >
+          <strong>{tooltip.content}</strong>
+        </div>
+      )}
 
       {/* MODAL D'AVIS */}
       {isModalOpen && (
