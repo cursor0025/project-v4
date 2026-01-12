@@ -8,7 +8,7 @@ import imageCompression from 'browser-image-compression'
 import { 
   Upload, X, ChevronRight, ChevronLeft, Save, AlertCircle, 
   Percent, Image as ImageIcon, Tag, DollarSign, Package,
-  Sparkles, CheckCircle2, Loader2
+  Sparkles, CheckCircle2, Loader2, Truck, Banknote, Home
 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
@@ -686,6 +686,10 @@ export default function CreateProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   
+  // ========== NOUVEAUX ÉTATS POUR LIVRAISON & TYPE DE PRIX ==========
+  const [deliveryAvailable, setDeliveryAvailable] = useState(true)
+  const [priceType, setPriceType] = useState<'fixe' | 'negociable' | 'facilite'>('fixe')
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const discountPercent = productData.price && productData.old_price
@@ -882,6 +886,8 @@ export default function CreateProductPage() {
           stock: parseInt(productData.stock) || 1,
           images: imageUrls,
           metadata: metadata,
+          delivery_available: deliveryAvailable,  // NOUVEAU CHAMP
+          price_type: priceType,  // NOUVEAU CHAMP
           status: 'active',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -1052,7 +1058,7 @@ export default function CreateProductPage() {
     )
   }
 
-  // ==================== RENDU PRINCIPAL (suite dans le prochain message) ====================
+  // ==================== RENDU PRINCIPAL ====================
   return (
     <div className="min-h-screen bg-[#0c0c0c] px-4 py-8 md:px-6 lg:px-8">
       <Toaster 
@@ -1366,6 +1372,198 @@ export default function CreateProductPage() {
                              focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                   />
                 </div>
+
+                {/* ========== NOUVELLE SECTION: OPTIONS DE LIVRAISON ========== */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="border-t border-white/10 pt-6 mt-6"
+                >
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 
+                                  flex items-center justify-center border border-white/10">
+                      <Truck className="w-6 h-6 text-cyan-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Options de livraison</h3>
+                      <p className="text-sm text-gray-400">Indiquez si la livraison est disponible</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setDeliveryAvailable(true)}
+                      className={`py-5 px-6 rounded-2xl border-2 transition-all duration-200 ${
+                        deliveryAvailable
+                          ? 'border-green-500 bg-green-500/10 shadow-lg shadow-green-500/20'
+                          : 'border-white/10 bg-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-3">
+                        <Truck size={24} className={deliveryAvailable ? 'text-green-400' : 'text-gray-400'} />
+                        <span className={`font-bold text-lg ${deliveryAvailable ? 'text-green-300' : 'text-gray-400'}`}>
+                          Livraison disponible
+                        </span>
+                      </div>
+                      {deliveryAvailable && (
+                        <motion.p 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-sm text-green-400 mt-2"
+                        >
+                          ✓ Le produit sera livré chez l'acheteur
+                        </motion.p>
+                      )}
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setDeliveryAvailable(false)}
+                      className={`py-5 px-6 rounded-2xl border-2 transition-all duration-200 ${
+                        !deliveryAvailable
+                          ? 'border-orange-500 bg-orange-500/10 shadow-lg shadow-orange-500/20'
+                          : 'border-white/10 bg-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-3">
+                        <Home size={24} className={!deliveryAvailable ? 'text-orange-400' : 'text-gray-400'} />
+                        <span className={`font-bold text-lg ${!deliveryAvailable ? 'text-orange-300' : 'text-gray-400'}`}>
+                          Retrait uniquement
+                        </span>
+                      </div>
+                      {!deliveryAvailable && (
+                        <motion.p 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-sm text-orange-400 mt-2"
+                        >
+                          ⚠️ Retrait sur place obligatoire
+                        </motion.p>
+                      )}
+                    </motion.button>
+                  </div>
+                </motion.div>
+
+                {/* ========== NOUVELLE SECTION: TYPE DE PRIX ========== */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="border-t border-white/10 pt-6 mt-6"
+                >
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 
+                                  flex items-center justify-center border border-white/10">
+                      <Banknote className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Type de prix</h3>
+                      <p className="text-sm text-gray-400">Choisissez le mode de paiement</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setPriceType('fixe')}
+                      className={`py-6 px-5 rounded-2xl border-2 transition-all duration-200 ${
+                        priceType === 'fixe'
+                          ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
+                          : 'border-white/10 bg-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-4xl mb-3">💰</div>
+                        <span className={`font-bold text-lg block mb-1 ${
+                          priceType === 'fixe' ? 'text-blue-300' : 'text-gray-400'
+                        }`}>
+                          Prix fixe
+                        </span>
+                        <span className={`text-sm ${
+                          priceType === 'fixe' ? 'text-blue-400' : 'text-gray-500'
+                        }`}>
+                          Non négociable
+                        </span>
+                      </div>
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setPriceType('negociable')}
+                      className={`py-6 px-5 rounded-2xl border-2 transition-all duration-200 ${
+                        priceType === 'negociable'
+                          ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
+                          : 'border-white/10 bg-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-4xl mb-3">🤝</div>
+                        <span className={`font-bold text-lg block mb-1 ${
+                          priceType === 'negociable' ? 'text-purple-300' : 'text-gray-400'
+                        }`}>
+                          Négociable
+                        </span>
+                        <span className={`text-sm ${
+                          priceType === 'negociable' ? 'text-purple-400' : 'text-gray-500'
+                        }`}>
+                          Prix discutable
+                        </span>
+                      </div>
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setPriceType('facilite')}
+                      className={`py-6 px-5 rounded-2xl border-2 transition-all duration-200 ${
+                        priceType === 'facilite'
+                          ? 'border-green-500 bg-green-500/10 shadow-lg shadow-green-500/20'
+                          : 'border-white/10 bg-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-4xl mb-3">📆</div>
+                        <span className={`font-bold text-lg block mb-1 ${
+                          priceType === 'facilite' ? 'text-green-300' : 'text-gray-400'
+                        }`}>
+                          Avec facilité
+                        </span>
+                        <span className={`text-sm ${
+                          priceType === 'facilite' ? 'text-green-400' : 'text-gray-500'
+                        }`}>
+                          Paiement échelonné
+                        </span>
+                      </div>
+                    </motion.button>
+                  </div>
+
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="mt-5 p-4 bg-white/5 border border-white/10 rounded-xl"
+                  >
+                    <p className="text-sm text-gray-300 flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <span>
+                        {priceType === 'fixe' && "Prix ferme et définitif sans possibilité de négociation"}
+                        {priceType === 'negociable' && "Les acheteurs pourront vous proposer un autre prix via messages"}
+                        {priceType === 'facilite' && "Paiement en plusieurs fois possible selon vos conditions"}
+                      </span>
+                    </p>
+                  </motion.div>
+                </motion.div>
               </div>
 
               <div className="flex justify-end mt-10 pt-6 border-t border-white/10">

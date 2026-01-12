@@ -3,13 +3,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   Search, ShoppingCart, Heart, Bell, User, ChevronDown, 
-  Menu, ArrowRight, ArrowLeft, X, ChevronRight, Star, 
-  LogIn, UserPlus, LifeBuoy, Package, LayoutDashboard, LogOut
+  Menu, ArrowRight, X, ChevronRight, 
+  LogIn, UserPlus, LifeBuoy, Package, LayoutDashboard, LogOut,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-// Utilisation de votre instance Supabase globale
-import { supabase } from '@/lib/supabase';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Product } from '@/types/product';
+import ProductGrid from '@/components/ProductGrid';
 
 // 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES (CONSERVÉE À 100%)
 const BZM_DATA = [
@@ -33,7 +35,7 @@ const BZM_DATA = [
   { id: 18, name: "Produits Naturels & Herboristerie", subs: ["Plantes médicinales", "Tisanes", "Huiles essentielles", "Savons naturels", "Produits de la ruche", "Compléments naturels", "Épices naturelles"] },
   { id: 19, name: "Meubles & Maison", subs: ["Salon", "Chambre", "Bureau", "Cuisine", "Salle de bain", "Déco intérieure", "Déco extérieure", "Jardin", "Textiles maison", "Éclairage"] },
   { id: 20, name: "Textiles Maison", subs: ["Parures", "Couvertures", "Protège-matelas", "Serviettes", "Rideaux", "Nappes", "Stores", "Tapis", "Coussins", "Plaids"] },
-  { id: 21, name: "Déoration Maison", subs: ["Objets déco", "Tableaux", "Bougies", "Décoration saisonnière", "Plantes & pots", "Tapis", "Accessoires design"] },
+  { id: 21, name: "Décoration Maison", subs: ["Objets déco", "Tableaux", "Bougies", "Décoration saisonnière", "Plantes & pots", "Tapis", "Accessoires design"] },
   { id: 22, name: "Ustensiles de Cuisine", subs: ["Poêles", "Casseroles", "Cocottes", "Couteaux", "Ustensiles", "Bols / Saladiers", "Plats & Plateaux", "Boîtes alimentaires", "Moules", "Passoires", "Grills BBQ"] },
   { id: 23, name: "Services Alimentaires", subs: ["Restaurants", "Fast-food", "Cafés", "Pâtisseries", "Boulangeries", "Traiteurs", "Livraison repas", "Grillades", "Cuisine traditionnelle", "Healthy food"] },
   { id: 24, name: "Équipement Magasin & Pro", subs: ["Frigos professionnels", "Chambres froides", "Tables inox", "Vitrines & Comptoirs", "Matériel boulangerie", "Cuisine pro", "Matériel pizzeria", "Rayonnages", "Caisse & POS", "Boucherie"] },
@@ -53,7 +55,7 @@ const BZM_DATA = [
   { id: 38, name: "Vape & Cigarettes Électroniques", subs: ["E-cigarettes", "Pods", "Clearomiseurs", "Résistances", "Batteries", "Chargeurs", "DIY"] },
   { id: 39, name: "Matériel Médical", subs: ["Fauteuils roulants", "Déambulateurs", "Orthèses", "Tensiomètres", "Thermomètres", "Matelas médicaux", "Rééducation", "Béquilles"] },
   { id: 40, name: "Promoteurs Immobiliers", subs: ["Projets immobiliers", "Programmes neufs", "Résidences en construction", "Appartements promo", "Villas promo", "Terrains promo", "Plans"] },
-  { id: 41, name: "Engins de Travaux Publics", subs: ["Rét chargeuses", "Grues", "Excavatrices", "Bulldozers", "Camions", "Chargeurs", "Compacteurs", "Pelles mini"] },
+  { id: 41, name: "Engins de Travaux Publics", subs: ["Rétrochargeuses", "Grues", "Excavatrices", "Bulldozers", "Camions", "Chargeurs", "Compacteurs", "Pelles mini"] },
   { id: 42, name: "Fête & Mariage", subs: ["Robes de soirée", "Robes de mariage", "Tenues traditionnelles", "Accessoires mariage", "Décoration", "Salles", "Traiteurs", "Photographes", "DJ & Animation"] },
   { id: 43, name: "Kaba", subs: ["Articles Kaba", "Importations Directes"] },
   { id: 44, name: "Divers", subs: ["Articles variés", "Objets insolites", "Accessoires divers", "Produits généraux"] }
@@ -79,7 +81,40 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  // LOGIQUE DE DÉTECTION (CORRECTED DEPENDENCY ARRAY)
+  // ÉTATS DES PRODUITS
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+
+  const supabase = createSupabaseBrowserClient();
+
+  // Fetch products from Supabase
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoadingProducts(true);
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error) {
+          console.error('Erreur lors de la récupération des produits:', error);
+        } else {
+          setProducts(data || []);
+        }
+      } catch (err) {
+        console.error('Erreur:', err);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // LOGIQUE DE DÉTECTION USER
   useEffect(() => {
     const fetchUserAndRole = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -104,7 +139,7 @@ export default function HomePage() {
     });
 
     return () => authListener.subscription.unsubscribe();
-  }, [supabase]); // Ajout de supabase ici pour stabiliser le hook
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -135,8 +170,9 @@ export default function HomePage() {
   }, [slides.length]);
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] font-sans text-slate-900">
+    <div className="min-h-screen bg-[#0c0c0c] font-sans text-slate-900">
       
+      {/* HEADER - Conservé à 100% */}
       <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-slate-100">
         <div className="max-w-[1440px] mx-auto px-4 h-20 flex items-center gap-6">
           <Link href="/"><img src="/images/bzm-logo.png" className="h-10 w-auto" alt="Logo" /></Link>
@@ -234,12 +270,13 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="relative w-full overflow-hidden bg-[#f0f2f5] pb-6">
+      {/* BANNER - Conservé */}
+      <section className="relative w-full overflow-hidden bg-[#0c0c0c] pb-6">
         <div className="relative h-[750px]">
           {slides.map((s, i) => (
             <div key={i} className={`absolute inset-0 transition-all duration-1000 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
               <img src={s.img} className="w-full h-full object-cover brightness-75 animate-kenburns" alt="Banner" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#f0f2f5] via-transparent to-black/40"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-black/40"></div>
               <div className="absolute top-[20%] left-0 right-0 mx-auto text-center space-y-6 max-w-4xl drop-shadow-2xl px-4">
                 <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-none text-white">{s.title} <span className={s.color}>{s.word}</span></h1>
                 <p className="text-2xl md:text-4xl font-bold tracking-tight opacity-90 text-white">{s.subtitle}</p>
@@ -271,48 +308,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="max-w-[1440px] mx-auto px-4 mt-4 mb-24 text-center">
-        <h2 className="text-3xl font-black text-slate-900 mb-16 uppercase tracking-tighter">Catégories les plus populaires</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <CategoryCard title="Informatique" color="blue" items={[{n:'Bureau'},{n:'Portables'},{n:'Audio'},{n:'Accessoires'}]} />
-          <CategoryCard title="Téléphones" color="orange" items={[{n:'Smartphones'},{n:'Étuis'},{n:'Chargeurs'},{n:'Tablettes'}]} />
-          <CategoryCard title="Auto et Motos" color="blue" items={[{n:'Voitures'},{n:'Motos'},{n:'Pièces'},{n:'Outillage'}]} />
-          <CategoryCard title="Beauté et Soins" color="orange" items={[{n:'Visage'},{n:'Maquillage'},{n:'Cheveux'},{n:'Parfums'}]} />
-        </div>
-      </section>
-
-      <section className="max-w-[1440px] mx-auto px-4 mb-32">
-        <div className="flex justify-between items-end mb-12 border-b border-white pb-8"><h2 className="text-4xl font-black text-[#0f172a] uppercase tracking-tighter">Sélectionnés pour vous</h2><Link href="/boutique" className="text-[#ff7011] font-black text-sm uppercase tracking-widest hover:underline flex items-center gap-2">Tout explorer <ArrowRight size={16}/></Link></div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
-           {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(p => (
-             <div key={p} className="bg-white rounded-2xl border border-slate-100 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden">
-                <div className="aspect-[4/5] bg-[#f8fafc] relative overflow-hidden p-6"><img src={`https://picsum.photos/seed/p${p+70}/500/600`} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt="Produit" /><button className="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-[#ff7011] hover:text-white"><ShoppingCart size={20} /></button></div>
-                <div className="p-5"><h3 className="text-sm font-bold text-slate-800 line-clamp-2 h-10">Produit Premium BZMarket - Pack {p}</h3><div className="flex items-center gap-1 text-orange-400 mt-2"><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/><Star size={12} fill="currentColor"/></div><p className="text-2xl font-black text-slate-900 mt-3 tracking-tighter">14,500 DA</p></div>
-             </div>
-           ))}
-        </div>
-      </section>
-
-      <footer className="bg-[#131a22] text-slate-400 py-24 text-center"><img src="/images/bzm-logo.png" className="h-10 mx-auto brightness-0 invert opacity-20 mb-10" alt="Logo" /><p className="text-[10px] font-black uppercase tracking-[0.5em]">© 2025 BZMARKET ALGERIA - TOUS DROITS RÉSERVÉS</p></footer>
-    </div>
-  );
-}
-
-function CategoryCard({ title, items, color }: { title: string, items: {n:string}[], color: 'blue' | 'orange' }) {
-  return (
-    <div className={`bg-white/40 backdrop-blur-md p-8 rounded-[40px] shadow-sm border-2 ${color === 'blue' ? 'border-blue-100 hover:border-blue-400' : 'border-orange-100 hover:border-orange-400'} flex flex-col items-center hover:shadow-2xl transition-all duration-500`}>
-      <h3 className={`font-black mb-10 text-base uppercase tracking-tighter ${color === 'blue' ? 'text-blue-600' : 'text-[#ff7011]'}`}>{title}</h3>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-10 w-full px-2 mb-12">
-        {items.map((it, i) => (
-          <div key={i} className="flex flex-col items-center gap-3 group">
-            <div className={`aspect-square w-full bg-[#f8fafc] rounded-[28px] flex items-center justify-center p-1 border border-slate-50 transition-all duration-500 shadow-inner ${color === 'blue' ? 'group-hover:bg-blue-50' : 'group-hover:bg-orange-50'}`}>
-               <img src={`https://picsum.photos/seed/${it.n}/200/200`} alt={it.n} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-all duration-700" />
-            </div>
-            <p className={`text-[10px] font-black text-slate-500 text-center uppercase h-6 flex items-center transition-colors ${color === 'blue' ? 'group-hover:text-blue-600' : 'group-hover:text-[#ff7011]'}`}>{it.n}</p>
+      {/* SECTION PRODUITS AVEC FILTRES - NOUVEAU */}
+      <section className="max-w-[1440px] mx-auto px-4 mt-20 mb-32">
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Sparkles className="text-blue-500" size={32} />
+            <h2 className="text-5xl font-black text-white uppercase tracking-tighter">
+              Sélectionnés pour vous
+            </h2>
+            <Sparkles className="text-orange-500" size={32} />
           </div>
-        ))}
-      </div>
-      <button className={`w-full text-white py-4 rounded-2xl text-xs font-black uppercase shadow-xl transition-all hover:scale-105 ${color === 'blue' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-[#ff7011] hover:bg-[#e6630f]'}`}>Découvrir</button>
+          <div className="w-32 h-1 bg-gradient-to-r from-blue-500 to-orange-500 mx-auto rounded-full"></div>
+        </div>
+
+        {/* ProductGrid avec filtres */}
+        <ProductGrid products={products} isLoading={isLoadingProducts} />
+      </section>
+
+      {/* FOOTER - Conservé */}
+      <footer className="bg-[#131a22] text-slate-400 py-24 text-center"><img src="/images/bzm-logo.png" className="h-10 mx-auto brightness-0 invert opacity-20 mb-10" alt="Logo" /><p className="text-[10px] font-black uppercase tracking-[0.5em]">© 2025 BZMARKET ALGERIA - TOUS DROITS RÉSERVÉS</p></footer>
     </div>
   );
 }
