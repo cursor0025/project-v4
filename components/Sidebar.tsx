@@ -32,14 +32,9 @@ import { supabase } from '@/lib/supabase';
 
 export default function Sidebar() {
   const pathname = usePathname();
-  
-  // État pour gérer l'ouverture du sous-menu Profil
   const [isProfileOpen, setIsProfileOpen] = useState(true);
-  
-  // Détection de l'espace actuel (Client ou Vendeur)
   const isClientPath = pathname.includes('/dashboard/client');
 
-  // Action de déconnexion liée à Supabase
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -49,7 +44,6 @@ export default function Sidebar() {
     }
   };
 
-  // --- MENUS VENDEUR PRO ---
   const vendorItems = [
     { icon: <LayoutDashboard size={20} />, label: "Tableau de bord", href: "/dashboard/vendor" },
     { icon: <BarChart3 size={20} />, label: "Analyses & Perf.", href: "/dashboard/analytics" },
@@ -61,7 +55,6 @@ export default function Sidebar() {
     { icon: <CreditCard size={20} />, label: "Abonnement", href: "/dashboard/subscription" },
   ];
 
-  // --- MENUS CLIENT BZMARKET ---
   const clientItems = [
     { icon: <LayoutDashboard size={20} />, label: "Dashboard", href: "/dashboard/client" },
     { icon: <ShoppingBag size={20} />, label: "Mes Achats", href: "/dashboard/client/achats" },
@@ -74,59 +67,50 @@ export default function Sidebar() {
     { icon: <Wallet size={20} />, label: "Portefeuille", href: "/dashboard/client/portefeuille" },
   ];
 
-  // --- SOUS-MENU PROFIL REGROUPÉ ---
-  const profileSubItems = isClientPath ? [
-    { icon: <User size={18} />, label: "Mon Profil", href: "/dashboard/client/profile" },
-    { icon: <MapPin size={18} />, label: "Adresses", href: "/dashboard/client/adresses" },
-    { icon: <Shield size={18} />, label: "Sécurité", href: "/dashboard/client/securite" },
-    { icon: <Settings size={18} />, label: "Paramètres", href: "/dashboard/client/settings" },
-  ] : [
-    { icon: <User size={18} />, label: "Mon Profil", href: "/dashboard/profile" },
-    { icon: <Settings size={18} />, label: "Paramètres", href: "/dashboard/settings" },
-  ];
-
   const menuItems = isClientPath ? clientItems : vendorItems;
 
   return (
-    <aside className="w-64 min-h-screen bg-[#0b0f1a] border-r border-white/5 flex flex-col p-4 hidden lg:flex sticky top-0 transition-all z-50">
+    <aside className="w-64 h-screen bg-[#0b0f1a] border-r border-white/5 flex flex-col p-4 hidden lg:flex fixed top-0 left-0 transition-all z-50 overflow-y-auto custom-scrollbar">
       
-      {/* SECTION LOGO */}
       <div className="flex justify-center w-full mb-10 pt-6">
         <Link href="/" className="hover:opacity-80 transition-opacity cursor-pointer">
-          <img 
-            src="/images/bzm-logo.png" 
-            alt="Logo BZMarket" 
-            className="h-16 w-auto" 
-          />
+          <img src="/images/bzm-logo.png" alt="Logo BZMarket" className="h-16 w-auto" />
         </Link>
       </div>
 
-      {/* NAVIGATION PRINCIPALE */}
-      <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
+      <nav className="flex-1 space-y-1 pr-2">
         {menuItems.map((item, index) => {
           const isActive = pathname === item.href;
           return (
             <Link key={index} href={item.href} className="block">
-              <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${
-                isActive 
-                  ? "bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.05)]" 
-                  : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
-              }`}>
-                <span className={`transition-colors ${isActive ? "text-orange-500" : "text-slate-500 group-hover:text-slate-300"}`}>
-                  {item.icon}
-                </span>
+              <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${isActive ? "bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.05)]" : "text-slate-400 hover:bg-white/[0.04] hover:text-white"}`}>
+                <span className={`transition-colors ${isActive ? "text-orange-500" : "text-slate-500 group-hover:text-slate-300"}`}>{item.icon}</span>
                 <span className="whitespace-nowrap">{item.label}</span>
               </button>
             </Link>
           );
         })}
 
-        {/* SECTION PROFIL & COMPTE */}
         <div className="my-4 border-t border-white/5 pt-4">
-          <button 
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-slate-400 hover:text-white transition-colors group"
-          >
+          <div className="px-3 py-2 text-slate-500 text-xs font-black uppercase tracking-wider">Avantages</div>
+          <div className="space-y-1">
+            <Link href={isClientPath ? "/dashboard/client/recompenses" : "/dashboard/vendor/recompenses"} className="block">
+              <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${pathname === (isClientPath ? "/dashboard/client/recompenses" : "/dashboard/vendor/recompenses") ? "bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.05)]" : "text-slate-400 hover:bg-white/[0.04] hover:text-white"}`}>
+                <span className={`transition-colors ${pathname === (isClientPath ? "/dashboard/client/recompenses" : "/dashboard/vendor/recompenses") ? "text-orange-500" : "text-slate-500 group-hover:text-slate-300"}`}><Gift size={20} /></span>
+                <span className="whitespace-nowrap">Récompenses</span>
+              </button>
+            </Link>
+            <Link href={isClientPath ? "/dashboard/client/parrainage" : "/dashboard/vendor/parrainage"} className="block">
+              <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${pathname === (isClientPath ? "/dashboard/client/parrainage" : "/dashboard/vendor/parrainage") ? "bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.05)]" : "text-slate-400 hover:bg-white/[0.04] hover:text-white"}`}>
+                <span className={`transition-colors ${pathname === (isClientPath ? "/dashboard/client/parrainage" : "/dashboard/vendor/parrainage") ? "text-orange-500" : "text-slate-500 group-hover:text-slate-300"}`}><Users size={20} /></span>
+                <span className="whitespace-nowrap">Parrainage</span>
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        <div className="my-4 border-t border-white/5 pt-4">
+          <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="w-full flex items-center justify-between px-3 py-2.5 text-slate-400 hover:text-white transition-colors group">
             <div className="flex items-center gap-3 text-sm font-semibold">
               <UserCircle size={20} className="text-slate-500 group-hover:text-slate-300" />
               <span>Profil & Compte</span>
@@ -136,38 +120,49 @@ export default function Sidebar() {
 
           {isProfileOpen && (
             <div className="mt-1 ml-4 space-y-1 border-l border-white/5 pl-2">
-              {profileSubItems.map((sub, idx) => {
-                const isSubActive = pathname === sub.href;
-                return (
-                  <Link key={idx} href={sub.href} className="block">
-                    <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                      isSubActive 
-                        ? "text-orange-500 bg-orange-500/5" 
-                        : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]"
-                    }`}>
-                      <span className={isSubActive ? "text-orange-500" : "text-slate-600"}>
-                        {sub.icon}
-                      </span>
-                      {sub.label}
+              <Link href={isClientPath ? "/dashboard/client/profile" : "/dashboard/profile"} className="block">
+                <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === (isClientPath ? "/dashboard/client/profile" : "/dashboard/profile") ? "text-orange-500 bg-orange-500/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]"}`}>
+                  <User size={18} className={pathname === (isClientPath ? "/dashboard/client/profile" : "/dashboard/profile") ? "text-orange-500" : "text-slate-600"} />
+                  Mon Profil
+                </button>
+              </Link>
+
+              {isClientPath && (
+                <>
+                  <Link href="/dashboard/client/adresses" className="block">
+                    <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === "/dashboard/client/adresses" ? "text-orange-500 bg-orange-500/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]"}`}>
+                      <MapPin size={18} className={pathname === "/dashboard/client/adresses" ? "text-orange-500" : "text-slate-600"} />
+                      Adresses
                     </button>
                   </Link>
-                );
-              })}
+                  <Link href="/dashboard/client/securite" className="block">
+                    <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === "/dashboard/client/securite" ? "text-orange-500 bg-orange-500/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]"}`}>
+                      <Shield size={18} className={pathname === "/dashboard/client/securite" ? "text-orange-500" : "text-slate-600"} />
+                      Sécurité
+                    </button>
+                  </Link>
+                </>
+              )}
+
+              <Link href={isClientPath ? "/dashboard/client/settings" : "/dashboard/settings"} className="block">
+                <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === (isClientPath ? "/dashboard/client/settings" : "/dashboard/settings") ? "text-orange-500 bg-orange-500/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]"}`}>
+                  <Settings size={18} className={pathname === (isClientPath ? "/dashboard/client/settings" : "/dashboard/settings") ? "text-orange-500" : "text-slate-600"} />
+                  Paramètres
+                </button>
+              </Link>
             </div>
           )}
         </div>
+
+        <div className="my-4 border-t border-white/5 pt-4">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:scale-105 active:scale-95 transition-all group">
+            <LogOut size={20} className="transition-transform group-hover:-translate-x-1" />
+            <span>Déconnexion</span>
+          </button>
+        </div>
       </nav>
 
-      {/* BOUTON DÉCONNEXION */}
-      <div className="pt-4 mt-4 border-t border-white/5">
-        <button 
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-all group"
-        >
-          <LogOut size={20} className="transition-transform group-hover:-translate-x-1" />
-          <span>Déconnexion</span>
-        </button>
-      </div>
+      <div className="h-4"></div>
     </aside>
   );
 }

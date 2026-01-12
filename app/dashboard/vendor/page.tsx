@@ -2,7 +2,7 @@
 
 import './dashboard.css';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Eye,
   MousePointerClick,
@@ -22,9 +22,45 @@ import {
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
+// ============================================
+// 🎯 HOOK PERSONNALISÉ POUR ANIMER LES COMPTEURS
+// ============================================
+function useCountUp(end: number, duration: number = 1500, start: number = 0) {
+  const [count, setCount] = useState(start);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  useEffect(() => {
+    if (hasAnimated) return;
+    
+    setHasAnimated(true);
+    let startTime: number | null = null;
+    const startValue = start;
+    const endValue = end;
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const current = Math.floor(startValue + (endValue - startValue) * easeOutQuart);
+      
+      setCount(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [end, duration, start, hasAnimated]);
+
+  return count;
+}
+
 export default function VendorDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [animationsTriggered, setAnimationsTriggered] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -34,7 +70,8 @@ export default function VendorDashboard() {
         shopSubscribers: 234,
         subscriptionDaysLeft: 45,
         revenue: 450000,
-        averageBasket: 3400
+        averageBasket: 3400,
+        validationPercent: 82
       });
       setLoading(false);
     }, 500);
@@ -42,28 +79,30 @@ export default function VendorDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!loading) {
-      const progressBars = document.querySelectorAll('.progress-bar-fill');
-      progressBars.forEach((bar, index) => {
-        const element = bar as HTMLElement;
-        const targetWidth = element.getAttribute('data-width') || '0%';
-        element.style.width = '0%';
-        setTimeout(() => {
+    if (!loading && !animationsTriggered) {
+      setAnimationsTriggered(true);
+      
+      // Animation des barres de progression
+      const timer = setTimeout(() => {
+        const progressBars = document.querySelectorAll('.progress-bar-fill');
+        progressBars.forEach((bar) => {
+          const element = bar as HTMLElement;
+          const targetWidth = element.getAttribute('data-width') || '0%';
           element.style.width = targetWidth;
-        }, 100 + index * 100);
-      });
+        });
 
-      const circleProgress = document.querySelector('.circle-progress');
-      if (circleProgress) {
-        const circle = circleProgress as SVGCircleElement;
-        const offset = circle.getAttribute('data-offset') || '0';
-        circle.style.strokeDashoffset = '440';
-        setTimeout(() => {
+        // Animation du cercle de performance
+        const circleProgress = document.querySelector('.circle-progress');
+        if (circleProgress) {
+          const circle = circleProgress as SVGCircleElement;
+          const offset = circle.getAttribute('data-offset') || '0';
           circle.style.strokeDashoffset = offset;
-        }, 200);
-      }
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
-  }, [loading]);
+  }, [loading, animationsTriggered]);
 
   const handleLogout = async () => {
     const supabase = createSupabaseBrowserClient();
@@ -71,13 +110,31 @@ export default function VendorDashboard() {
     window.location.href = '/';
   };
 
+  // Compteurs animés
+  const animatedVisits = useCountUp(stats?.dailyVisits || 0, 1500);
+  const animatedClicks = useCountUp(stats?.productClicks || 0, 1500);
+  const animatedSubscribers = useCountUp(stats?.shopSubscribers || 0, 1500);
+  const animatedDays = useCountUp(stats?.subscriptionDaysLeft || 0, 1500);
+  const animatedRevenue = useCountUp(stats?.revenue || 0, 1800);
+  const animatedBasket = useCountUp(stats?.averageBasket || 0, 1800);
+  const animatedPercent = useCountUp(stats?.validationPercent || 0, 1500);
+
   return (
     <div className="min-h-screen bg-[#0c0c0c] text-white p-4 md:p-6 space-y-6 md:space-y-8 font-sans">
       
       {/* HEADER */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
         <div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* AVATAR VENDEUR */}
+            <div className="w-10 h-10 rounded-full border border-cyan-500 overflow-hidden flex-shrink-0">
+              <img 
+                src="https://ui-avatars.com/api/?name=Vendeur&background=06b6d4&color=fff&bold=true" 
+                alt="Avatar Vendeur" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
               {loading ? (
                 <span className="inline-block w-48 h-8 bg-white/5 rounded animate-pulse"></span>
@@ -143,7 +200,7 @@ export default function VendorDashboard() {
         {loading ? (
           <>
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-[#161618] border border-white/5 rounded-[24px] p-6 animate-pulse">
+              <div key={i} className="bg-[#111827] border border-white/5 rounded-[24px] p-6 animate-pulse">
                 <div className="flex justify-between mb-6">
                   <div className="w-10 h-10 bg-white/5 rounded-xl"></div>
                   <div className="w-16 h-6 bg-white/5 rounded-full"></div>
@@ -156,18 +213,18 @@ export default function VendorDashboard() {
         ) : (
           <>
             {/* Card 1: Visites */}
-            <div className="bg-[#161618] border border-white/5 rounded-[24px] p-5 md:p-6 relative overflow-hidden group hover:border-blue-500/30 hover:scale-105 transition-all duration-300 shadow-xl cursor-pointer">
+            <div className="stat-card blue bg-[#111827] border-t-2 border-t-blue-500 rounded-[24px] p-5 md:p-6 relative group hover:scale-105 transition-all duration-300 shadow-xl cursor-pointer">
               <div className="flex justify-between items-start mb-4 md:mb-6">
-                <div className="bg-blue-600 shadow-blue-600/20 p-2 md:p-2.5 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="stat-icon blue bg-blue-600 shadow-blue-600/20 p-2 md:p-2.5 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Eye size={20} />
                 </div>
                 <div className="flex items-center gap-1 bg-emerald-500/10 px-2 md:px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-500 text-[10px] font-black">
                   <TrendingUp size={10} /> +12.5%
                 </div>
               </div>
-              <p className="text-gray-500 text-[10px] font-black tracking-[2px] uppercase">VISITES</p>
-              <p className="text-3xl md:text-4xl font-black mt-1 text-white tracking-tighter">
-                {stats.dailyVisits.toLocaleString()}
+              <p className="stat-title text-gray-500 text-[10px] font-black tracking-[2px] uppercase">VISITES</p>
+              <p className="stat-value text-3xl md:text-4xl font-black mt-1 text-white tracking-tighter">
+                {animatedVisits.toLocaleString()}
               </p>
               <svg className="stat-sparkline absolute bottom-0 left-0 right-0 h-16 opacity-30" viewBox="0 0 100 30" preserveAspectRatio="none">
                 <polyline 
@@ -178,18 +235,18 @@ export default function VendorDashboard() {
             </div>
 
             {/* Card 2: Clics Produits */}
-            <div className="bg-[#161618] border border-white/5 rounded-[24px] p-5 md:p-6 relative overflow-hidden group hover:border-purple-500/30 hover:scale-105 transition-all duration-300 shadow-xl cursor-pointer">
+            <div className="stat-card purple bg-[#111827] border-t-2 border-t-purple-500 rounded-[24px] p-5 md:p-6 relative group hover:scale-105 transition-all duration-300 shadow-xl cursor-pointer">
               <div className="flex justify-between items-start mb-4 md:mb-6">
-                <div className="bg-purple-600 shadow-purple-600/20 p-2 md:p-2.5 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="stat-icon purple bg-purple-600 shadow-purple-600/20 p-2 md:p-2.5 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <MousePointerClick size={20} />
                 </div>
                 <div className="flex items-center gap-1 bg-emerald-500/10 px-2 md:px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-500 text-[10px] font-black">
                   <TrendingUp size={10} /> +4.2%
                 </div>
               </div>
-              <p className="text-gray-500 text-[10px] font-black tracking-[2px] uppercase">CLICS PRODUITS</p>
-              <p className="text-3xl md:text-4xl font-black mt-1 text-white tracking-tighter">
-                {stats.productClicks.toLocaleString()}
+              <p className="stat-title text-gray-500 text-[10px] font-black tracking-[2px] uppercase">CLICS PRODUITS</p>
+              <p className="stat-value text-3xl md:text-4xl font-black mt-1 text-white tracking-tighter">
+                {animatedClicks.toLocaleString()}
               </p>
               <svg className="stat-sparkline absolute bottom-0 left-0 right-0 h-16 opacity-30" viewBox="0 0 100 30" preserveAspectRatio="none">
                 <polyline 
@@ -200,30 +257,30 @@ export default function VendorDashboard() {
             </div>
 
             {/* Card 3: Abonnés */}
-            <div className="bg-[#161618] border border-white/5 rounded-[24px] p-5 md:p-6 relative overflow-hidden group hover:border-emerald-500/30 hover:scale-105 transition-all duration-300 shadow-xl cursor-pointer">
+            <div className="stat-card green bg-[#111827] border-t-2 border-t-emerald-500 rounded-[24px] p-5 md:p-6 relative group hover:scale-105 transition-all duration-300 shadow-xl cursor-pointer">
               <div className="flex justify-between items-start mb-4 md:mb-6">
-                <div className="bg-emerald-500 shadow-emerald-500/20 p-2 md:p-2.5 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="stat-icon green bg-emerald-500 shadow-emerald-500/20 p-2 md:p-2.5 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Users size={20} />
                 </div>
                 <div className="flex items-center gap-1 bg-emerald-500/10 px-2 md:px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-500 text-[10px] font-black">
                   <TrendingUp size={10} /> +8%
                 </div>
               </div>
-              <p className="text-gray-500 text-[10px] font-black tracking-[2px] uppercase">ABONNÉS</p>
-              <p className="text-3xl md:text-4xl font-black mt-1 text-white tracking-tighter">
-                {stats.shopSubscribers.toLocaleString()}
+              <p className="stat-title text-gray-500 text-[10px] font-black tracking-[2px] uppercase">ABONNÉS</p>
+              <p className="stat-value text-3xl md:text-4xl font-black mt-1 text-white tracking-tighter">
+                {animatedSubscribers.toLocaleString()}
               </p>
             </div>
 
             {/* Card 4: Abonnement */}
-            <div className="bg-[#161618] border border-white/5 rounded-[24px] p-5 md:p-6 relative overflow-hidden group hover:border-orange-500/30 hover:scale-105 transition-all duration-300 shadow-xl">
+            <div className="stat-card orange bg-[#111827] border-t-2 border-t-orange-500 rounded-[24px] p-5 md:p-6 relative group hover:scale-105 transition-all duration-300 shadow-xl">
               <div className="flex justify-between items-start mb-4 md:mb-6">
-                <div className="bg-orange-500 p-2 md:p-2.5 rounded-xl text-white shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform duration-300">
+                <div className="stat-icon orange bg-orange-500 p-2 md:p-2.5 rounded-xl text-white shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform duration-300">
                   <Clock size={20} />
                 </div>
               </div>
-              <p className="text-gray-500 text-[10px] font-black tracking-widest uppercase">ABONNEMENT</p>
-              <p className="text-2xl md:text-3xl font-black mt-1 text-white tracking-tighter">{stats.subscriptionDaysLeft} Jours</p>
+              <p className="stat-title text-gray-500 text-[10px] font-black tracking-widest uppercase">ABONNEMENT</p>
+              <p className="stat-value text-2xl md:text-3xl font-black mt-1 text-white tracking-tighter">{animatedDays} Jours</p>
               <div className="mt-4 md:mt-6">
                 <div className="flex justify-between text-[9px] font-black text-gray-500 uppercase mb-2">
                   <span>Cycle mensuel</span>
@@ -231,7 +288,7 @@ export default function VendorDashboard() {
                 </div>
                 <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                   <div 
-                    className="progress-bar-fill h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full" 
+                    className="progress-bar-fill h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all duration-[1500ms] ease-out" 
                     data-width="50%"
                     style={{ width: '0%' }}
                   />
@@ -244,7 +301,7 @@ export default function VendorDashboard() {
 
       {/* PERFORMANCE & CATEGORIES */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6" style={{ animation: 'fadeInUp 0.8s ease-out' }}>
-        <div className="lg:col-span-2 bg-[#161618] border border-white/5 rounded-[32px] p-6 md:p-8 shadow-2xl hover:border-white/10 transition-all duration-300">
+        <div className="lg:col-span-2 bg-[#111827] border border-white/5 rounded-[32px] p-6 md:p-8 shadow-2xl hover:border-white/10 transition-all duration-300">
           <h3 className="text-lg md:text-xl font-bold text-white tracking-tight mb-6 md:mb-8">
             Performance Commerciale
           </h3>
@@ -263,20 +320,20 @@ export default function VendorDashboard() {
                     strokeDasharray="440" 
                     data-offset="79.2"
                     strokeLinecap="round" 
-                    className="circle-progress text-emerald-500" 
+                    className="circle-progress text-emerald-500 transition-all duration-[1500ms] ease-out" 
                     style={{ strokeDashoffset: '440' }}
                   />
                 </svg>
                 <div className="absolute text-center">
                   <span className="text-3xl md:text-4xl font-black block text-white tracking-tighter">
-                    {loading ? '...' : '82%'}
+                    {loading ? '...' : `${animatedPercent}%`}
                   </span>
                   <span className="text-[10px] text-gray-500 uppercase font-black tracking-wider">validé</span>
                 </div>
               </div>
             </div>
             <div className="md:col-span-2 space-y-4 justify-center flex flex-col">
-              <div className="bg-[#1a1a1c] border border-white/5 rounded-[20px] p-4 md:p-5 shadow-inner hover:bg-[#1e1e20] hover:border-emerald-500/20 transition-all duration-300 group">
+              <div className="bg-[#0f172a] border border-white/5 rounded-[20px] p-4 md:p-5 shadow-inner hover:bg-[#1e1e20] hover:border-emerald-500/20 transition-all duration-300 group">
                 <div className="flex items-center gap-2 mb-1">
                   <DollarSign size={14} className="text-emerald-400" />
                   <p className="text-emerald-400 text-[9px] font-black uppercase tracking-[2px]">
@@ -284,10 +341,10 @@ export default function VendorDashboard() {
                   </p>
                 </div>
                 <p className="text-xl md:text-2xl font-black text-white group-hover:text-emerald-400 transition-colors">
-                  {loading ? '...' : `${stats.revenue.toLocaleString()} DA`}
+                  {loading ? '...' : `${animatedRevenue.toLocaleString()} DA`}
                 </p>
               </div>
-              <div className="bg-[#1a1a1c] border border-white/5 rounded-[20px] p-4 md:p-5 shadow-inner hover:bg-[#1e1e20] hover:border-purple-500/20 transition-all duration-300 group">
+              <div className="bg-[#0f172a] border border-white/5 rounded-[20px] p-4 md:p-5 shadow-inner hover:bg-[#1e1e20] hover:border-purple-500/20 transition-all duration-300 group">
                 <div className="flex items-center gap-2 mb-1">
                   <Package size={14} className="text-purple-500" />
                   <p className="text-purple-500 text-[9px] font-black uppercase tracking-[2px]">
@@ -295,7 +352,7 @@ export default function VendorDashboard() {
                   </p>
                 </div>
                 <p className="text-xl md:text-2xl font-black text-white group-hover:text-purple-400 transition-colors">
-                  {loading ? '...' : `${stats.averageBasket.toLocaleString()} DA`}
+                  {loading ? '...' : `${animatedBasket.toLocaleString()} DA`}
                 </p>
               </div>
             </div>
@@ -303,7 +360,7 @@ export default function VendorDashboard() {
         </div>
 
         {/* TOP CATEGORIES */}
-        <div className="bg-[#161618] border border-white/5 rounded-[32px] p-6 md:p-8 flex flex-col h-full shadow-2xl hover:border-white/10 transition-all duration-300">
+        <div className="bg-[#111827] border border-white/5 rounded-[32px] p-6 md:p-8 flex flex-col h-full shadow-2xl hover:border-white/10 transition-all duration-300">
           <h3 className="text-lg md:text-xl font-bold text-white mb-6 md:mb-8 tracking-tight">
             Top Sous-catégories
           </h3>
@@ -323,7 +380,7 @@ export default function VendorDashboard() {
 
       {/* RECENT ORDERS & MESSAGES */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6 pb-8 md:pb-12" style={{ animation: 'fadeInUp 1s ease-out' }}>
-        <div className="bg-[#161618] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl hover:border-white/10 transition-all duration-300">
+        <div className="bg-[#111827] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl hover:border-white/10 transition-all duration-300">
           <div className="p-5 md:p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
             <div className="flex items-center gap-3">
               <Package className="text-cyan-400" size={18} />
@@ -342,7 +399,7 @@ export default function VendorDashboard() {
           </div>
         </div>
 
-        <div className="bg-[#161618] border border-white/5 rounded-[32px] overflow-hidden flex flex-col shadow-2xl hover:border-white/10 transition-all duration-300">
+        <div className="bg-[#111827] border border-white/5 rounded-[32px] overflow-hidden flex flex-col shadow-2xl hover:border-white/10 transition-all duration-300">
           <div className="p-5 md:p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
             <div className="flex items-center gap-3">
               <MessageSquare className="text-purple-400" size={18} />
@@ -372,6 +429,8 @@ export default function VendorDashboard() {
 // --- COMPOSANTS ---
 
 function CategoryRow({ label, sales, percent, color, loading }: any) {
+  const animatedSales = useCountUp(sales, 1500);
+  
   return (
     <div className="space-y-2 group">
       <div className="flex justify-between items-end text-sm">
@@ -379,12 +438,12 @@ function CategoryRow({ label, sales, percent, color, loading }: any) {
           {label}
         </span>
         <span className="text-[11px] text-gray-500 font-medium">
-          <b className="text-white font-black">{loading ? '...' : `${sales} ventes`}</b> {percent}%
+          <b className="text-white font-black">{loading ? '...' : `${animatedSales} ventes`}</b> {percent}%
         </span>
       </div>
       <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden shadow-inner">
         <div 
-          className={`progress-bar-fill h-full bg-gradient-to-r ${color} rounded-full group-hover:brightness-125`} 
+          className={`progress-bar-fill h-full bg-gradient-to-r ${color} rounded-full group-hover:brightness-125 transition-all duration-[1500ms] ease-out`} 
           data-width={`${percent}%`}
           style={{ width: '0%' }} 
         />
