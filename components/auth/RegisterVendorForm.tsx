@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabase'; 
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { 
   Gift, Store, FileCheck, Upload, Eye, EyeOff, 
   Globe, CheckCircle2, XCircle, Phone, Mail, Loader2, KeyRound, ArrowLeft, MapPin
@@ -40,7 +40,7 @@ const wilayaData: { [key: string]: string[] } = {
   "13 — Tlemcen": ["Tlemcen", "Maghnia"],
   "14 — Tiaret": ["Tiaret", "Frenda"],
   "15 — Tizi Ouzou": ["Tizi Ouzou", "Azeffoun", "Azazga"],
-  "16 — Alger": ["Alger-Centre", "Sidi M’hamed", "Kouba", "Bachdjerrah", "Dar El Beïda", "Bab Ezzouar", "Draria", "Chéraga", "Hydra", "Zéralda"],
+  "16 — Alger": ["Alger-Centre", "Sidi M'hamed", "Kouba", "Bachdjerrah", "Dar El Beïda", "Bab Ezzouar", "Draria", "Chéraga", "Hydra", "Zéralda"],
   "17 — Djelfa": ["Djelfa", "Hassi Bahbah"],
   "18 — Jijel": ["Jijel", "Taher"],
   "19 — Sétif": ["Sétif", "El Eulma"],
@@ -165,6 +165,7 @@ export default function RegisterVendorForm() {
 
     setIsLoading(true);
     try {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -187,6 +188,7 @@ export default function RegisterVendorForm() {
     if (otpCode.length < 6) return toast.error("Code incomplet.");
     setIsLoading(true);
     try {
+      const supabase = createSupabaseBrowserClient();
       const { data, error: vErr } = await supabase.auth.verifyOtp({
         email: formData.email,
         token: otpCode,

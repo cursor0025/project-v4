@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { 
   Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, UserPlus, ShoppingBag, Globe, ArrowLeft 
 } from 'lucide-react';
@@ -35,6 +35,8 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
+      const supabase = createSupabaseBrowserClient();
+      
       // 1. Authentification avec Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -60,7 +62,7 @@ export default function LoginPage() {
 
         toast.success("Connexion réussie !");
 
-        // 3. Logique de redirection stricte selon le rôle (cite: 1.1, 1.3)
+        // 3. Logique de redirection stricte selon le rôle
         if (profile?.role === 'vendor') {
           // Redirection forcée vers le Dashboard Vendeur
           router.push('/dashboard/vendor');
@@ -150,7 +152,7 @@ export default function LoginPage() {
             </div>
 
             <div className="flex justify-end px-1">
-              <Link href="/forgot-password text-[12px] font-bold text-blue-700 hover:underline uppercase tracking-tight">Mot de passe oublié ?</Link>
+              <Link href="/forgot-password" className="text-[12px] font-bold text-blue-700 hover:underline uppercase tracking-tight">Mot de passe oublié ?</Link>
             </div>
 
             <button 

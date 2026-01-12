@@ -9,7 +9,7 @@ import {
   Package, DollarSign, Tag, AlertCircle, CheckCircle2, Sparkles, Percent,
   Eye, Clock
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import toast, { Toaster } from 'react-hot-toast'
 import imageCompression from 'browser-image-compression'
 
@@ -171,6 +171,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const fetchProduct = async () => {
     try {
       setLoading(true)
+      const supabase = createSupabaseBrowserClient()
 
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       
@@ -399,6 +400,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     toast.loading('💾 Mise à jour du produit en cours...', { id: 'save' })
 
     try {
+      const supabase = createSupabaseBrowserClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       
       if (authError || !user) {

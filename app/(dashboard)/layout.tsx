@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider, useTheme } from '@/lib/theme-context';
 import Sidebar from '@/components/Sidebar';
-import '../globals.css';
 
 // Cette partie gère l'affichage visuel (le "coquillage" du dashboard)
 function DashboardShell({ children }: { children: ReactNode }) {
@@ -16,7 +15,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
       <Sidebar />
 
       {/* Barre d'en-tête (Header) avec le switch de thème */}
-      <header className="fixed top-0 right-0 left-0 md:left-20 lg:left-64 z-30 border-b border-slate-800/50 bg-black/30 backdrop-blur-sm flex items-center justify-between px-4 py-2">
+      <header className="fixed top-0 right-0 left-0 md:left-20 lg:left-64 z-30 h-14 border-b border-slate-800/50 bg-black/30 backdrop-blur-sm flex items-center justify-between px-4 py-2">
         <div className="text-xs text-gray-400 hidden md:block italic">
           BZMarket • Dashboard Vendeur Pro
         </div>

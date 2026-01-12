@@ -10,7 +10,7 @@ import {
   ShoppingCart, Coins, TrendingUp, Gift, X, Package,
   User, Shield
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import './dashboard.css'
 
 export default function DashboardPage() {
@@ -26,9 +26,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        const [{ data: { user: authUser }, error: authError }] = await Promise.all([
-          supabase.auth.getUser()
-        ])
+        const supabase = createSupabaseBrowserClient()
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
         if (authError || !authUser) {
           window.location.href = '/login'
@@ -89,6 +88,7 @@ export default function DashboardPage() {
   }, [])
 
   const handleLogout = async () => {
+    const supabase = createSupabaseBrowserClient()
     await supabase.auth.signOut()
     window.location.href = '/'
   }

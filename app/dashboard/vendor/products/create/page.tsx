@@ -10,7 +10,7 @@ import {
   Percent, Image as ImageIcon, Tag, DollarSign, Package,
   Sparkles, CheckCircle2, Loader2
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 // ==================== TYPES ====================
 interface ProductImage {
@@ -832,6 +832,7 @@ export default function CreateProductPage() {
     toast.loading('Création du produit en cours...', { id: 'submit' })
 
     try {
+      const supabase = createSupabaseBrowserClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       
       if (authError || !user) {
@@ -877,7 +878,7 @@ export default function CreateProductPage() {
           price: parseFloat(productData.price),
           old_price: productData.old_price ? parseFloat(productData.old_price) : null,
           category: category,
-          subcategory: subcategory || null, // ← AJOUT DE LA SOUS-CATÉGORIE
+          subcategory: subcategory || null,
           stock: parseInt(productData.stock) || 1,
           images: imageUrls,
           metadata: metadata,
@@ -1051,7 +1052,7 @@ export default function CreateProductPage() {
     )
   }
 
-  // ==================== RENDU PRINCIPAL ====================
+  // ==================== RENDU PRINCIPAL (suite dans le prochain message) ====================
   return (
     <div className="min-h-screen bg-[#0c0c0c] px-4 py-8 md:px-6 lg:px-8">
       <Toaster 

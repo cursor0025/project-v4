@@ -8,7 +8,7 @@ import {
   Package, TrendingUp, AlertCircle, Loader2, Archive,
   CheckCircle, XCircle, Clock, ChevronDown
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import toast, { Toaster } from 'react-hot-toast'
 
 // ==================== TYPES ====================
@@ -107,6 +107,7 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
+      const supabase = createSupabaseBrowserClient()
 
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       
@@ -154,6 +155,7 @@ export default function ProductsPage() {
     toast.loading('Suppression en cours...', { id: 'delete' })
 
     try {
+      const supabase = createSupabaseBrowserClient()
       const product = products.find(p => p.id === productId)
       
       // Supprimer les images du Storage
@@ -193,6 +195,7 @@ export default function ProductsPage() {
   // ==================== CHANGEMENT DE STATUT ====================
   const handleStatusChange = async (productId: string, newStatus: 'active' | 'draft' | 'archived') => {
     try {
+      const supabase = createSupabaseBrowserClient()
       const { error } = await supabase
         .from('products')
         .update({ 

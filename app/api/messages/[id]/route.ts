@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-  // On récupère l'ID de la conversation depuis l'URL
+  // Next.js 15+ : params est maintenant une Promise
+  const params = await context.params;
   const conversationId = params.id;
 
-  // Simulation de l'historique des messages pour BZMarket [cite: 1543-1549]
+  // Simulation de l'historique des messages pour BZMarket
   const messages = [
     { 
       id: 'm1', 

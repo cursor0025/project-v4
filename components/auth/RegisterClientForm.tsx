@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabase'; 
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { WILAYAS } from '@/lib/constants/wilayas';
 import { getCommunesByWilaya } from '@/lib/constants/communes';
 import { 
@@ -99,6 +99,7 @@ export default function RegisterClientForm() {
     }
     setIsLoading(true);
     try {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -125,6 +126,7 @@ export default function RegisterClientForm() {
     if (otpCode.length < 6) return toast.error("Code incomplet.");
     setIsLoading(true);
     try {
+      const supabase = createSupabaseBrowserClient();
       const { data, error: vErr } = await supabase.auth.verifyOtp({
         email: formData.email, 
         token: otpCode, 
