@@ -62,10 +62,10 @@ const BZM_DATA = [
 ];
 
 const AMAZON_OVERLAY_CARDS = [
-  { title: "Ventes Flash du Jour", items: [{n:'Cuisine', img:'101'}, {n:'Maison', img:'102'}, {n:'Déco', img:'103'}, {n:'Outils', img:'104'}], link: "Voir les offres", color: "blue" },
-  { title: "Nouveauté BZM", items: [{n:'Beauté', img:'105'}, {n:'Tech', img:'106'}, {n:'Gaming', img:'107'}, {n:'Mode', img:'108'}], link: "DÉCOUVRIR", color: "orange" },
-  { title: "Maison & Confort", items: [{n:'Électro', img:'109'}, {n:'Cuisine', img:'110'}, {n:'Salon', img:'111'}, {n:'Rangement', img:'112'}], link: "EXPLORER", color: "blue" },
-  { title: "Tendances 2025", items: [{n:'Literie', img:'113'}, {n:'Luminaire', img:'114'}, {n:'Jardin', img:'115'}, {n:'Organisation', img:'116'}], link: "VOIR PLUS", color: "orange" }
+  { title: "Ventes Flash", items: [{n:'Cuisine', img:'101'}, {n:'Maison', img:'102'}, {n:'Déco', img:'103'}, {n:'Outils', img:'104'}], link: "Voir", color: "blue" },
+  { title: "Nouveautés", items: [{n:'Beauté', img:'105'}, {n:'Tech', img:'106'}, {n:'Gaming', img:'107'}, {n:'Mode', img:'108'}], link: "Découvrir", color: "orange" },
+  { title: "Maison", items: [{n:'Électro', img:'109'}, {n:'Cuisine', img:'110'}, {n:'Salon', img:'111'}, {n:'Range', img:'112'}], link: "Explorer", color: "blue" },
+  { title: "Tendances", items: [{n:'Literie', img:'113'}, {n:'Lumière', img:'114'}, {n:'Jardin', img:'115'}, {n:'Orga', img:'116'}], link: "Voir", color: "orange" }
 ];
 
 export default function HomePage() {
@@ -73,21 +73,18 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [lang, setLang] = useState('FR');
   const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeCatIdx, setActiveCatIdx] = useState(0);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // ÉTATS DE CONNEXION
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-
-  // ÉTATS DES PRODUITS
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
   const supabase = createSupabaseBrowserClient();
 
-  // Fetch products from Supabase
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -114,7 +111,6 @@ export default function HomePage() {
     fetchProducts();
   }, []);
 
-  // LOGIQUE DE DÉTECTION USER
   useEffect(() => {
     const fetchUserAndRole = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -157,11 +153,11 @@ export default function HomePage() {
   }, []);
 
   const slides = [
-    { title: "L'Ère du", word: "Numérique", color: "text-blue-500", subtitle: "Équipez-vous avec les dernières technologies", img: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1600" },
-    { title: "Devenez", word: "Vendeur Pro", color: "text-[#ff7011]", subtitle: "Vendez vos produits sur BZMarket dès aujourd'hui", img: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=1600" },
-    { title: "Mode &", word: "Tendances", color: "text-blue-500", subtitle: "Découvrez nos nouvelles collections exclusives", img: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600" },
-    { title: "Univers", word: "Gaming", color: "text-[#ff7011]", subtitle: "Tout le matériel pour les vrais gamers", img: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1600" },
-    { title: "Maison &", word: "Déco", color: "text-blue-500", subtitle: "Sublimez votre intérieur avec style", img: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=1600" }
+    { title: "L'Ère du", word: "Numérique", color: "text-blue-500", subtitle: "Dernières technologies", img: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1600" },
+    { title: "Devenez", word: "Vendeur", color: "text-[#ff7011]", subtitle: "Vendez sur BZMarket", img: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=1600" },
+    { title: "Mode &", word: "Style", color: "text-blue-500", subtitle: "Collections exclusives", img: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600" },
+    { title: "Univers", word: "Gaming", color: "text-[#ff7011]", subtitle: "Matériel gaming pro", img: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1600" },
+    { title: "Maison &", word: "Déco", color: "text-blue-500", subtitle: "Sublimez votre intérieur", img: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=1600" }
   ];
 
   useEffect(() => {
@@ -172,83 +168,176 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#0c0c0c] font-sans text-slate-900">
       
-      {/* HEADER - Conservé à 100% */}
+      {/* HEADER RESPONSIVE */}
       <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-slate-100">
-        <div className="max-w-[1440px] mx-auto px-4 h-20 flex items-center gap-6">
-          <Link href="/"><img src="/images/bzm-logo.png" className="h-10 w-auto" alt="Logo" /></Link>
-          <div className="flex-1 flex items-center">
-            <div className="flex-1 flex border-2 border-[#ff7011] rounded-l-md overflow-hidden bg-white h-[42px]">
-              <input type="text" placeholder="Rechercher des produits..." className="flex-1 px-4 outline-none text-sm font-medium" />
+        {/* Top Bar - Mobile & Desktop */}
+        <div className="max-w-[1440px] mx-auto px-3 md:px-4 h-16 md:h-20 flex items-center gap-2 md:gap-6">
+          
+          {/* Mobile Menu Button */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0">
+            <img src="/images/bzm-logo.png" className="h-8 md:h-10 w-auto" alt="Logo" />
+          </Link>
+          
+          {/* Search Bar - Hidden on mobile, shown on tablet+ */}
+          <div className="hidden md:flex flex-1 items-center">
+            <div className="flex-1 flex border-2 border-[#ff7011] rounded-l-md overflow-hidden bg-white h-10 md:h-[42px]">
+              <input 
+                type="text" 
+                placeholder="Rechercher..." 
+                className="flex-1 px-3 md:px-4 outline-none text-xs md:text-sm font-medium" 
+              />
             </div>
-            <button className="bg-[#ff7011] text-white px-6 h-[42px] rounded-r-md hover:bg-[#e6630f] transition-all"><Search size={20} /></button>
+            <button className="bg-[#ff7011] text-white px-4 md:px-6 h-10 md:h-[42px] rounded-r-md hover:bg-[#e6630f] transition-all">
+              <Search size={18} className="md:w-5 md:h-5" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <img src={lang === 'FR' ? "https://flagcdn.com/w40/fr.png" : "https://flagcdn.com/w40/dz.png"} className="h-4 w-6 object-cover" alt="Flag" />
+          {/* Right Icons */}
+          <div className="flex items-center gap-2 md:gap-4 ml-auto">
+            
+            {/* Language Selector - Hidden on mobile */}
+            <div className="hidden lg:flex items-center gap-2">
+              <img 
+                src={lang === 'FR' ? "https://flagcdn.com/w40/fr.png" : "https://flagcdn.com/w40/dz.png"} 
+                className="h-4 w-6 object-cover" 
+                alt="Flag" 
+              />
               <div className="relative border border-[#ff7011] rounded-lg px-2 py-1 bg-white flex items-center">
-                <select className="text-sm font-normal bg-transparent outline-none cursor-pointer appearance-none pr-6" value={lang} onChange={(e) => setLang(e.target.value)}>
-                  <option value="FR">Français</option>
-                  <option value="AR">العربية</option>
+                <select 
+                  className="text-sm font-normal bg-transparent outline-none cursor-pointer appearance-none pr-6" 
+                  value={lang} 
+                  onChange={(e) => setLang(e.target.value)}
+                >
+                  <option value="FR">FR</option>
+                  <option value="AR">AR</option>
                 </select>
                 <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
 
+            {/* Devenir Vendeur - Hidden on small mobile */}
             {userRole !== 'vendor' && (
-              <Link href="/register/vendor" className="bg-[#ff7011] text-white px-5 py-2.5 rounded-lg font-black text-sm shadow-md hover:bg-orange-600 transition-all uppercase flex items-center justify-center">Devenir vendeur</Link>
+              <Link 
+                href="/register/vendor" 
+                className="hidden sm:flex bg-[#ff7011] text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm shadow-md hover:bg-orange-600 transition-all uppercase items-center justify-center"
+              >
+                Vendeur
+              </Link>
             )}
 
-            <div className="flex items-center gap-5 text-slate-600">
-              <Heart size={22} className="cursor-pointer hover:text-red-500" />
-              <div className="relative cursor-pointer"><Bell size={22} /><span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span></div>
-              <div className="relative cursor-pointer"><ShoppingCart size={22} /><span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-bold">0</span></div>
+            {/* Icons - Compact on mobile */}
+            <div className="flex items-center gap-3 md:gap-5 text-slate-600">
+              <Heart size={20} className="cursor-pointer hover:text-red-500 md:w-[22px] md:h-[22px]" />
+              <div className="relative cursor-pointer">
+                <Bell size={20} className="md:w-[22px] md:h-[22px]" />
+                <span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
+              </div>
+              <div className="relative cursor-pointer">
+                <ShoppingCart size={20} className="md:w-[22px] md:h-[22px]" />
+                <span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">0</span>
+              </div>
               
+              {/* User Menu */}
               <div className="relative" ref={userMenuRef}>
-                <div className="flex items-center gap-1 cursor-pointer hover:text-orange-600 transition-colors" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}>
-                  <User size={22} />
-                  <span className="text-sm font-bold uppercase">{user ? 'Mon Compte' : 'Se connecter'}</span>
-                  <ChevronDown size={14} className={`transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:text-orange-600 transition-colors" 
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                >
+                  <User size={20} className="md:w-[22px] md:h-[22px]" />
+                  <span className="hidden xl:inline text-sm font-bold uppercase">{user ? 'Compte' : 'Connexion'}</span>
+                  <ChevronDown size={14} className={`hidden md:inline transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                 </div>
+                
                 {isUserMenuOpen && (
-                  <div className="absolute top-full right-0 mt-3 w-64 bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+                  <div className="absolute top-full right-0 mt-3 w-56 md:w-64 bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden z-50">
                     <div className="p-2 space-y-1">
                       {user ? (
-                        <button onClick={handleLogout} className="w-full group flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"><LogOut size={18} /> Se déconnecter</button>
+                        <>
+                          <Link 
+                            href={userRole === 'vendor' ? '/dashboard/vendor' : '/dashboard/client'} 
+                            className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all"
+                          >
+                            <LayoutDashboard size={18} className="text-slate-400 group-hover:text-orange-500" /> 
+                            Tableau de bord
+                          </Link>
+                          <button 
+                            onClick={handleLogout} 
+                            className="w-full group flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <LogOut size={18} /> Se déconnecter
+                          </button>
+                        </>
                       ) : (
                         <>
-                          <Link href="/login" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200"><LogIn size={18} className="text-slate-400 group-hover:text-orange-500" /> Se connecter</Link>
-                          <Link href="/register/client" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200"><UserPlus size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Client</Link>
-                          <Link href="/register/vendor" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all duration-200"><Package size={18} className="text-slate-400 group-hover:text-orange-500" /> Inscription Vendeur</Link>
+                          <Link href="/login" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all">
+                            <LogIn size={18} className="text-slate-400 group-hover:text-orange-500" /> Se connecter
+                          </Link>
+                          <Link href="/register/client" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all">
+                            <UserPlus size={18} className="text-slate-400 group-hover:text-orange-500" /> Client
+                          </Link>
+                          <Link href="/register/vendor" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all">
+                            <Package size={18} className="text-slate-400 group-hover:text-orange-500" /> Vendeur
+                          </Link>
                         </>
                       )}
                       <div className="border-t border-slate-100 my-1"></div>
-                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"><LifeBuoy size={18} /> Support</Link>
+                      <Link href="#" className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-all">
+                        <LifeBuoy size={18} /> Support
+                      </Link>
                     </div>
                   </div>
                 )}
               </div>
-
-              {user && (
-                <Link 
-                  href={userRole === 'vendor' ? '/dashboard/vendor' : '/dashboard/client'} 
-                  className="bg-blue-700 text-white px-5 py-2.5 rounded-lg font-black text-xs uppercase shadow-lg hover:bg-blue-800 hover:scale-105 transition-all flex items-center justify-center gap-2 ml-2"
-                >
-                  <LayoutDashboard size={18} /> Tableau de bord
-                </Link>
-              )}
             </div>
           </div>
         </div>
-        <div className="bg-[#0f172a] text-white relative">
+
+        {/* Mobile Search Bar - Full width below header */}
+        <div className="md:hidden px-3 pb-3">
+          <div className="flex border-2 border-[#ff7011] rounded-md overflow-hidden bg-white">
+            <input 
+              type="text" 
+              placeholder="Rechercher des produits..." 
+              className="flex-1 px-3 py-2 outline-none text-sm" 
+            />
+            <button className="bg-[#ff7011] text-white px-4 hover:bg-[#e6630f] transition-all">
+              <Search size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Navigation Bar */}
+        <div className="hidden lg:block bg-[#0f172a] text-white">
           <div className="max-w-[1440px] mx-auto px-4 flex items-center h-[52px]">
-            <div onMouseEnter={() => setIsCatMenuOpen(true)} onMouseLeave={() => setIsCatMenuOpen(false)} className="h-full flex items-center relative">
-              <button className="bg-white text-slate-800 px-6 h-[40px] flex items-center justify-center gap-3 font-bold text-sm rounded-sm mr-8">{isCatMenuOpen ? <X size={18}/> : <Menu size={18} />} Toutes les catégories</button>
+            <div 
+              onMouseEnter={() => setIsCatMenuOpen(true)} 
+              onMouseLeave={() => setIsCatMenuOpen(false)} 
+              className="h-full flex items-center relative"
+            >
+              <button className="bg-white text-slate-800 px-6 h-[40px] flex items-center justify-center gap-3 font-bold text-sm rounded-sm mr-8">
+                {isCatMenuOpen ? <X size={18}/> : <Menu size={18} />} Catégories
+              </button>
+              
               {isCatMenuOpen && (
                 <div className="absolute top-full left-0 bg-white w-[1150px] h-[650px] rounded-b-lg shadow-2xl flex overflow-hidden z-50 border-t border-slate-100">
                   <div className="w-[300px] bg-slate-50 border-r border-slate-100 overflow-y-auto text-slate-800">
                     {BZM_DATA.map((cat, idx) => (
-                      <button key={cat.id} onMouseEnter={() => setActiveCatIdx(idx)} className={`w-full text-left px-6 py-4 text-[12px] font-bold border-b border-slate-100/50 flex justify-between items-center transition-all ${activeCatIdx === idx ? 'bg-white text-orange-600 border-l-4 border-orange-500 shadow-sm' : 'text-slate-600'}`}><span className="truncate uppercase tracking-tight">{cat.id}. {cat.name}</span><ChevronRight size={14} /></button>
+                      <button 
+                        key={cat.id} 
+                        onMouseEnter={() => setActiveCatIdx(idx)} 
+                        className={`w-full text-left px-6 py-4 text-[12px] font-bold border-b border-slate-100/50 flex justify-between items-center transition-all ${activeCatIdx === idx ? 'bg-white text-orange-600 border-l-4 border-orange-500 shadow-sm' : 'text-slate-600'}`}
+                      >
+                        <span className="truncate uppercase tracking-tight">{cat.id}. {cat.name}</span>
+                        <ChevronRight size={14} />
+                      </button>
                     ))}
                   </div>
                   <div className="flex-1 p-10 bg-white overflow-y-auto text-slate-800">
@@ -256,7 +345,9 @@ export default function HomePage() {
                     <div className="grid grid-cols-4 gap-8">
                        {BZM_DATA[activeCatIdx].subs.map(s => (
                          <div key={s} className="flex flex-col items-center gap-3 cursor-pointer group">
-                           <div className="w-24 h-24 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden group-hover:border-orange-500 transition-all shadow-inner"><img src={`https://picsum.photos/seed/${s}/100/100`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={s} /></div>
+                           <div className="w-24 h-24 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden group-hover:border-orange-500 transition-all shadow-inner">
+                             <img src={`https://picsum.photos/seed/${s}/100/100`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={s} />
+                           </div>
                            <span className="text-[10px] font-bold text-center text-slate-600 group-hover:text-orange-600 uppercase tracking-tighter">{s}</span>
                          </div>
                        ))}
@@ -265,68 +356,97 @@ export default function HomePage() {
                 </div>
               )}
             </div>
-            <nav className="flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-300"><Link href="#">Informatique</Link><Link href="#">Téléphones</Link><Link href="#">Immobilier</Link><Link href="#">Véhicules</Link></nav>
+            <nav className="flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-300">
+              <Link href="#">Informatique</Link>
+              <Link href="#">Téléphones</Link>
+              <Link href="#">Immobilier</Link>
+              <Link href="#">Véhicules</Link>
+            </nav>
           </div>
         </div>
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 bg-black/50 z-40 top-16" onClick={() => setIsMobileMenuOpen(false)}>
+            <div className="bg-white w-80 h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="p-4 space-y-2">
+                {BZM_DATA.map((cat) => (
+                  <div key={cat.id} className="border-b border-gray-100 pb-2">
+                    <button className="w-full text-left font-bold text-sm text-slate-800 py-2">
+                      {cat.name}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* BANNER - Conservé */}
-      <section className="relative w-full overflow-hidden bg-[#0c0c0c] pb-6">
-        <div className="relative h-[750px]">
+      {/* BANNER - RESPONSIVE */}
+      <section className="relative w-full overflow-hidden bg-[#0c0c0c] pb-4 md:pb-6">
+        <div className="relative h-[400px] md:h-[600px] lg:h-[750px]">
           {slides.map((s, i) => (
             <div key={i} className={`absolute inset-0 transition-all duration-1000 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-              <img src={s.img} className="w-full h-full object-cover brightness-75 animate-kenburns" alt="Banner" />
+              <img src={s.img} className="w-full h-full object-cover brightness-75" alt="Banner" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-black/40"></div>
-              <div className="absolute top-[20%] left-0 right-0 mx-auto text-center space-y-6 max-w-4xl drop-shadow-2xl px-4">
-                <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-none text-white">{s.title} <span className={s.color}>{s.word}</span></h1>
-                <p className="text-2xl md:text-4xl font-bold tracking-tight opacity-90 text-white">{s.subtitle}</p>
+              <div className="absolute top-[15%] md:top-[20%] left-0 right-0 mx-auto text-center space-y-3 md:space-y-6 max-w-4xl px-4">
+                <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-none text-white">
+                  {s.title} <span className={s.color}>{s.word}</span>
+                </h1>
+                <p className="text-lg md:text-2xl lg:text-4xl font-bold tracking-tight opacity-90 text-white">{s.subtitle}</p>
               </div>
-              <button className="absolute top-10 right-10 bg-white text-[#0f172a] px-12 py-5 rounded-full font-black uppercase tracking-widest hover:bg-[#ff7011] hover:text-white transition-all shadow-2xl z-40">Explorer maintenant</button>
+              <button className="absolute top-4 md:top-10 right-4 md:right-10 bg-white text-[#0f172a] px-6 md:px-12 py-3 md:py-5 rounded-full font-black uppercase tracking-widest hover:bg-[#ff7011] hover:text-white transition-all shadow-2xl text-xs md:text-base">
+                Explorer
+              </button>
             </div>
           ))}
         </div>
         
-        <div className="max-w-[1440px] mx-auto px-4 -mt-[320px] relative z-30 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Cards Overlay - RESPONSIVE GRID */}
+        <div className="max-w-[1440px] mx-auto px-3 md:px-4 -mt-32 md:-mt-64 lg:-mt-[320px] relative z-30 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
            {AMAZON_OVERLAY_CARDS.map((card, i) => (
-             <div key={i} className={`bg-white/40 backdrop-blur-md p-8 rounded-[40px] shadow-2xl flex flex-col h-[520px] border-t-4 ${card.color === 'blue' ? 'border-blue-500 bg-blue-50/50' : 'border-[#ff7011] bg-orange-50/50'} group transition-all duration-500 hover:-translate-y-2`}>
-                <h3 className="text-2xl font-black text-[#0f172a] mb-8 tracking-tight uppercase">{card.title}</h3>
-                <div className="grid grid-cols-2 gap-6 flex-1">
+             <div key={i} className={`bg-white/40 backdrop-blur-md p-4 md:p-8 rounded-2xl md:rounded-[40px] shadow-2xl flex flex-col h-auto md:h-[520px] border-t-4 ${card.color === 'blue' ? 'border-blue-500 bg-blue-50/50' : 'border-[#ff7011] bg-orange-50/50'} group transition-all duration-500 hover:-translate-y-2`}>
+                <h3 className="text-sm md:text-2xl font-black text-[#0f172a] mb-4 md:mb-8 tracking-tight uppercase">{card.title}</h3>
+                <div className="grid grid-cols-2 gap-3 md:gap-6 flex-1">
                    {card.items.map((it, idx) => (
-                     <div key={idx} className="cursor-pointer flex flex-col items-center gap-3">
-                        <div className="aspect-square w-full bg-white rounded-2xl overflow-hidden flex items-center justify-center p-1 border border-slate-100 shadow-sm">
+                     <div key={idx} className="cursor-pointer flex flex-col items-center gap-2 md:gap-3">
+                        <div className="aspect-square w-full bg-white rounded-xl md:rounded-2xl overflow-hidden flex items-center justify-center p-1 border border-slate-100 shadow-sm">
                            <img src={`https://picsum.photos/seed/bzm_${it.img}/300/300`} className="w-full h-full object-contain mix-blend-multiply hover:scale-110 transition-transform duration-500" alt={it.n} />
                         </div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center truncate w-full">{it.n}</p>
+                        <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest text-center truncate w-full">{it.n}</p>
                      </div>
                    ))}
                 </div>
-                <Link href="#" className={`mt-auto w-full py-4 rounded-2xl text-center font-black uppercase tracking-[0.1em] text-[10px] transition-all flex items-center justify-center gap-2 ${card.color === 'blue' ? 'bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white' : 'bg-orange-100 text-[#ff7011] hover:bg-[#ff7011] hover:text-white'}`}>
-                  {card.link} <ArrowRight size={14}/>
+                <Link href="#" className={`mt-4 md:mt-auto w-full py-2 md:py-4 rounded-xl md:rounded-2xl text-center font-black uppercase tracking-[0.1em] text-[8px] md:text-[10px] transition-all flex items-center justify-center gap-2 ${card.color === 'blue' ? 'bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white' : 'bg-orange-100 text-[#ff7011] hover:bg-[#ff7011] hover:text-white'}`}>
+                  {card.link} <ArrowRight size={12} className="md:w-[14px] md:h-[14px]"/>
                 </Link>
              </div>
            ))}
         </div>
       </section>
 
-      {/* SECTION PRODUITS AVEC FILTRES - NOUVEAU */}
-      <section className="max-w-[1440px] mx-auto px-4 mt-20 mb-32">
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Sparkles className="text-blue-500" size={32} />
-            <h2 className="text-5xl font-black text-white uppercase tracking-tighter">
+      {/* SECTION PRODUITS - RESPONSIVE */}
+      <section className="max-w-[1440px] mx-auto px-3 md:px-4 mt-10 md:mt-20 mb-16 md:mb-32">
+        <div className="text-center mb-8 md:mb-12">
+          <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
+            <Sparkles className="text-blue-500" size={24} />
+            <h2 className="text-2xl md:text-5xl font-black text-white uppercase tracking-tighter">
               Sélectionnés pour vous
             </h2>
-            <Sparkles className="text-orange-500" size={32} />
+            <Sparkles className="text-orange-500" size={24} />
           </div>
-          <div className="w-32 h-1 bg-gradient-to-r from-blue-500 to-orange-500 mx-auto rounded-full"></div>
+          <div className="w-20 md:w-32 h-1 bg-gradient-to-r from-blue-500 to-orange-500 mx-auto rounded-full"></div>
         </div>
 
-        {/* ProductGrid avec filtres */}
         <ProductGrid products={products} isLoading={isLoadingProducts} />
       </section>
 
-      {/* FOOTER - Conservé */}
-      <footer className="bg-[#131a22] text-slate-400 py-24 text-center"><img src="/images/bzm-logo.png" className="h-10 mx-auto brightness-0 invert opacity-20 mb-10" alt="Logo" /><p className="text-[10px] font-black uppercase tracking-[0.5em]">© 2025 BZMARKET ALGERIA - TOUS DROITS RÉSERVÉS</p></footer>
+      {/* FOOTER - RESPONSIVE */}
+      <footer className="bg-[#131a22] text-slate-400 py-12 md:py-24 text-center px-4">
+        <img src="/images/bzm-logo.png" className="h-8 md:h-10 mx-auto brightness-0 invert opacity-20 mb-6 md:mb-10" alt="Logo" />
+        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] md:tracking-[0.5em]">© 2025 BZMARKET ALGERIA</p>
+      </footer>
     </div>
   );
 }

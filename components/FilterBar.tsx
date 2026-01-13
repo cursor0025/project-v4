@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { ProductFilters, WILAYAS } from '@/types/product';
 
 interface FilterBarProps {
@@ -24,7 +24,7 @@ export default function FilterBar({ filters, onFilterChange, totalProducts }: Fi
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Wilaya Filter */}
+        {/* Wilaya Filter - 58 WILAYAS COMPLÈTES */}
         <div className="relative">
           <label className="block text-sm font-semibold text-gray-300 mb-2">Wilaya</label>
           <div className="relative">
@@ -39,10 +39,10 @@ export default function FilterBar({ filters, onFilterChange, totalProducts }: Fi
                 backgroundSize: '1.25rem'
               }}
             >
-              <option value="" className="bg-[#1a1a1a]">Toutes les wilayas</option>
+              <option value="" className="bg-[#1a1a1a]">Toutes les wilayas (58)</option>
               {WILAYAS.map(wilaya => (
-                <option key={wilaya} value={wilaya} className="bg-[#1a1a1a]">
-                  {wilaya}
+                <option key={wilaya.code} value={wilaya.name} className="bg-[#1a1a1a]">
+                  {wilaya.code} - {wilaya.name}
                 </option>
               ))}
             </select>

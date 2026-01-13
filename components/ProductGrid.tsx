@@ -75,8 +75,9 @@ export default function ProductGrid({ products, isLoading = false }: ProductGrid
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 animate-pulse">
           <div className="h-20 bg-gray-700 rounded"></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
+        {/* GRILLE DE 5 COLONNES */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
+          {[...Array(10)].map((_, i) => (
             <ProductSkeleton key={i} />
           ))}
         </div>
@@ -93,9 +94,9 @@ export default function ProductGrid({ products, isLoading = false }: ProductGrid
         totalProducts={filteredProducts.length}
       />
 
-      {/* Products Grid */}
+      {/* Products Grid - 5 COLONNES avec espacement optimisé */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
