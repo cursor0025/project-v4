@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Product } from '@/types/product';
 import ProductGrid from '@/components/ProductGrid';
+import { useCartStore } from '@/store/cart'; // ✅ AJOUTÉ
 
 // 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES (CONSERVÉE À 100%)
 const BZM_DATA = [
@@ -83,7 +84,17 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
+  // ✅ AJOUTÉ - Gestion du panier
+  const [isClient, setIsClient] = useState(false);
+  const getTotalItems = useCartStore((state) => state.getTotalItems);
+  const cartItemsCount = isClient ? getTotalItems() : 0;
+
   const supabase = createSupabaseBrowserClient();
+
+  // ✅ AJOUTÉ - Attendre que le composant soit monté côté client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -240,10 +251,16 @@ export default function HomePage() {
                 <Bell size={20} className="md:w-[22px] md:h-[22px]" />
                 <span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
               </div>
-              <div className="relative cursor-pointer">
+              
+              {/* ✅ MODIFIÉ - Badge panier dynamique */}
+              <Link href="/cart" className="relative cursor-pointer">
                 <ShoppingCart size={20} className="md:w-[22px] md:h-[22px]" />
-                <span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">0</span>
-              </div>
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                    {cartItemsCount}
+                  </span>
+                )}
+              </Link>
               
               {/* User Menu */}
               <div className="relative" ref={userMenuRef}>

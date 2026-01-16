@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Heart, Eye, ShoppingCart, Truck, X, Handshake, Calendar, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Heart, Eye, ShoppingCart, Truck, X, Handshake, Calendar, Lock, Check } from 'lucide-react';
 import { Product } from '@/types/product';
+import Link from 'next/link';
+import { useCartStore } from '@/store/cart'; // ✅ AJOUTÉ
+import { toast } from 'sonner'; // ✅ AJOUTÉ
 
 interface ProductCardProps {
   product: Product;
@@ -11,6 +14,16 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isAdding, setIsAdding] = useState(false); // ✅ AJOUTÉ
+  const [isClient, setIsClient] = useState(false); // ✅ AJOUTÉ
+
+  // ✅ AJOUTÉ - Connexion au store
+  const { addItem, canAddItem, getItemQuantity } = useCartStore();
+
+  // ✅ AJOUTÉ - Attendre le montage côté client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const discountPercent = product.old_price 
     ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
@@ -59,58 +72,106 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   };
 
+  // ✅ AJOUTÉ - Fonction pour ajouter au panier
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Vérifier le stock
+    if (product.stock === 0) {
+      toast.error('Produit en rupture de stock');
+      return;
+    }
+
+    // Vérifier si on peut ajouter (stock disponible)
+    if (isClient && !canAddItem(product.id, 1, product.stock)) {
+      toast.error('Stock maximum atteint');
+      return;
+    }
+
+    setIsAdding(true);
+
+    // Ajouter au panier
+    addItem({
+      id: crypto.randomUUID(),
+      product_id: product.id,
+      vendor_id: product.vendor_id,
+      name: product.name,
+      price: product.price,
+      weight: product.weight || 0,
+      image_url: product.images && product.images.length > 0 ? product.images[0] : null,
+      max_stock: product.stock,
+    });
+
+    // Notification de succès
+    toast.success('Produit ajouté au panier !', {
+      icon: <Check className="w-4 h-4" />,
+    });
+
+    // Reset du bouton après animation
+    setTimeout(() => setIsAdding(false), 500);
+  };
+
   return (
     <div className="bg-[#111827] rounded-3xl overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300 group hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2 flex flex-col h-full">
       
-      {/* Image Container - Ratio fixe */}
-      <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-800 overflow-hidden flex-shrink-0">
-        {!imageError && product.images && product.images.length > 0 ? (
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-600">
-            <ShoppingCart size={64} />
+      {/* Image Container */}
+      <Link href={`/products/${product.id}`} className="block">
+        <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-800 overflow-hidden flex-shrink-0">
+          {!imageError && product.images && product.images.length > 0 ? (
+            <img
+              src={product.images[0]}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-600">
+              <ShoppingCart size={64} />
+            </div>
+          )}
+
+          {/* Discount Badge */}
+          {discountPercent > 0 && (
+            <div className="absolute top-3 left-3 bg-red-500 text-white px-2.5 py-1 rounded-lg font-bold text-xs shadow-lg">
+              -{discountPercent}%
+            </div>
+          )}
+
+          {/* Favorite Button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsFavorite(!isFavorite);
+            }}
+            className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-lg hover:scale-110"
+          >
+            <Heart 
+              size={18} 
+              className={`transition-all ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-700'}`}
+            />
+          </button>
+
+          {/* Views Overlay */}
+          <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-xs font-semibold">
+            <Eye size={13} />
+            <span>{formatViews(views)} vues</span>
           </div>
-        )}
-
-        {/* Discount Badge */}
-        {discountPercent > 0 && (
-          <div className="absolute top-3 left-3 bg-red-500 text-white px-2.5 py-1 rounded-lg font-bold text-xs shadow-lg">
-            -{discountPercent}%
-          </div>
-        )}
-
-        {/* Favorite Button */}
-        <button
-          onClick={() => setIsFavorite(!isFavorite)}
-          className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-lg hover:scale-110"
-        >
-          <Heart 
-            size={18} 
-            className={`transition-all ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-700'}`}
-          />
-        </button>
-
-        {/* Views Overlay */}
-        <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-xs font-semibold">
-          <Eye size={13} />
-          <span>{formatViews(views)} vues</span>
         </div>
-      </div>
+      </Link>
 
-      {/* Product Info - Structure rigide pour alignement */}
+      {/* Product Info */}
       <div className="p-4 flex flex-col flex-1">
         
-        {/* Title - HAUTEUR FIXE 2 LIGNES */}
-        <h3 className="text-white font-bold text-sm line-clamp-2 h-10 leading-5 mb-3">
-          {product.name}
-        </h3>
+        {/* Title */}
+        <Link href={`/products/${product.id}`}>
+          <h3 className="text-white font-bold text-sm line-clamp-2 h-10 leading-5 mb-3 hover:text-blue-400 transition-colors cursor-pointer">
+            {product.name}
+          </h3>
+        </Link>
 
-        {/* Rating & Stock - HAUTEUR FIXE */}
+        {/* Rating & Stock */}
         <div className="flex items-center justify-between mb-3 h-5">
           <div className="flex items-center gap-1">
             {[...Array(5)].map((_, i) => (
@@ -133,7 +194,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Price Section - HAUTEUR FIXE */}
+        {/* Price Section */}
         <div className="flex items-start justify-between mb-3 pt-2 border-t border-white/5 h-20">
           <div className="flex-1 min-w-0">
             {/* Prix principal */}
@@ -154,13 +215,13 @@ export default function ProductCard({ product }: ProductCardProps) {
               </div>
             )}
             
-            {/* Price Type Badge - HAUTEUR FIXE */}
+            {/* Price Type Badge */}
             <div className="h-6 flex items-center">
               {getPriceTypeBadge()}
             </div>
           </div>
 
-          {/* Delivery Icon - POSITION FIXE */}
+          {/* Delivery Icon */}
           <div className="flex flex-col items-center justify-start ml-2 flex-shrink-0">
             {product.delivery_available ? (
               <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center text-green-400">
@@ -177,10 +238,18 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Bouton - TOUJOURS EN BAS - mt-auto garantit l'alignement */}
-        <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] shadow-lg shadow-green-500/20 mt-auto">
+        {/* ✅ BOUTON MODIFIÉ - Connecté au panier */}
+        <button 
+          onClick={handleAddToCart}
+          disabled={isAdding || product.stock === 0}
+          className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-lg mt-auto ${
+            product.stock === 0
+              ? 'bg-gray-600 cursor-not-allowed opacity-50'
+              : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:scale-[1.02] shadow-green-500/20'
+          } text-white`}
+        >
           <ShoppingCart size={16} />
-          <span>Ajouter au panier</span>
+          <span>{isAdding ? 'Ajout...' : product.stock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}</span>
         </button>
       </div>
     </div>
