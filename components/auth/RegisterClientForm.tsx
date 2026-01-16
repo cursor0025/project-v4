@@ -8,7 +8,7 @@ import { WILAYAS } from '@/lib/constants/wilayas';
 import { getCommunesByWilaya } from '@/lib/constants/communes';
 import { 
   User, Mail, Phone, Globe, CheckCircle2, XCircle, 
-  Loader2, KeyRound, ArrowLeft, Navigation, Gift, Eye, EyeOff, Users, Calendar
+  Loader2, ArrowLeft, Navigation, Gift, Eye, EyeOff, Users, Calendar, Bell
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -22,8 +22,6 @@ const IMAGES = [
 
 export default function RegisterClientForm() {
   const router = useRouter();
-  const [step, setStep] = useState<'form' | 'otp'>('form');
-  const [otpCode, setOtpCode] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -34,7 +32,8 @@ export default function RegisterClientForm() {
 
   const [formData, setFormData] = useState({
     nom: '', prenom: '', email: '', telephone: '', gender: '', age: '',
-    password: '', confirmPassword: '', wilaya: '', commune: '', address: '', referral: '', acceptedTerms: false
+    password: '', confirmPassword: '', wilaya: '', commune: '', address: '', 
+    referral: '', acceptedTerms: false, newsletter: false // ✅ AJOUTÉ newsletter
   });
 
   // --- VALIDATIONS ---
@@ -56,7 +55,7 @@ export default function RegisterClientForm() {
 
   const isFormValid = useMemo(() => {
     return (
-      v.name(formData.nom) && v.email(formData.email) && v.selection(formData.gender) &&
+      v.name(formData.nom) && v.name(formData.prenom) && v.email(formData.email) && v.selection(formData.gender) &&
       v.phone(formData.telephone) && v.age(formData.age) && isPasswordSecure && isMatch && 
       v.selection(formData.wilaya) && v.selection(formData.commune) &&
       v.address(formData.address) && formData.acceptedTerms
@@ -64,7 +63,7 @@ export default function RegisterClientForm() {
   }, [formData, isPasswordSecure, isMatch]);
 
   const hasStartedFilling = useMemo(() => {
-    const { referral, acceptedTerms, ...textFields } = formData;
+    const { referral, acceptedTerms, newsletter, ...textFields } = formData; // ✅ MODIFIÉ
     return Object.values(textFields).some(val => val.trim() !== '') || acceptedTerms;
   }, [formData]);
 
@@ -97,10 +96,13 @@ export default function RegisterClientForm() {
       setTimeout(() => setIsShaking(false), 500);
       return toast.error("Veuillez remplir correctement les champs.");
     }
+    
     setIsLoading(true);
+    
     try {
       const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.signUp({
+      
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: { 
@@ -108,86 +110,52 @@ export default function RegisterClientForm() {
             first_name: formData.prenom, 
             last_name: formData.nom, 
             role: 'client' 
-          } 
+          }
         }
       });
-      if (error) throw error;
-      toast.success("Code de vérification envoyé !");
-      setStep('otp');
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length < 6) return toast.error("Code incomplet.");
-    setIsLoading(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data, error: vErr } = await supabase.auth.verifyOtp({
-        email: formData.email, 
-        token: otpCode, 
-        type: 'signup'
-      });
+      if (signUpError) throw signUpError;
       
-      if (vErr) throw vErr;
-
-      if (data.user) {
-        // CORRECTION : Ajout de email: formData.email pour éviter le NULL en base de données
-        const { error: dbErr } = await supabase.from('profiles').upsert([{
-          id: data.user.id,
-          email: formData.email, // <--- LIGNE AJOUTÉE ICI
-          first_name: formData.prenom,
-          last_name: formData.nom,
-          gender: formData.gender,
-          age: parseInt(formData.age), 
-          wilaya: formData.wilaya,
-          commune: formData.commune,
-          address: formData.address,
-          phone: formData.telephone,
-          referral_code: formData.referral,
-          role: 'client'
-        }]);
-        
-        if (dbErr) {
-            throw new Error(`Erreur Base de données: ${dbErr.message}`);
-        }
+      if (!authData.user) {
+        throw new Error("Erreur lors de la création du compte");
       }
 
-      toast.success("Bienvenue sur BZMarket !");
-      router.push('/'); 
+      // ✅ MODIFIÉ - Ajout de newsletter
+      const { error: dbErr } = await supabase.from('profiles').upsert([{
+        id: authData.user.id,
+        email: formData.email,
+        first_name: formData.prenom,
+        last_name: formData.nom,
+        gender: formData.gender,
+        age: parseInt(formData.age), 
+        wilaya: formData.wilaya,
+        commune: formData.commune,
+        address: formData.address,
+        phone: formData.telephone,
+        referral_code: formData.referral || null,
+        newsletter: formData.newsletter, // ✅ AJOUTÉ
+        role: 'client'
+      }]);
+      
+      if (dbErr) {
+        console.error("Erreur DB:", dbErr);
+        throw new Error(`Erreur Base de données: ${dbErr.message}`);
+      }
+
+      toast.success("🎉 Compte créé avec succès ! Bienvenue sur BZMarket !");
+      
+      setTimeout(() => {
+        router.push('/');
+        router.refresh();
+      }, 1000);
+      
     } catch (err: any) {
-      toast.error(err.message || "Code invalide.");
+      console.error("Erreur d'inscription:", err);
+      toast.error(err.message || "Erreur lors de l'inscription");
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (step === 'otp') {
-    return (
-      <div className="min-h-screen w-full bg-[#0f172a] flex items-center justify-center p-5 font-sans">
-        <div className="max-w-md w-full bg-white p-10 rounded-[35px] shadow-2xl text-center space-y-6">
-          <button onClick={() => setStep('form')} className="flex items-center gap-2 text-slate-500 font-bold hover:text-blue-600 transition-all"><ArrowLeft size={18}/> Retour</button>
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto"><KeyRound className="text-blue-600" size={40} /></div>
-          <h2 className="text-2xl font-black text-black uppercase tracking-tighter">VÉRIFICATION CLIENT</h2>
-          <p className="text-slate-600 text-sm font-medium">Un code de sécurité a été envoyé à <br/><span className="text-blue-700 font-bold">{formData.email}</span></p>
-          <input 
-            type="text" 
-            maxLength={6} 
-            placeholder="000000" 
-            className="w-full p-4 border-2 border-slate-200 rounded-2xl text-center text-4xl font-black tracking-widest text-black outline-none focus:border-blue-600" 
-            onChange={(e) => setOtpCode(e.target.value)} 
-          />
-          <button onClick={handleVerifyOtp} disabled={isLoading} className="w-full p-5 bg-blue-600 text-white rounded-full font-black uppercase shadow-lg hover:bg-blue-700 transition-all">
-            {isLoading ? <Loader2 className="animate-spin mx-auto"/> : "Activer mon compte client"}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-t from-[#0b1120] via-[#1e293b] to-[#f0f9ff] p-5 pb-20 font-sans text-black flex flex-col items-center">
@@ -288,10 +256,27 @@ export default function RegisterClientForm() {
               <textarea placeholder="Adresse exacte (Cité, n° porte, repères) *" className={getFieldStyle(formData.address, v.address(formData.address)) + " h-24 pt-3 bg-white"} onChange={e => setFormData({...formData, address: e.target.value})} />
             </div>
 
+            {/* ✅ AJOUTÉ - Newsletter */}
+            <div className="flex items-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-[18px] border border-blue-200">
+              <input 
+                type="checkbox" 
+                checked={formData.newsletter} 
+                onChange={e => setFormData({...formData, newsletter: e.target.checked})} 
+                className="w-5 h-5 accent-blue-600 mt-1 cursor-pointer"
+              />
+              <div className="flex-1">
+                <label className="text-sm font-bold text-slate-900 cursor-pointer flex items-center gap-2">
+                  <Bell size={16} className="text-blue-600" />
+                  Recevoir les offres et promotions BZMarket par email
+                </label>
+                <p className="text-xs text-slate-600 mt-1">(Optionnel - Vous pouvez vous désabonner à tout moment)</p>
+              </div>
+            </div>
+
             <div className="flex items-start gap-3">
               <input type="checkbox" checked={formData.acceptedTerms} onChange={e => setFormData({...formData, acceptedTerms: e.target.checked})} className="w-5 h-5 accent-blue-600 mt-1 cursor-pointer"/>
               <label className="text-sm text-blue-700 font-bold cursor-pointer">
-                j'accepte les conditions et la politique de <span className="text-orange-500">BZM</span>arket
+                j'accepte les conditions et la politique de <span className="text-orange-500">BZM</span>arket *
               </label>
             </div>
 

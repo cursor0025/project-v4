@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { Toaster } from 'sonner'; // ✅ AJOUTÉ
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,13 +19,10 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={inter.className}>
-        {/* On enveloppe toute l'application avec AuthProvider.
-          Cela permet à la ligne 'const { user } = useAuth();' 
-          de fonctionner dans votre page dashboard.
-        */}
         <AuthProvider>
           {children}
         </AuthProvider>
+        <Toaster position="top-right" richColors /> {/* ✅ AJOUTÉ */}
       </body>
     </html>
   );

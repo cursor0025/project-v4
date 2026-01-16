@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Product } from '@/types/product';
 import ProductGrid from '@/components/ProductGrid';
-import { useCartStore } from '@/store/cart'; // ✅ AJOUTÉ
+import { useCartStore } from '@/store/cart';
 
 // 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES (CONSERVÉE À 100%)
 const BZM_DATA = [
@@ -84,14 +84,12 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
-  // ✅ AJOUTÉ - Gestion du panier
   const [isClient, setIsClient] = useState(false);
-  const getTotalItems = useCartStore((state) => state.getTotalItems);
-  const cartItemsCount = isClient ? getTotalItems() : 0;
+  const { getTotalItems, setUserId, isLoaded } = useCartStore();
+  const cartItemsCount = isClient && isLoaded ? getTotalItems() : 0;
 
   const supabase = createSupabaseBrowserClient();
 
-  // ✅ AJOUTÉ - Attendre que le composant soit monté côté client
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -127,8 +125,11 @@ export default function HomePage() {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
         setUser(authUser);
+        setUserId(authUser.id);
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', authUser.id).single();
         if (profile) setUserRole(profile.role);
+      } else {
+        setUserId(null);
       }
     };
 
@@ -137,16 +138,18 @@ export default function HomePage() {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
+        setUserId(session.user.id);
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
         if (profile) setUserRole(profile.role);
       } else {
         setUser(null);
         setUserRole(null);
+        setUserId(null);
       }
     });
 
     return () => authListener.subscription.unsubscribe();
-  }, []);
+  }, [setUserId]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -252,7 +255,7 @@ export default function HomePage() {
                 <span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
               </div>
               
-              {/* ✅ MODIFIÉ - Badge panier dynamique */}
+              {/* Badge panier dynamique */}
               <Link href="/cart" className="relative cursor-pointer">
                 <ShoppingCart size={20} className="md:w-[22px] md:h-[22px]" />
                 {cartItemsCount > 0 && (
@@ -262,15 +265,57 @@ export default function HomePage() {
                 )}
               </Link>
               
-              {/* User Menu */}
+              {/* ✅ User Menu AVEC AVATAR + PRÉNOM */}
               <div className="relative" ref={userMenuRef}>
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:text-orange-600 transition-colors" 
+                  className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-all" 
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 >
-                  <User size={20} className="md:w-[22px] md:h-[22px]" />
-                  <span className="hidden xl:inline text-sm font-bold uppercase">{user ? 'Compte' : 'Connexion'}</span>
-                  <ChevronDown size={14} className={`hidden md:inline transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  {user ? (
+                    <>
+                      {/* Avatar + Nom */}
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-orange-50 px-3 py-1.5 rounded-full border-2 border-orange-200 hover:border-orange-400 transition-all">
+                        {/* Avatar circulaire */}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-black text-sm shadow-lg border-2 border-white">
+                          {user.user_metadata?.avatar_url ? (
+                            <img 
+                              src={user.user_metadata.avatar_url} 
+                              alt="Avatar" 
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="uppercase">
+                              {user.user_metadata?.first_name?.[0] || user.email?.[0] || 'U'}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Prénom + Badge - Hidden on mobile */}
+                        <div className="hidden xl:flex flex-col items-start">
+                          <span className="text-xs font-black text-slate-800 leading-none">
+                            {user.user_metadata?.first_name || 'Utilisateur'}
+                          </span>
+                          <span className={`text-[9px] font-bold uppercase leading-none mt-0.5 ${
+                            userRole === 'vendor' ? 'text-orange-600' : 'text-blue-600'
+                          }`}>
+                            {userRole === 'vendor' ? '⭐ Vendeur' : '👤 Client'}
+                          </span>
+                        </div>
+                        
+                        <ChevronDown 
+                          size={14} 
+                          className={`hidden md:inline text-slate-600 transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} 
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    // Non connecté - Icône User classique
+                    <div className="flex items-center gap-1 text-slate-600 hover:text-orange-600 transition-colors">
+                      <User size={20} className="md:w-[22px] md:h-[22px]" />
+                      <span className="hidden xl:inline text-sm font-bold uppercase">Connexion</span>
+                      <ChevronDown size={14} className={`hidden md:inline transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  )}
                 </div>
                 
                 {isUserMenuOpen && (
@@ -278,6 +323,38 @@ export default function HomePage() {
                     <div className="p-2 space-y-1">
                       {user ? (
                         <>
+                          {/* En-tête du menu avec avatar et infos complètes */}
+                          <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-orange-50 rounded-lg mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-black text-lg shadow-lg border-2 border-white">
+                                {user.user_metadata?.avatar_url ? (
+                                  <img 
+                                    src={user.user_metadata.avatar_url} 
+                                    alt="Avatar" 
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="uppercase">
+                                    {user.user_metadata?.first_name?.[0] || user.email?.[0] || 'U'}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-black text-slate-800 truncate">
+                                  {user.user_metadata?.first_name || 'Utilisateur'} {user.user_metadata?.last_name || ''}
+                                </p>
+                                <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                                <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded-full mt-1 ${
+                                  userRole === 'vendor' 
+                                    ? 'bg-orange-100 text-orange-600' 
+                                    : 'bg-blue-100 text-blue-600'
+                                }`}>
+                                  {userRole === 'vendor' ? '⭐ Vendeur' : '👤 Client'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
                           <Link 
                             href={userRole === 'vendor' ? '/dashboard/vendor' : '/dashboard/client'} 
                             className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-lg transition-all"

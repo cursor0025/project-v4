@@ -20,9 +20,8 @@ interface AddToCartButtonProps {
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const { addItem, getItemQuantity, updateQuantity, canAddItem } = useCartStore();
   const [isAdding, setIsAdding] = useState(false);
-  const [isClient, setIsClient] = useState(false); // ✅ AJOUTÉ pour gérer l'hydratation
+  const [isClient, setIsClient] = useState(false);
   
-  // ✅ ATTENDRE QUE LE COMPOSANT SOIT MONTÉ CÔTÉ CLIENT
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -42,6 +41,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       id: crypto.randomUUID(),
       product_id: product.id,
       vendor_id: product.vendor_id,
+      vendor_name: 'Vendeur',
       name: product.name,
       price: product.price,
       weight: product.weight,
@@ -73,18 +73,6 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }
   };
 
-  if (product.stock === 0) {
-    return (
-      <button
-        disabled
-        className="w-full bg-gray-300 text-gray-500 py-3 px-6 rounded-lg font-semibold cursor-not-allowed"
-      >
-        Rupture de stock
-      </button>
-    );
-  }
-
-  // ✅ AFFICHER UN LOADER PENDANT L'HYDRATATION
   if (!isClient) {
     return (
       <button
@@ -93,6 +81,17 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       >
         <ShoppingCart className="w-5 h-5" />
         Ajouter au panier
+      </button>
+    );
+  }
+
+  if (product.stock === 0) {
+    return (
+      <button
+        disabled
+        className="w-full bg-gray-300 text-gray-500 py-3 px-6 rounded-lg font-semibold cursor-not-allowed"
+      >
+        Rupture de stock
       </button>
     );
   }

@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { 
   Gift, Store, FileCheck, Upload, Eye, EyeOff, 
-  Globe, CheckCircle2, XCircle, Phone, Mail, Loader2, KeyRound, ArrowLeft, MapPin
+  Globe, CheckCircle2, XCircle, Phone, Mail, Loader2, Users, Calendar, Bell
 } from 'lucide-react';
 
 const categoriesList = [
@@ -23,7 +23,6 @@ const categoriesList = [
   "41. Engins de Travaux Publics", "42. Fête & Mariage", "43. Kaba", "44. Divers"
 ];
 
-// LISTE COMPLÈTE DES 58 WILAYAS
 const wilayaData: { [key: string]: string[] } = {
   "01 — Adrar": ["Adrar", "Reggane", "In Zghmir", "Tsabit"],
   "02 — Chlef": ["Chlef", "Ténès", "Boukadir"],
@@ -95,8 +94,6 @@ const IMAGES = [
 
 export default function RegisterVendorForm() {
   const router = useRouter();
-  const [step, setStep] = useState<'form' | 'otp'>('form');
-  const [otpCode, setOtpCode] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -107,17 +104,21 @@ export default function RegisterVendorForm() {
 
   const [uploadedDocs, setUploadedDocs] = useState({ rc: false, id: false, auto: false });
 
+  // ✅ MODIFIÉ - Ajout de gender, age et newsletter
   const [formData, setFormData] = useState({
-    nom: '', prenom: '', email: '', telephone: '', password: '', confirmPassword: '', 
-    shopName: '', category: '', wilaya: '', commune: '', referral: ''
+    nom: '', prenom: '', email: '', telephone: '', gender: '', age: '',
+    password: '', confirmPassword: '', 
+    shopName: '', category: '', wilaya: '', commune: '', referral: '', newsletter: false
   });
 
+  // ✅ MODIFIÉ - Ajout de la validation age
   const v = {
     name: (val: string) => val.trim().length >= 2,
     email: (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
     phone: (val: string) => /^(05|06|07|02)[0-9]{8}$/.test(val),
     shop: (val: string) => val.trim().length >= 3,
-    selection: (val: string) => val !== ''
+    selection: (val: string) => val !== '',
+    age: (val: string) => parseInt(val) >= 18 && parseInt(val) <= 100 // ✅ AJOUTÉ - Min 18 ans pour vendeur
   };
 
   const hasMinLength = formData.password.length >= 8;
@@ -127,10 +128,12 @@ export default function RegisterVendorForm() {
   const isPasswordSecure = hasMinLength && hasUpper && hasLower && hasNumber;
   const isMatch = formData.password === formData.confirmPassword && formData.confirmPassword !== '';
 
+  // ✅ MODIFIÉ - Ajout de gender et age dans la validation
   const isFormValid = useMemo(() => {
     return (
       v.name(formData.nom) && v.name(formData.prenom) && 
       v.email(formData.email) && v.phone(formData.telephone) &&
+      v.selection(formData.gender) && v.age(formData.age) && // ✅ AJOUTÉ
       isPasswordSecure && isMatch && v.shop(formData.shopName) &&
       v.selection(formData.category) && v.selection(formData.wilaya) && v.selection(formData.commune) &&
       acceptedTerms && uploadedDocs.rc && uploadedDocs.id
@@ -138,7 +141,7 @@ export default function RegisterVendorForm() {
   }, [formData, acceptedTerms, isPasswordSecure, isMatch, uploadedDocs]);
 
   const hasStartedFilling = useMemo(() => {
-    const { referral, ...required } = formData;
+    const { referral, newsletter, ...required } = formData; // ✅ MODIFIÉ
     return Object.values(required).some(val => val.trim() !== '') || acceptedTerms || uploadedDocs.rc;
   }, [formData, acceptedTerms, uploadedDocs]);
 
@@ -155,7 +158,8 @@ export default function RegisterVendorForm() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
+  // ✅ MODIFIÉ - Enlever l'étape OTP, inscription directe
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) {
       setIsShaking(true);
@@ -164,90 +168,78 @@ export default function RegisterVendorForm() {
     }
 
     setIsLoading(true);
+    
     try {
       const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.signUp({
+      
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: { 
-          data: { first_name: formData.prenom, last_name: formData.nom, role: 'vendor' }
+          data: { 
+            first_name: formData.prenom, 
+            last_name: formData.nom, 
+            role: 'vendor' 
+          }
         }
       });
-      if (error) throw error;
-      toast.success("Code envoyé à " + formData.email);
-      setStep('otp');
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length < 6) return toast.error("Code incomplet.");
-    setIsLoading(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data, error: vErr } = await supabase.auth.verifyOtp({
-        email: formData.email,
-        token: otpCode,
-        type: 'signup'
-      });
-      if (vErr) throw vErr;
-
-      if (data.user) {
-        const { error: profErr } = await supabase.from('profiles').upsert([{
-            id: data.user.id,
-            first_name: formData.prenom,
-            last_name: formData.nom,
-            role: 'vendor',
-            phone: formData.telephone
-        }]);
-
-        if (profErr) throw new Error("Profil utilisateur : " + profErr.message);
-
-        const vendorData = {
-          id: data.user.id,
-          shop_name: formData.shopName,
-          category: formData.category,
-          wilaya: formData.wilaya,
-          commune: formData.commune,
-          telephone: formData.telephone 
-        };
-        
-        const { error: dbErr } = await supabase.from('vendors').insert([vendorData]);
-        
-        if (dbErr) {
-          throw new Error("Profil boutique : " + dbErr.message);
-        }
+      if (signUpError) throw signUpError;
+      
+      if (!authData.user) {
+        throw new Error("Erreur lors de la création du compte");
       }
 
-      toast.success("Bienvenue sur BZMarket !");
-      router.push('/dashboard/vendor');
+      // ✅ MODIFIÉ - Ajout de gender, age et newsletter dans profiles
+      const { error: profErr } = await supabase.from('profiles').upsert([{
+        id: authData.user.id,
+        email: formData.email,
+        first_name: formData.prenom,
+        last_name: formData.nom,
+        gender: formData.gender, // ✅ AJOUTÉ
+        age: parseInt(formData.age), // ✅ AJOUTÉ
+        phone: formData.telephone,
+        referral_code: formData.referral || null,
+        newsletter: formData.newsletter, // ✅ AJOUTÉ
+        role: 'vendor'
+      }]);
+
+      if (profErr) {
+        console.error("Erreur profil:", profErr);
+        throw new Error("Profil utilisateur : " + profErr.message);
+      }
+
+      // Insertion dans vendors
+      const vendorData = {
+        id: authData.user.id,
+        shop_name: formData.shopName,
+        category: formData.category,
+        wilaya: formData.wilaya,
+        commune: formData.commune,
+        telephone: formData.telephone 
+      };
+      
+      const { error: dbErr } = await supabase.from('vendors').insert([vendorData]);
+      
+      if (dbErr) {
+        console.error("Erreur vendor:", dbErr);
+        throw new Error("Profil boutique : " + dbErr.message);
+      }
+
+      toast.success("🎉 Bienvenue sur BZMarket !");
+      
+      setTimeout(() => {
+        router.push('/dashboard/vendor');
+        router.refresh();
+      }, 1000);
+      
     } catch (err: any) {
+      console.error("Erreur d'inscription:", err);
       toast.error("Erreur : " + err.message);
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (step === 'otp') {
-    return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-5">
-        <div className="max-w-md w-full bg-white p-10 rounded-[35px] shadow-2xl text-center space-y-6">
-          <button onClick={() => setStep('form')} className="flex items-center gap-2 text-slate-500 font-bold hover:text-blue-600 transition-all"><ArrowLeft size={18}/> Retour</button>
-          <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto"><KeyRound className="text-orange-600" size={40} /></div>
-          <h2 className="text-2xl font-black text-black">VÉRIFICATION</h2>
-          <p className="text-slate-600 text-sm font-medium">Un code a été envoyé à <br/><span className="text-blue-700 font-bold">{formData.email}</span></p>
-          <input type="text" placeholder="000000" maxLength={6} className="w-full p-4 border-2 border-slate-200 rounded-2xl text-center text-4xl font-black tracking-widest text-black outline-none focus:border-blue-600" onChange={(e) => setOtpCode(e.target.value)} />
-          <button onClick={handleVerifyOtp} disabled={isLoading} className="w-full p-5 bg-emerald-600 text-white rounded-full font-black uppercase shadow-lg hover:bg-emerald-700">
-            {isLoading ? <Loader2 className="animate-spin mx-auto"/> : "Confirmer mon compte"}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-t from-[#0b1120] via-[#1e293b] to-[#f0f9ff] p-5 pb-20 font-sans">
@@ -272,12 +264,14 @@ export default function RegisterVendorForm() {
             ))}
           </div>
         </div>
+
         <div className="p-8 md:p-14">
-          <form className="space-y-7" onSubmit={handleRequestOtp}>
+          <form className="space-y-7" onSubmit={handleRegister}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <input placeholder="Nom *" className={getFieldStyle(formData.nom, v.name(formData.nom))} onChange={e => setFormData({...formData, nom: e.target.value})} />
               <input placeholder="Prénom *" className={getFieldStyle(formData.prenom, v.name(formData.prenom))} onChange={e => setFormData({...formData, prenom: e.target.value})} />
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative">
                 <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${formData.email ? (v.email(formData.email) ? 'text-emerald-600' : 'text-red-600') : 'text-slate-500'}`} size={18} />
@@ -288,6 +282,23 @@ export default function RegisterVendorForm() {
                 <input placeholder="Numéro de téléphone *" className={getFieldStyle(formData.telephone, v.phone(formData.telephone)) + " pl-12"} onChange={e => setFormData({...formData, telephone: e.target.value})} />
               </div>
             </div>
+
+            {/* ✅ AJOUTÉ - Genre et Âge */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="relative">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <select className={getFieldStyle(formData.gender, v.selection(formData.gender)) + " pl-12 bg-[#f8fafc] text-black cursor-pointer"} onChange={e => setFormData({...formData, gender: e.target.value})}>
+                  <option value="">Genre *</option>
+                  <option value="Homme">Homme</option>
+                  <option value="Femme">Femme</option>
+                </select>
+              </div>
+              <div className="relative">
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <input type="number" placeholder="Âge * (minimum 18 ans)" className={getFieldStyle(formData.age, v.age(formData.age)) + " pl-12"} onChange={e => setFormData({...formData, age: e.target.value})} />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative">
                 <input type={showPass ? "text" : "password"} placeholder="Mot de passe *" className={getFieldStyle(formData.password, isPasswordSecure)} onChange={e => setFormData({...formData, password: e.target.value})} />
@@ -298,36 +309,40 @@ export default function RegisterVendorForm() {
                 <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">{showConfirm ? <EyeOff size={20}/> : <Eye size={20}/>}</button>
               </div>
             </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <PassCheck label="8+ Caractères" v={hasMinLength} />
               <PassCheck label="Majuscule" v={hasUpper} />
               <PassCheck label="Minuscule" v={hasLower} />
               <PassCheck label="Un Chiffre" v={hasNumber} />
             </div>
+
             <div className="relative">
               <Gift className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500" size={20}/>
               <input placeholder="Code de parrainage (Optionnel)" className={getFieldStyle(formData.referral, true) + " pl-12"} onChange={e => setFormData({...formData, referral: e.target.value})} />
             </div>
+
             <div className="bg-[#f1f5f9] p-8 rounded-[24px] space-y-6 shadow-inner border border-slate-300">
               <h3 className="font-black text-slate-900 flex items-center gap-2 text-lg uppercase tracking-tight"><Store className="text-blue-600"/> Votre Boutique</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <input placeholder="Nom boutique *" className={getFieldStyle(formData.shopName, v.shop(formData.shopName)) + " bg-white"} onChange={e => setFormData({...formData, shopName: e.target.value})} />
                 <select className={getFieldStyle(formData.category, v.selection(formData.category)) + " bg-white appearance-none cursor-pointer text-black"} onChange={e => setFormData({...formData, category: e.target.value})}>
-                  <option value="">Catégorie</option>
+                  <option value="">Catégorie *</option>
                   {categoriesList.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <select className={getFieldStyle(formData.wilaya, v.selection(formData.wilaya)) + " bg-white appearance-none cursor-pointer text-black"} onChange={e => setFormData({...formData, wilaya: e.target.value, commune: ''})}>
-                  <option value="">Wilaya</option>
+                  <option value="">Wilaya *</option>
                   {Object.keys(wilayaData).sort().map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
                 <select className={getFieldStyle(formData.commune, v.selection(formData.commune)) + " bg-white appearance-none cursor-pointer disabled:opacity-50 text-black"} disabled={!formData.wilaya} onChange={e => setFormData({...formData, commune: e.target.value})}>
-                  <option value="">Commune</option>
+                  <option value="">Commune *</option>
                   {(wilayaData[formData.wilaya] || []).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             </div>
+
             <div className="bg-[#f0fdf4] p-8 rounded-[24px] border border-emerald-200">
               <h3 className="font-black text-slate-900 flex items-center gap-2 mb-4"><FileCheck className="text-emerald-600"/> Documents (Obligatoires *)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -336,13 +351,32 @@ export default function RegisterVendorForm() {
                 <UploadBox label="Carte Autoentrepreneur" onFileChange={(h) => setUploadedDocs(p => ({...p, auto: h}))} />
               </div>
             </div>
+
+            {/* ✅ AJOUTÉ - Newsletter */}
+            <div className="flex items-start gap-3 bg-gradient-to-r from-orange-50 to-amber-50 p-5 rounded-[18px] border border-orange-200">
+              <input 
+                type="checkbox" 
+                checked={formData.newsletter} 
+                onChange={e => setFormData({...formData, newsletter: e.target.checked})} 
+                className="w-5 h-5 accent-orange-600 mt-1 cursor-pointer"
+              />
+              <div className="flex-1">
+                <label className="text-sm font-bold text-slate-900 cursor-pointer flex items-center gap-2">
+                  <Bell size={16} className="text-orange-600" />
+                  Recevoir les actualités vendeurs et conseils BZMarket par email
+                </label>
+                <p className="text-xs text-slate-600 mt-1">(Optionnel - Désabonnement possible à tout moment)</p>
+              </div>
+            </div>
+
             <div className="flex items-start gap-3">
               <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} className="w-5 h-5 accent-orange-600 mt-1 cursor-pointer"/>
               <label className="text-sm text-black font-bold">
                 J'accepte les <span className="text-blue-700 font-black">conditions BZMarket</span>. 
-                En cochant cette case, j'accepte la <a href="#" className="text-orange-600 font-bold hover:underline">politique</a>, les <a href="#" className="text-orange-600 font-bold hover:underline">règles</a> et les <a href="#" className="text-orange-600 font-bold hover:underline">conditions générales</a>.
+                En cochant cette case, j'accepte la <a href="#" className="text-orange-600 font-bold hover:underline">politique</a>, les <a href="#" className="text-orange-600 font-bold hover:underline">règles</a> et les <a href="#" className="text-orange-600 font-bold hover:underline">conditions générales</a> *
               </label>
             </div>
+
             <button type="submit" disabled={isLoading} className={`w-full p-5 text-white rounded-full text-xl font-black shadow-xl transition-all duration-500 uppercase flex items-center justify-center gap-2 ${isShaking ? "animate-shake" : "active:scale-95"} ${isFormValid ? "bg-emerald-600 shadow-emerald-300" : hasStartedFilling ? "bg-red-600 shadow-red-300" : "bg-gradient-to-r from-blue-700 via-blue-600 to-orange-500 shadow-blue-200"}`}>
               {isLoading ? <Loader2 className="animate-spin" size={24} /> : isFormValid ? "Lancer ma boutique BZMarket !" : "Lancer ma boutique BZMarket"}
             </button>
