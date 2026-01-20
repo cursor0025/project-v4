@@ -107,28 +107,22 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const supabase = createSupabaseBrowserClient()
-
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
       
-      if (authError || !user) {
-        toast.error('Vous devez être connecté')
+      // ✅ CORRECTION : Appel de la nouvelle API /api/vendor/products
+      const response = await fetch('/api/vendor/products')
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement')
+      }
+      
+      const result = await response.json()
+      
+      if (result.error) {
+        toast.error(result.message || 'Erreur lors du chargement')
         return
       }
-
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('vendor_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Erreur lors du chargement:', error)
-        toast.error('Erreur lors du chargement des produits')
-        return
-      }
-
-      setProducts(data || [])
+      
+      setProducts(result.products || [])
     } catch (error) {
       console.error('Erreur:', error)
       toast.error('Une erreur est survenue')
