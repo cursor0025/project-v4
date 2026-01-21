@@ -16,7 +16,13 @@ export async function PATCH(
     if (!rateLimitResult.success) {
       return Response.json(
         { error: 'TOO_MANY_REQUESTS' },
-        { status: 429 }
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
       )
     }
 
@@ -25,7 +31,16 @@ export async function PATCH(
     
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return Response.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+      return Response.json(
+        { error: 'UNAUTHORIZED' }, 
+        { 
+          status: 401,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
+      )
     }
 
     const { data: vendor } = await supabase
@@ -35,7 +50,16 @@ export async function PATCH(
       .single()
 
     if (!vendor) {
-      return Response.json({ error: 'VENDOR_NOT_FOUND' }, { status: 404 })
+      return Response.json(
+        { error: 'VENDOR_NOT_FOUND' }, 
+        { 
+          status: 404,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
+      )
     }
 
     const body = await request.json()
@@ -44,7 +68,13 @@ export async function PATCH(
     if (!validation.success) {
       return Response.json(
         { error: 'VALIDATION_ERROR', errors: validation.errors },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
       )
     }
 
@@ -69,17 +99,47 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return Response.json({ error: error.message }, { status: 500 })
+      return Response.json(
+        { error: error.message }, 
+        { 
+          status: 500,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
+      )
     }
 
     if (!order) {
-      return Response.json({ error: 'ORDER_NOT_FOUND' }, { status: 404 })
+      return Response.json(
+        { error: 'ORDER_NOT_FOUND' }, 
+        { 
+          status: 404,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
+      )
     }
 
-    return Response.json({ order }, { status: 200 })
+    return Response.json(
+      { order }, 
+      { 
+        status: 200,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        }
+      }
+    )
     
   } catch (e) {
-    return Response.json({ error: 'INTERNAL_ERROR' }, { status: 500 })
+    return Response.json(
+      { error: 'INTERNAL_ERROR' }, 
+      { status: 500 }
+    )
   }
 }
 
@@ -94,7 +154,13 @@ export async function GET(
     if (!rateLimitResult.success) {
       return Response.json(
         { error: 'TOO_MANY_REQUESTS' },
-        { status: 429 }
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
       )
     }
 
@@ -103,7 +169,16 @@ export async function GET(
     
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return Response.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+      return Response.json(
+        { error: 'UNAUTHORIZED' }, 
+        { 
+          status: 401,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
+      )
     }
 
     const { data: vendor } = await supabase
@@ -113,7 +188,16 @@ export async function GET(
       .single()
 
     if (!vendor) {
-      return Response.json({ error: 'VENDOR_NOT_FOUND' }, { status: 404 })
+      return Response.json(
+        { error: 'VENDOR_NOT_FOUND' }, 
+        { 
+          status: 404,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
+      )
     }
 
     const { data: order, error } = await supabase
@@ -124,12 +208,33 @@ export async function GET(
       .single()
 
     if (error || !order) {
-      return Response.json({ error: 'ORDER_NOT_FOUND' }, { status: 404 })
+      return Response.json(
+        { error: 'ORDER_NOT_FOUND' }, 
+        { 
+          status: 404,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          }
+        }
+      )
     }
 
-    return Response.json({ order }, { status: 200 })
+    return Response.json(
+      { order }, 
+      { 
+        status: 200,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        }
+      }
+    )
     
   } catch (e) {
-    return Response.json({ error: 'INTERNAL_ERROR' }, { status: 500 })
+    return Response.json(
+      { error: 'INTERNAL_ERROR' }, 
+      { status: 500 }
+    )
   }
 }
