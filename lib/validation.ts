@@ -32,7 +32,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown) {
     if (error instanceof z.ZodError) {
       return {
         success: false as const,
-        errors: error.errors.map(e => ({
+        errors: error.issues.map(e => ({
           field: e.path.join('.'),
           message: e.message,
         })),
