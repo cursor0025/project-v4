@@ -38,7 +38,6 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     setIsAdding(true);
     
     addItem({
-      id: crypto.randomUUID(),
       product_id: product.id,
       vendor_id: product.vendor_id,
       vendor_name: 'Vendeur',
