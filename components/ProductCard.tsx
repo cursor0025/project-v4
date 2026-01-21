@@ -92,7 +92,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       vendor_name: 'Vendeur',
       name: product.name,
       price: product.price,
-      weight: product.weight || 0,
+      weight: 0,
       image_url: product.images && product.images.length > 0 ? product.images[0] : null,
       max_stock: product.stock,
     });
