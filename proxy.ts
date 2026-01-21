@@ -1,11 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-/**
- * CONFIGURATION BZMARKET - NEXT.JS 16
- * Proxy pour gérer l'authentification Supabase.
- * CHANGEMENT CLÉ : L'exportation doit être directe.
- */
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: { headers: request.headers },
@@ -37,13 +32,20 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
-  // Rafraîchit la session utilisateur Supabase
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Protection routes dashboard
+  if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+  }
 
   return response
 }
 
-// Configuration du matcher pour protéger vos routes BZMarket
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
