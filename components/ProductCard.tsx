@@ -89,7 +89,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     addItem({
       product_id: product.id,
       vendor_id: product.vendor_id,
-      vendor_name: product.vendor?.business_name || 'Vendeur',
+      vendor_name: 'Vendeur',
       name: product.name,
       price: product.price,
       weight: product.weight || 0,
