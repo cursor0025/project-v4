@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { apiLimiter } from '@/lib/rate-limit'
+import { updateOrderSchema, validateData } from '@/lib/validation'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +10,16 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = await apiLimiter(ip)
+    
+    if (!rateLimitResult.success) {
+      return Response.json(
+        { error: 'TOO_MANY_REQUESTS' },
+        { status: 429 }
+      )
+    }
+
     const { id } = await context.params
     const supabase = await createServerSupabaseClient()
     
@@ -27,16 +39,25 @@ export async function PATCH(
     }
 
     const body = await request.json()
+    
+    const validation = validateData(updateOrderSchema, body)
+    if (!validation.success) {
+      return Response.json(
+        { error: 'VALIDATION_ERROR', errors: validation.errors },
+        { status: 400 }
+      )
+    }
+
     const updates: any = {
       updated_at: new Date().toISOString()
     }
     
-    if (body.status) {
-      updates.status = body.status
+    if (validation.data.status) {
+      updates.status = validation.data.status
     }
     
-    if (body.vendor_notes !== undefined) {
-      updates.vendor_notes = body.vendor_notes
+    if (validation.data.vendor_notes !== undefined) {
+      updates.vendor_notes = validation.data.vendor_notes
     }
 
     const { data: order, error } = await supabase
@@ -67,6 +88,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = await apiLimiter(ip)
+    
+    if (!rateLimitResult.success) {
+      return Response.json(
+        { error: 'TOO_MANY_REQUESTS' },
+        { status: 429 }
+      )
+    }
+
     const { id } = await context.params
     const supabase = await createServerSupabaseClient()
     

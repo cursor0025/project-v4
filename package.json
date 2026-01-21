@@ -11,6 +11,8 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.87.3",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.1",
     "argon2": "^0.44.0",
     "axios": "^1.13.2",
     "browser-image-compression": "^2.0.2",
@@ -29,7 +31,7 @@
     "recharts": "^3.6.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "zod": "^4.2.1",
+    "zod": "^4.3.5",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
