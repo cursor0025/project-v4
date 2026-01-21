@@ -87,7 +87,6 @@ export default function ProductCard({ product }: ProductCardProps) {
     setIsAdding(true);
 
     addItem({
-      id: crypto.randomUUID(),
       product_id: product.id,
       vendor_id: product.vendor_id,
       vendor_name: product.vendor?.business_name || 'Vendeur',
