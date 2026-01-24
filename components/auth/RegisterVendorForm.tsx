@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { 
   Gift, Store, FileCheck, Upload, Eye, EyeOff, 
   Globe, CheckCircle2, XCircle, Phone, Mail, Loader2, Users, Calendar, Bell
@@ -104,21 +103,19 @@ export default function RegisterVendorForm() {
 
   const [uploadedDocs, setUploadedDocs] = useState({ rc: false, id: false, auto: false });
 
-  // ✅ MODIFIÉ - Ajout de gender, age et newsletter
   const [formData, setFormData] = useState({
     nom: '', prenom: '', email: '', telephone: '', gender: '', age: '',
     password: '', confirmPassword: '', 
     shopName: '', category: '', wilaya: '', commune: '', referral: '', newsletter: false
   });
 
-  // ✅ MODIFIÉ - Ajout de la validation age
   const v = {
     name: (val: string) => val.trim().length >= 2,
     email: (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
     phone: (val: string) => /^(05|06|07|02)[0-9]{8}$/.test(val),
     shop: (val: string) => val.trim().length >= 3,
     selection: (val: string) => val !== '',
-    age: (val: string) => parseInt(val) >= 18 && parseInt(val) <= 100 // ✅ AJOUTÉ - Min 18 ans pour vendeur
+    age: (val: string) => parseInt(val) >= 18 && parseInt(val) <= 100
   };
 
   const hasMinLength = formData.password.length >= 8;
@@ -128,12 +125,11 @@ export default function RegisterVendorForm() {
   const isPasswordSecure = hasMinLength && hasUpper && hasLower && hasNumber;
   const isMatch = formData.password === formData.confirmPassword && formData.confirmPassword !== '';
 
-  // ✅ MODIFIÉ - Ajout de gender et age dans la validation
   const isFormValid = useMemo(() => {
     return (
       v.name(formData.nom) && v.name(formData.prenom) && 
       v.email(formData.email) && v.phone(formData.telephone) &&
-      v.selection(formData.gender) && v.age(formData.age) && // ✅ AJOUTÉ
+      v.selection(formData.gender) && v.age(formData.age) &&
       isPasswordSecure && isMatch && v.shop(formData.shopName) &&
       v.selection(formData.category) && v.selection(formData.wilaya) && v.selection(formData.commune) &&
       acceptedTerms && uploadedDocs.rc && uploadedDocs.id
@@ -141,7 +137,7 @@ export default function RegisterVendorForm() {
   }, [formData, acceptedTerms, isPasswordSecure, isMatch, uploadedDocs]);
 
   const hasStartedFilling = useMemo(() => {
-    const { referral, newsletter, ...required } = formData; // ✅ MODIFIÉ
+    const { referral, newsletter, ...required } = formData;
     return Object.values(required).some(val => val.trim() !== '') || acceptedTerms || uploadedDocs.rc;
   }, [formData, acceptedTerms, uploadedDocs]);
 
@@ -158,9 +154,9 @@ export default function RegisterVendorForm() {
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ MODIFIÉ - Enlever l'étape OTP, inscription directe
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!isFormValid) {
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
@@ -170,72 +166,45 @@ export default function RegisterVendorForm() {
     setIsLoading(true);
     
     try {
-      const supabase = createSupabaseBrowserClient();
-      
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: { 
-          data: { 
-            first_name: formData.prenom, 
-            last_name: formData.nom, 
-            role: 'vendor' 
-          }
-        }
+      const response = await fetch('/api/vendor-verification/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorEmail: formData.email,
+          vendorName: `${formData.prenom} ${formData.nom}`
+        })
       });
 
-      if (signUpError) throw signUpError;
-      
-      if (!authData.user) {
-        throw new Error("Erreur lors de la création du compte");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'envoi du code');
       }
 
-      // ✅ MODIFIÉ - Ajout de gender, age et newsletter dans profiles
-      const { error: profErr } = await supabase.from('profiles').upsert([{
-        id: authData.user.id,
+      sessionStorage.setItem('pendingVendorRegistration', JSON.stringify({
         email: formData.email,
-        first_name: formData.prenom,
-        last_name: formData.nom,
-        gender: formData.gender, // ✅ AJOUTÉ
-        age: parseInt(formData.age), // ✅ AJOUTÉ
-        phone: formData.telephone,
-        referral_code: formData.referral || null,
-        newsletter: formData.newsletter, // ✅ AJOUTÉ
-        role: 'vendor'
-      }]);
+        password: formData.password,
+        userData: {
+          firstName: formData.prenom,
+          lastName: formData.nom,
+          gender: formData.gender,
+          age: formData.age,
+          phone: formData.telephone,
+          shopName: formData.shopName,
+          category: formData.category,
+          wilaya: formData.wilaya,
+          commune: formData.commune,
+          referral: formData.referral,
+          newsletter: formData.newsletter
+        }
+      }));
 
-      if (profErr) {
-        console.error("Erreur profil:", profErr);
-        throw new Error("Profil utilisateur : " + profErr.message);
-      }
-
-      // Insertion dans vendors
-      const vendorData = {
-        id: authData.user.id,
-        shop_name: formData.shopName,
-        category: formData.category,
-        wilaya: formData.wilaya,
-        commune: formData.commune,
-        telephone: formData.telephone 
-      };
+      toast.success('📧 Code de vérification envoyé par email !');
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}&type=vendor`);
       
-      const { error: dbErr } = await supabase.from('vendors').insert([vendorData]);
-      
-      if (dbErr) {
-        console.error("Erreur vendor:", dbErr);
-        throw new Error("Profil boutique : " + dbErr.message);
-      }
-
-      toast.success("🎉 Bienvenue sur BZMarket !");
-      
-      setTimeout(() => {
-        router.push('/dashboard/vendor');
-        router.refresh();
-      }, 1000);
-      
-    } catch (err: any) {
-      console.error("Erreur d'inscription:", err);
-      toast.error("Erreur : " + err.message);
+    } catch (error: any) {
+      console.error('Erreur inscription:', error);
+      toast.error(error.message || 'Erreur lors de l\'inscription');
     } finally {
       setIsLoading(false);
     }
@@ -283,7 +252,6 @@ export default function RegisterVendorForm() {
               </div>
             </div>
 
-            {/* ✅ AJOUTÉ - Genre et Âge */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative">
                 <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
@@ -352,7 +320,6 @@ export default function RegisterVendorForm() {
               </div>
             </div>
 
-            {/* ✅ AJOUTÉ - Newsletter */}
             <div className="flex items-start gap-3 bg-gradient-to-r from-orange-50 to-amber-50 p-5 rounded-[18px] border border-orange-200">
               <input 
                 type="checkbox" 
@@ -389,19 +356,44 @@ export default function RegisterVendorForm() {
 
 function PassCheck({ label, v }: { label: string, v: boolean }) {
   return (
-    <div className={`flex items-center gap-1.5 text-[11px] font-black ${v ? 'text-emerald-700' : 'text-slate-600'}`}>
-      {v ? <CheckCircle2 size={13}/> : <XCircle size={13}/>} {label}
+    <div className="flex items-center gap-2 text-sm">
+      {v ? (
+        <CheckCircle2 className="w-4 h-4 text-green-500" />
+      ) : (
+        <XCircle className="w-4 h-4 text-gray-300" />
+      )}
+      <span className={v ? 'text-green-600' : 'text-gray-500'}>
+        {label}
+      </span>
     </div>
   );
 }
 
-function UploadBox({ label, onFileChange }: { label: string, onFileChange: (has: boolean) => void }) {
-  const [hasFile, setHasFile] = useState(false);
+function UploadBox({ label, onFileChange }: { label: string, onFileChange: (hasFile: boolean) => void }) {
+  const [fileName, setFileName] = useState<string>('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const hasFile = e.target.files && e.target.files.length > 0;
+    if (hasFile && e.target.files) {
+      setFileName(e.target.files[0].name);
+    } else {
+      setFileName('');
+    }
+    onFileChange(hasFile);
+  };
+
   return (
-    <label className={`p-4 border-2 border-dashed rounded-xl cursor-pointer flex flex-col items-center gap-2 transition-all ${hasFile ? 'border-emerald-500 bg-emerald-100' : 'border-emerald-300 bg-white hover:border-blue-600'}`}>
-      <Upload size={18} className={hasFile ? 'text-emerald-700' : 'text-emerald-500'}/>
-      <span className="text-[10px] text-center font-bold text-black">{hasFile ? "Ajouté ✓" : label}</span>
-      <input type="file" className="hidden" onChange={(e) => { const has = !!e.target.files?.length; setHasFile(has); onFileChange(has); }} />
+    <label className="flex flex-col items-center justify-center h-24 bg-white border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer hover:bg-emerald-50 transition relative overflow-hidden">
+      <Upload className="text-emerald-600 mb-1" size={24} />
+      <span className="text-xs font-bold text-slate-700 text-center px-2">
+        {fileName || label}
+      </span>
+      <input 
+        type="file" 
+        className="hidden" 
+        onChange={handleChange} 
+        accept=".pdf,.jpg,.jpeg,.png" 
+      />
     </label>
   );
 }

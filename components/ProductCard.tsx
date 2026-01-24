@@ -4,23 +4,38 @@ import { useState, useEffect } from 'react';
 import { Heart, Eye, ShoppingCart, Truck, X, Handshake, Calendar, Lock, Check } from 'lucide-react';
 import { Product } from '@/types/product';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/cart';
 import { toast } from 'sonner';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
+  
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   const { addItem, canAddItem } = useCartStore();
 
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  // ✅ Vérifier l'utilisateur connecté
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    checkUser();
   }, []);
 
   const discountPercent = product.old_price 
@@ -70,9 +85,15 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // ✅ VÉRIFICATION AUTHENTIFICATION - REDIRECTION DIRECTE
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
     if (product.stock === 0) {
       toast.error('Produit en rupture de stock');

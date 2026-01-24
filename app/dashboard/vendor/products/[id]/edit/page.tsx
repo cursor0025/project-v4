@@ -129,6 +129,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isCompressing, setIsCompressing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [error, setError] = useState<string | null>(null) // ✅ AJOUTÉ
 
   const [product, setProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState({
@@ -168,36 +169,38 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     fetchProduct()
   }, [productId])
 
+  // ✅ FONCTION CORRIGÉE - SANS REDIRECTIONS AUTOMATIQUES
   const fetchProduct = async () => {
     try {
       setLoading(true)
+      setError(null)
       const supabase = createSupabaseBrowserClient()
 
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       
       if (authError || !user) {
-        toast.error('Vous devez être connecté')
-        router.push('/dashboard/vendor/products')
+        setError('Vous devez être connecté')
+        setLoading(false)
         return
       }
 
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('products')
         .select('*')
         .eq('id', productId)
         .eq('vendor_id', user.id)
         .single()
 
-      if (error) {
-        console.error('Erreur chargement produit:', error)
-        toast.error('Produit introuvable ou accès refusé')
-        router.push('/dashboard/vendor/products')
+      if (fetchError) {
+        console.error('Erreur chargement produit:', fetchError)
+        setError('Produit introuvable ou accès refusé')
+        setLoading(false)
         return
       }
 
       if (!data) {
-        toast.error('Produit introuvable')
-        router.push('/dashboard/vendor/products')
+        setError('Produit introuvable')
+        setLoading(false)
         return
       }
 
@@ -225,8 +228,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
     } catch (error) {
       console.error('Erreur complète:', error)
-      toast.error('Erreur lors du chargement du produit')
-      router.push('/dashboard/vendor/products')
+      setError('Une erreur est survenue')
     } finally {
       setLoading(false)
     }
@@ -363,7 +365,6 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       return false
     }
 
-    // ✅ CORRECTION: Ignorer la validation si l'ancien prix est 0 ou vide
     const oldPriceValue = formData.old_price ? parseFloat(formData.old_price) : 0
     const priceValue = parseFloat(formData.price)
 
@@ -580,18 +581,37 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     return <PageSkeleton />
   }
 
-  if (!product) {
+  // ✅ GESTION ERREUR AMÉLIORÉE
+  if (error || !product) {
     return (
       <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center p-4">
-        <div className="text-center">
-          <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Produit introuvable</h2>
-          <p className="text-gray-400 mb-6">Ce produit n'existe pas ou vous n'avez pas accès.</p>
-          <Link href="/dashboard/vendor/products">
-            <button className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-all">
-              Retour à la liste
-            </button>
-          </Link>
+        <div className="max-w-md w-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#161618] border border-red-500/30 rounded-3xl p-8 text-center"
+          >
+            <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-3">
+              {error || 'Produit introuvable'}
+            </h2>
+            <p className="text-gray-400 mb-6">
+              {error === 'Vous devez être connecté'
+                ? 'Veuillez vous connecter pour continuer'
+                : 'Ce produit n\'existe pas ou vous n\'avez pas accès'}
+            </p>
+            <Link href="/dashboard/vendor/products">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 
+                         hover:from-orange-600 hover:to-red-700 text-white font-bold 
+                         rounded-xl transition-all shadow-lg"
+              >
+                Retour à la liste
+              </motion.button>
+            </Link>
+          </motion.div>
         </div>
       </div>
     )

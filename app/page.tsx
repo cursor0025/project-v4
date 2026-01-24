@@ -13,6 +13,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Product } from '@/types/product';
 import ProductGrid from '@/components/ProductGrid';
 import { useCartStore } from '@/store/cart';
+import { toast } from 'sonner'; // ✅ AJOUT: Import de toast
 
 // 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES (CONSERVÉE À 100%)
 const BZM_DATA = [
@@ -255,15 +256,25 @@ export default function HomePage() {
                 <span className="absolute -top-1 -right-1 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
               </div>
               
-              {/* Badge panier dynamique */}
-              <Link href="/cart" className="relative cursor-pointer">
+              {/* ✅ MODIFICATION: Badge panier avec protection auth */}
+              <div 
+                onClick={() => {
+                  if (!user) {
+                    toast.error('Connectez-vous pour accéder au panier');
+                    router.push('/login');
+                  } else {
+                    router.push('/cart');
+                  }
+                }}
+                className="relative cursor-pointer"
+              >
                 <ShoppingCart size={20} className="md:w-[22px] md:h-[22px]" />
                 {cartItemsCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
                     {cartItemsCount}
                   </span>
                 )}
-              </Link>
+              </div>
               
               {/* ✅ User Menu AVEC AVATAR + PRÉNOM */}
               <div className="relative" ref={userMenuRef}>

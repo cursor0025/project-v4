@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { WILAYAS } from '@/lib/constants/wilayas';
 import { getCommunesByWilaya } from '@/lib/constants/communes';
 import { 
@@ -33,7 +32,7 @@ export default function RegisterClientForm() {
   const [formData, setFormData] = useState({
     nom: '', prenom: '', email: '', telephone: '', gender: '', age: '',
     password: '', confirmPassword: '', wilaya: '', commune: '', address: '', 
-    referral: '', acceptedTerms: false, newsletter: false // ✅ AJOUTÉ newsletter
+    referral: '', acceptedTerms: false, newsletter: false
   });
 
   // --- VALIDATIONS ---
@@ -63,7 +62,7 @@ export default function RegisterClientForm() {
   }, [formData, isPasswordSecure, isMatch]);
 
   const hasStartedFilling = useMemo(() => {
-    const { referral, acceptedTerms, newsletter, ...textFields } = formData; // ✅ MODIFIÉ
+    const { referral, acceptedTerms, newsletter, ...textFields } = formData;
     return Object.values(textFields).some(val => val.trim() !== '') || acceptedTerms;
   }, [formData]);
 
@@ -100,58 +99,57 @@ export default function RegisterClientForm() {
     setIsLoading(true);
     
     try {
-      const supabase = createSupabaseBrowserClient();
-      
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      console.log('🔵 APPEL API send-code - Données:', {
         email: formData.email,
-        password: formData.password,
-        options: { 
-          data: { 
-            first_name: formData.prenom, 
-            last_name: formData.nom, 
-            role: 'client' 
-          }
-        }
+        firstName: formData.prenom,
+        lastName: formData.nom
+      });
+      
+      // ✅ NOUVEAU - Appeler l'API de vérification client
+      const response = await fetch('/api/client-verification/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.prenom,
+          lastName: formData.nom
+        })
       });
 
-      if (signUpError) throw signUpError;
-      
-      if (!authData.user) {
-        throw new Error("Erreur lors de la création du compte");
+      const result = await response.json();
+      console.log('🟢 Réponse API:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'envoi du code');
       }
 
-      // ✅ MODIFIÉ - Ajout de newsletter
-      const { error: dbErr } = await supabase.from('profiles').upsert([{
-        id: authData.user.id,
+      // Stocker les données dans sessionStorage pour la page de vérification
+      sessionStorage.setItem('pendingClientRegistration', JSON.stringify({
+        tempClientId: result.tempClientId,
         email: formData.email,
-        first_name: formData.prenom,
-        last_name: formData.nom,
-        gender: formData.gender,
-        age: parseInt(formData.age), 
-        wilaya: formData.wilaya,
-        commune: formData.commune,
-        address: formData.address,
-        phone: formData.telephone,
-        referral_code: formData.referral || null,
-        newsletter: formData.newsletter, // ✅ AJOUTÉ
-        role: 'client'
-      }]);
-      
-      if (dbErr) {
-        console.error("Erreur DB:", dbErr);
-        throw new Error(`Erreur Base de données: ${dbErr.message}`);
-      }
+        password: formData.password,
+        userData: {
+          firstName: formData.prenom,
+          lastName: formData.nom,
+          gender: formData.gender,
+          age: formData.age,
+          phone: formData.telephone,
+          wilaya: formData.wilaya,
+          commune: formData.commune,
+          address: formData.address,
+          referral: formData.referral,
+          newsletter: formData.newsletter
+        }
+      }));
 
-      toast.success("🎉 Compte créé avec succès ! Bienvenue sur BZMarket !");
+      toast.success('📧 Code de vérification envoyé par email !');
       
-      setTimeout(() => {
-        router.push('/');
-        router.refresh();
-      }, 1000);
+      // Redirection vers la page de vérification
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}&type=client`);
       
-    } catch (err: any) {
-      console.error("Erreur d'inscription:", err);
-      toast.error(err.message || "Erreur lors de l'inscription");
+    } catch (error: any) {
+      console.error('❌ Erreur inscription:', error);
+      toast.error(error.message || "Erreur lors de l'inscription");
     } finally {
       setIsLoading(false);
     }
@@ -256,7 +254,6 @@ export default function RegisterClientForm() {
               <textarea placeholder="Adresse exacte (Cité, n° porte, repères) *" className={getFieldStyle(formData.address, v.address(formData.address)) + " h-24 pt-3 bg-white"} onChange={e => setFormData({...formData, address: e.target.value})} />
             </div>
 
-            {/* ✅ AJOUTÉ - Newsletter */}
             <div className="flex items-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-[18px] border border-blue-200">
               <input 
                 type="checkbox" 
