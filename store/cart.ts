@@ -1,161 +1,151 @@
-import { create } from 'zustand';
-import { 
-  loadCartFromDB, 
-  addToCartDB, 
-  updateCartQuantityDB, 
-  removeFromCartDB, 
-  clearCartDB,
-  clearVendorCartDB 
-} from '@/lib/cart-helpers';
+'use client';
 
-export interface CartItem {
-  id: string;
+import { create } from 'zustand';
+
+export type CartItem = {
+  cart_id?: string;          // id de la ligne en base (optionnel côté client)
   product_id: string;
   vendor_id: string;
   vendor_name: string;
   name: string;
   price: number;
-  quantity: number;
-  weight: number;
   image_url: string | null;
   max_stock: number;
-}
+  quantity: number;
+};
 
-export interface CartState {
+export type VendorCart = {
+  vendor_id: string;
+  vendor_name: string;
   items: CartItem[];
-  userId: string | null;
-  isLoaded: boolean;
-  
-  // Actions
-  setUserId: (userId: string | null) => void;
-  loadCart: (userId: string) => Promise<void>;
-  addItem: (item: Omit<CartItem, 'id' | 'quantity'>) => Promise<void>;
-  removeItem: (productId: string) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
-  clearCart: () => Promise<void>;
-  clearVendorItems: (vendorId: string) => Promise<void>;
-  
-  // Helpers
-  getItemQuantity: (productId: string) => number;
-  canAddItem: (productId: string, requestedQty: number, maxStock: number) => boolean;
-  getVendorItems: (vendorId: string) => CartItem[];
-  getVendorTotal: (vendorId: string) => number;
-  getVendorWeight: (vendorId: string) => number;
-  getGroupedByVendor: () => Record<string, CartItem[]>;
-  getTotalItems: () => number;
-  getTotalPrice: () => number;
-  getTotalWeight: () => number;
-}
+  subtotal: number;
+};
+
+type CartState = {
+  items: CartItem[]; // liste plate
+  isHydrated: boolean;
+
+  // Groupé par vendeur (calculé à la volée)
+  getVendors(): VendorCart[];
+
+  // Ajout local (ProductCard) — on vérifiera le stock côté UI
+  addItem: (item: Omit<CartItem, 'quantity' | 'subtotal'> & { quantity?: number }) => void;
+
+  // Changer quantité (+/-)
+  updateQuantity: (product_id: string, quantity: number) => void;
+
+  // Supprimer un article
+  removeItem: (product_id: string) => void;
+
+  // Vérifier si on peut ajouter X unités par rapport au stock
+  canAddItem: (product_id: string, addQty: number, maxStock: number) => boolean;
+
+  // Vider le panier local (après commande ou logout)
+  clear: () => void;
+};
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
-  userId: null,
-  isLoaded: false,
-  
-  setUserId: (userId) => {
-    set({ userId });
-    if (userId) {
-      get().loadCart(userId);
-    } else {
-      set({ items: [], isLoaded: true });
-    }
-  },
-  
-  loadCart: async (userId) => {
-    const items = await loadCartFromDB(userId);
-    set({ items, isLoaded: true });
-  },
-  
-  addItem: async (newItem) => {
-    const { userId } = get();
-    if (!userId) {
-      console.warn('Utilisateur non connecté');
-      return;
-    }
-    
-    await addToCartDB(userId, newItem);
-    await get().loadCart(userId);
-  },
-  
-  removeItem: async (productId) => {
-    const { userId } = get();
-    if (!userId) return;
-    
-    await removeFromCartDB(userId, productId);
-    await get().loadCart(userId);
-  },
-  
-  updateQuantity: async (productId, quantity) => {
-    const { userId } = get();
-    if (!userId) return;
-    
-    await updateCartQuantityDB(userId, productId, quantity);
-    await get().loadCart(userId);
-  },
-  
-  clearCart: async () => {
-    const { userId } = get();
-    if (!userId) return;
-    
-    await clearCartDB(userId);
-    set({ items: [] });
-  },
-  
-  clearVendorItems: async (vendorId) => {
-    const { userId } = get();
-    if (!userId) return;
-    
-    await clearVendorCartDB(userId, vendorId);
-    await get().loadCart(userId);
-  },
-  
-  getItemQuantity: (productId) => {
-    const item = get().items.find((item) => item.product_id === productId);
-    return item ? item.quantity : 0;
-  },
-  
-  canAddItem: (productId, requestedQty, maxStock) => {
-    const currentQty = get().getItemQuantity(productId);
-    return currentQty + requestedQty <= maxStock;
-  },
-  
-  getVendorItems: (vendorId) => {
-    return get().items.filter((item) => item.vendor_id === vendorId);
-  },
-  
-  getVendorTotal: (vendorId) => {
-    const vendorItems = get().getVendorItems(vendorId);
-    return vendorItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  },
-  
-  getVendorWeight: (vendorId) => {
-    const vendorItems = get().getVendorItems(vendorId);
-    return vendorItems.reduce((sum, item) => sum + item.weight * item.quantity, 0);
-  },
-  
-  getGroupedByVendor: () => {
+  isHydrated: false,
+
+  getVendors: () => {
     const items = get().items;
-    const grouped: Record<string, CartItem[]> = {};
-    
-    items.forEach((item) => {
-      if (!grouped[item.vendor_id]) {
-        grouped[item.vendor_id] = [];
+
+    const map = new Map<string, VendorCart>();
+
+    for (const item of items) {
+      if (!map.has(item.vendor_id)) {
+        map.set(item.vendor_id, {
+          vendor_id: item.vendor_id,
+          vendor_name: item.vendor_name || 'Vendeur',
+          items: [],
+          subtotal: 0,
+        });
       }
-      grouped[item.vendor_id].push(item);
+
+      const group = map.get(item.vendor_id)!;
+      group.items.push(item);
+      group.subtotal += item.price * item.quantity;
+    }
+
+    return Array.from(map.values());
+  },
+
+  addItem: (item) => {
+    set((state) => {
+      const quantity = item.quantity ?? 1;
+      const existingIndex = state.items.findIndex(
+        (i) => i.product_id === item.product_id
+      );
+
+      // Si déjà présent, on incrémente
+      if (existingIndex !== -1) {
+        const updated = [...state.items];
+        const existing = updated[existingIndex];
+        const newQty = existing.quantity + quantity;
+
+        updated[existingIndex] = {
+          ...existing,
+          quantity: newQty > existing.max_stock ? existing.max_stock : newQty,
+        };
+
+        return { items: updated };
+      }
+
+      // Sinon on ajoute
+      return {
+        items: [
+          ...state.items,
+          {
+            cart_id: item.cart_id,
+            product_id: item.product_id,
+            vendor_id: item.vendor_id,
+            vendor_name: item.vendor_name,
+            name: item.name,
+            price: item.price,
+            image_url: item.image_url ?? null,
+            max_stock: item.max_stock,
+            quantity: quantity > item.max_stock ? item.max_stock : quantity,
+          },
+        ],
+      };
     });
-    
-    return grouped;
   },
-  
-  getTotalItems: () => {
-    return get().items.reduce((sum, item) => sum + item.quantity, 0);
+
+  updateQuantity: (product_id, quantity) => {
+    set((state) => {
+      if (quantity <= 0) {
+        return {
+          items: state.items.filter((i) => i.product_id !== product_id),
+        };
+      }
+
+      return {
+        items: state.items.map((item) =>
+          item.product_id === product_id
+            ? {
+                ...item,
+                quantity:
+                  quantity > item.max_stock ? item.max_stock : quantity,
+              }
+            : item
+        ),
+      };
+    });
   },
-  
-  getTotalPrice: () => {
-    return get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  removeItem: (product_id) => {
+    set((state) => ({
+      items: state.items.filter((i) => i.product_id !== product_id),
+    }));
   },
-  
-  getTotalWeight: () => {
-    return get().items.reduce((sum, item) => sum + item.weight * item.quantity, 0);
+
+  canAddItem: (product_id, addQty, maxStock) => {
+    const { items } = get();
+    const existing = items.find((i) => i.product_id === product_id);
+    const currentQty = existing ? existing.quantity : 0;
+    return currentQty + addQty <= maxStock;
   },
+
+  clear: () => set({ items: [], isHydrated: true }),
 }));

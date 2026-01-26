@@ -1,13 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Heart, Eye, ShoppingCart, Truck, X, Handshake, Calendar, Lock, Check } from 'lucide-react';
+import {
+  Heart,
+  Eye,
+  ShoppingCart,
+  Truck,
+  X,
+  Handshake,
+  Calendar,
+  Lock,
+  Check,
+} from 'lucide-react';
 import { Product } from '@/types/product';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCartStore } from '@/store/cart';
 import { toast } from 'sonner';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { useCartStore } from '@/store/cart';
 
 interface ProductCardProps {
   product: Product;
@@ -16,12 +26,12 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  
+
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
 
   const { addItem, canAddItem } = useCartStore();
 
@@ -29,16 +39,15 @@ export default function ProductCard({ product }: ProductCardProps) {
     setIsClient(true);
   }, []);
 
-  // ✅ Vérifier l'utilisateur connecté
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
     };
     checkUser();
-  }, []);
+  }, [supabase]);
 
-  const discountPercent = product.old_price 
+  const discountPercent = product.old_price
     ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
     : 0;
 
@@ -89,17 +98,19 @@ export default function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    // ✅ VÉRIFICATION AUTHENTIFICATION - REDIRECTION DIRECTE
+    // 1) Auth obligatoire → login direct
     if (!user) {
       router.push('/login');
       return;
     }
 
+    // 2) Stock global du produit
     if (product.stock === 0) {
       toast.error('Produit en rupture de stock');
       return;
     }
 
+    // 3) Vérifier côté store si on ne dépasse pas le stock
     if (isClient && !canAddItem(product.id, 1, product.stock)) {
       toast.error('Stock maximum atteint');
       return;
@@ -107,14 +118,15 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     setIsAdding(true);
 
+    // 4) Ajout local dans le store groupé par vendeur
     addItem({
       product_id: product.id,
       vendor_id: product.vendor_id,
-      vendor_name: 'Vendeur',
+      vendor_name: product.vendor_business_name || 'Vendeur',
       name: product.name,
       price: product.price,
-      weight: 0,
-      image_url: product.images && product.images.length > 0 ? product.images[0] : null,
+      image_url:
+        product.images && product.images.length > 0 ? product.images[0] : null,
       max_stock: product.stock,
     });
 
@@ -122,12 +134,11 @@ export default function ProductCard({ product }: ProductCardProps) {
       icon: <Check className="w-4 h-4" />,
     });
 
-    setTimeout(() => setIsAdding(false), 500);
+    setTimeout(() => setIsAdding(false), 400);
   };
 
   return (
     <div className="bg-[#111827] rounded-3xl overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300 group hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2 flex flex-col h-full">
-      
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-800 overflow-hidden flex-shrink-0">
           {!imageError && product.images && product.images.length > 0 ? (
@@ -157,9 +168,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             }}
             className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-lg hover:scale-110"
           >
-            <Heart 
-              size={18} 
-              className={`transition-all ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-700'}`}
+            <Heart
+              size={18}
+              className={`transition-all ${
+                isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-700'
+              }`}
             />
           </button>
 
@@ -171,7 +184,6 @@ export default function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       <div className="p-4 flex flex-col flex-1">
-        
         <Link href={`/products/${product.id}`}>
           <h3 className="text-white font-bold text-sm line-clamp-2 h-10 leading-5 mb-3 hover:text-blue-400 transition-colors cursor-pointer">
             {product.name}
@@ -183,7 +195,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             {[...Array(5)].map((_, i) => (
               <svg
                 key={i}
-                className={`w-3.5 h-3.5 ${i < Math.floor(rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`}
+                className={`w-3.5 h-3.5 ${
+                  i < Math.floor(rating)
+                    ? 'text-yellow-400 fill-yellow-400'
+                    : 'text-gray-600'
+                }`}
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -193,7 +209,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-gray-400 text-xs ml-1">({rating})</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className={`w-1.5 h-1.5 rounded-full ${product.stock > 0 ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+            <div
+              className={`w-1.5 h-1.5 rounded-full ${
+                product.stock > 0 ? 'bg-green-500' : 'bg-orange-500'
+              }`}
+            ></div>
             <span className="text-[10px] font-semibold text-gray-300">
               {product.stock > 0 ? 'Stock' : 'Limité'}
             </span>
@@ -208,7 +228,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               </span>
               <span className="text-sm font-bold text-emerald-400">DA</span>
             </div>
-            
+
             {product.old_price && (
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-xs text-gray-500 line-through">
@@ -217,10 +237,8 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <span className="text-xs text-gray-500">DA</span>
               </div>
             )}
-            
-            <div className="h-6 flex items-center">
-              {getPriceTypeBadge()}
-            </div>
+
+            <div className="h-6 flex items-center">{getPriceTypeBadge()}</div>
           </div>
 
           <div className="flex flex-col items-center justify-start ml-2 flex-shrink-0">
@@ -239,7 +257,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        <button 
+        <button
           onClick={handleAddToCart}
           disabled={isAdding || product.stock === 0}
           className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-lg mt-auto ${
@@ -249,7 +267,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           } text-white`}
         >
           <ShoppingCart size={16} />
-          <span>{isAdding ? 'Ajout...' : product.stock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}</span>
+          <span>
+            {isAdding
+              ? 'Ajout...'
+              : product.stock === 0
+              ? 'Rupture de stock'
+              : 'Ajouter au panier'}
+          </span>
         </button>
       </div>
     </div>
