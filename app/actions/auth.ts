@@ -1,6 +1,5 @@
 'use server'
 
-// ⚠️ VÉRIFIEZ CETTE LIGNE : Si votre dossier est "lib" au lieu de "utils", changez le chemin ici.
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -28,7 +27,6 @@ export async function login(formData: FormData) {
 
 // ---------------------------------------------------------
 // 2. INSCRIPTION CLIENT (Acheteur)
-// ✅ C'est ici que la correction a été appliquée (emailRedirectTo)
 // ---------------------------------------------------------
 export async function registerClient(formData: FormData) {
   const supabase = await createClient()
@@ -41,7 +39,6 @@ export async function registerClient(formData: FormData) {
     email,
     password,
     options: {
-      // 👇 CETTE LIGNE EST CRUCIALE pour que le lien email fonctionne
       emailRedirectTo: 'http://localhost:3000/auth/callback',
       data: {
         full_name: fullName,
@@ -119,4 +116,93 @@ export async function logout() {
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
   redirect('/')
+}
+
+// ---------------------------------------------------------
+// ✅ NOUVELLES FONCTIONS POUR LE PANIER
+// ---------------------------------------------------------
+
+/**
+ * Vérifie si l'utilisateur est connecté (action serveur)
+ * @returns Objet avec isAuth et user
+ */
+export async function checkAuth() {
+  try {
+    const supabase = await createClient()
+    
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (error || !user) {
+      return {
+        isAuth: false,
+        user: null,
+      }
+    }
+    
+    return {
+      isAuth: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        role: user.user_metadata?.role || 'client',
+      },
+    }
+  } catch (error) {
+    console.error('Erreur vérification auth:', error)
+    return {
+      isAuth: false,
+      user: null,
+    }
+  }
+}
+
+/**
+ * Récupère l'ID de l'utilisateur connecté
+ * @returns L'ID ou null si non connecté
+ */
+export async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    return user?.id ?? null
+  } catch (error) {
+    console.error('Erreur récupération user ID:', error)
+    return null
+  }
+}
+
+/**
+ * Protège une action serveur (à utiliser en début de fonction)
+ * @returns L'ID utilisateur ou null
+ */
+export async function protectAction(): Promise<string | null> {
+  const userId = await getCurrentUserId()
+  return userId
+}
+
+/**
+ * Vérifie l'auth et retourne les infos pour redirection
+ * @param currentPath Chemin actuel pour redirection après login
+ */
+export async function requireAuth(currentPath?: string) {
+  const { isAuth, user } = await checkAuth()
+  
+  if (!isAuth || !user) {
+    const redirectUrl = currentPath 
+      ? `/login?redirect=${encodeURIComponent(currentPath)}`
+      : '/login'
+    
+    return {
+      isAuth: false,
+      user: null,
+      redirectUrl,
+    }
+  }
+  
+  return {
+    isAuth: true,
+    user,
+    redirectUrl: null,
+  }
 }

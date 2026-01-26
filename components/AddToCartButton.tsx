@@ -1,89 +1,125 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCartStore } from '@/store/cart';
+import { useRouter } from 'next/navigation';
+import { addToCartDB } from '@/app/actions/cart-db';
+import { checkAuth } from '@/app/actions/auth';
 import { toast } from 'sonner';
-import { ShoppingCart, Plus, Minus, Check } from 'lucide-react';
+import { ShoppingCart, Check, LogIn } from 'lucide-react';
 
 interface AddToCartButtonProps {
   product: {
     id: string;
     name: string;
     price: number;
-    weight: number;
+    weight?: number;
     stock: number;
     image_url: string | null;
     vendor_id: string;
+    vendor_name?: string;
+    vendor_logo?: string | null;
   };
 }
 
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
-  const { addItem, getItemQuantity, updateQuantity, canAddItem } = useCartStore();
+  const router = useRouter();
   const [isAdding, setIsAdding] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Vérifier l'authentification au montage
   useEffect(() => {
-    setIsClient(true);
+    async function verifyAuth() {
+      const { isAuth } = await checkAuth();
+      setIsAuthenticated(isAuth);
+      setIsChecking(false);
+    }
+    verifyAuth();
   }, []);
 
-  const currentQuantity = getItemQuantity(product.id);
-  const isInCart = currentQuantity > 0;
+  const handleAddToCart = async () => {
+    // ✅ Vérifier l'auth avant d'ajouter
+    if (!isAuthenticated) {
+      toast.error('Connectez-vous pour ajouter au panier', {
+        icon: <LogIn className="w-4 h-4" />,
+        action: {
+          label: 'Se connecter',
+          onClick: () => {
+            const currentUrl = window.location.pathname;
+            router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+          },
+        },
+      });
+      
+      // Rediriger après 2 secondes
+      setTimeout(() => {
+        const currentUrl = window.location.pathname;
+        router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+      }, 2000);
+      
+      return;
+    }
 
-  const handleAddToCart = () => {
-    if (!canAddItem(product.id, 1, product.stock)) {
-      toast.error('Stock insuffisant');
+    // Vérifier le stock
+    if (product.stock <= 0) {
+      toast.error('Produit en rupture de stock');
       return;
     }
 
     setIsAdding(true);
-    
-    addItem({
-      product_id: product.id,
-      vendor_id: product.vendor_id,
-      vendor_name: 'Vendeur',
-      name: product.name,
-      price: product.price,
-      weight: product.weight,
-      image_url: product.image_url,
-      max_stock: product.stock,
-    });
 
-    toast.success('Produit ajouté au panier !', {
-      icon: <Check className="w-4 h-4" />,
-    });
+    try {
+      // ✅ Appeler l'action serveur Supabase
+      const result = await addToCartDB(product.id, 1);
 
-    setTimeout(() => setIsAdding(false), 500);
-  };
+      if (result.requiresAuth) {
+        toast.error('Session expirée, reconnectez-vous', {
+          icon: <LogIn className="w-4 h-4" />,
+        });
+        const currentUrl = window.location.pathname;
+        router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+        return;
+      }
 
-  const handleIncrement = () => {
-    if (!canAddItem(product.id, 1, product.stock)) {
-      toast.error('Stock maximum atteint');
-      return;
+      if (!result.success) {
+        toast.error(result.error || 'Erreur lors de l\'ajout au panier');
+        return;
+      }
+
+      // ✅ Succès
+      toast.success(result.message || 'Produit ajouté au panier !', {
+        icon: <Check className="w-4 h-4" />,
+        action: {
+          label: 'Voir le panier',
+          onClick: () => router.push('/cart'),
+        },
+      });
+
+      // Rafraîchir pour mettre à jour le badge panier
+      router.refresh();
+
+    } catch (error) {
+      console.error('Erreur ajout panier:', error);
+      toast.error('Une erreur est survenue');
+    } finally {
+      setIsAdding(false);
     }
-    updateQuantity(product.id, currentQuantity + 1);
   };
 
-  const handleDecrement = () => {
-    if (currentQuantity > 1) {
-      updateQuantity(product.id, currentQuantity - 1);
-    } else {
-      updateQuantity(product.id, 0);
-      toast.info('Produit retiré du panier');
-    }
-  };
-
-  if (!isClient) {
+  // État de chargement initial
+  if (isChecking) {
     return (
       <button
         disabled
         className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold opacity-50 flex items-center justify-center gap-2"
       >
-        <ShoppingCart className="w-5 h-5" />
-        Ajouter au panier
+        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        Vérification...
       </button>
     );
   }
 
+  // Produit en rupture de stock
   if (product.stock === 0) {
     return (
       <button
@@ -95,48 +131,24 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     );
   }
 
-  if (isInCart) {
-    return (
-      <div className="flex items-center gap-3">
-        <div className="flex items-center border-2 border-blue-600 rounded-lg">
-          <button
-            onClick={handleDecrement}
-            className="px-4 py-3 hover:bg-blue-50 transition-colors"
-          >
-            <Minus className="w-5 h-5 text-blue-600" />
-          </button>
-          
-          <span className="px-6 py-3 font-bold text-lg min-w-[60px] text-center">
-            {currentQuantity}
-          </span>
-          
-          <button
-            onClick={handleIncrement}
-            className="px-4 py-3 hover:bg-blue-50 transition-colors"
-            disabled={currentQuantity >= product.stock}
-          >
-            <Plus className="w-5 h-5 text-blue-600" />
-          </button>
-        </div>
-        
-        <a
-          href="/cart"
-          className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 transition-colors text-center"
-        >
-          Voir le panier
-        </a>
-      </div>
-    );
-  }
-
+  // Bouton principal
   return (
     <button
       onClick={handleAddToCart}
       disabled={isAdding}
       className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
     >
-      <ShoppingCart className="w-5 h-5" />
-      {isAdding ? 'Ajout...' : 'Ajouter au panier'}
+      {isAdding ? (
+        <>
+          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          Ajout en cours...
+        </>
+      ) : (
+        <>
+          <ShoppingCart className="w-5 h-5" />
+          Ajouter au panier
+        </>
+      )}
     </button>
   );
 }

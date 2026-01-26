@@ -11,13 +11,14 @@ import {
   Calendar,
   Lock,
   Check,
+  LogIn,
 } from 'lucide-react';
 import { Product } from '@/types/product';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { useCartStore } from '@/store/cart';
+import { addToCartDB } from '@/app/actions/cart-db';
 
 interface ProductCardProps {
   product: Product;
@@ -31,13 +32,6 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [isClient, setIsClient] = useState(false);
-
-  const { addItem, canAddItem } = useCartStore();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -98,43 +92,66 @@ export default function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    // 1) Auth obligatoire → login direct
+    // ✅ 1) Auth obligatoire → redirection login
     if (!user) {
-      router.push('/login');
+      toast.error('Connectez-vous pour ajouter au panier', {
+        icon: <LogIn className="w-4 h-4" />,
+        action: {
+          label: 'Se connecter',
+          onClick: () => router.push('/login'),
+        },
+      });
+      
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+      
       return;
     }
 
-    // 2) Stock global du produit
+    // ✅ 2) Vérification stock
     if (product.stock === 0) {
       toast.error('Produit en rupture de stock');
       return;
     }
 
-    // 3) Vérifier côté store si on ne dépasse pas le stock
-    if (isClient && !canAddItem(product.id, 1, product.stock)) {
-      toast.error('Stock maximum atteint');
-      return;
-    }
-
     setIsAdding(true);
 
-    // 4) Ajout local dans le store groupé par vendeur
-    addItem({
-      product_id: product.id,
-      vendor_id: product.vendor_id,
-      vendor_name: product.vendor_business_name || 'Vendeur',
-      name: product.name,
-      price: product.price,
-      image_url:
-        product.images && product.images.length > 0 ? product.images[0] : null,
-      max_stock: product.stock,
-    });
+    try {
+      // ✅ 3) Ajout dans Supabase via action serveur
+      const result = await addToCartDB(product.id, 1);
 
-    toast.success('Produit ajouté au panier !', {
-      icon: <Check className="w-4 h-4" />,
-    });
+      if (result.requiresAuth) {
+        toast.error('Session expirée, reconnectez-vous', {
+          icon: <LogIn className="w-4 h-4" />,
+        });
+        router.push('/login');
+        return;
+      }
 
-    setTimeout(() => setIsAdding(false), 400);
+      if (!result.success) {
+        toast.error(result.error || 'Erreur lors de l\'ajout au panier');
+        return;
+      }
+
+      // ✅ 4) Succès
+      toast.success(result.message || 'Produit ajouté au panier !', {
+        icon: <Check className="w-4 h-4" />,
+        action: {
+          label: 'Voir le panier',
+          onClick: () => router.push('/cart'),
+        },
+      });
+
+      // Rafraîchir pour mettre à jour le badge panier
+      router.refresh();
+
+    } catch (error) {
+      console.error('Erreur ajout panier:', error);
+      toast.error('Une erreur est survenue');
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   return (

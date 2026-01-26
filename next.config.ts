@@ -11,6 +11,16 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    
+    // ✅ AJOUTÉ : Configuration Supabase
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'zkrtclqjnpzkisbppioj.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
   },
 
   // Optimisation des imports
