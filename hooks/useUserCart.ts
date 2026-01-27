@@ -5,32 +5,37 @@ import { useCartStore } from '@/store/cart';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function useUserCart() {
-  const clearCart = useCartStore((state) => state.clearCart);
+  // ⬅️ adapte le nom ici à celui de ton store (resetCart, clear, emptyCart, etc.)
+  const resetCart = useCartStore((state) => state.resetCart);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
 
     // Récupérer l'utilisateur actuel
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       // Si pas d'utilisateur connecté, vider le panier
       if (!user) {
-        clearCart();
+        resetCart();
       }
     };
 
     checkUser();
 
     // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
-        clearCart();
+        resetCart();
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [clearCart]);
+  }, [resetCart]);
 }
