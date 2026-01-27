@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import LogoutButton from '@/components/auth/LogoutButton';
-import CartBadge from '@/components/cart/CartBadge';
+import CartBadge from '@/components/CartBadge';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
 
@@ -12,16 +12,18 @@ export default function Nav() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
     };
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -53,7 +55,7 @@ export default function Nav() {
                 >
                   Mon Espace
                 </Link>
-                <div className="h-6 w-px bg-gray-200"></div>
+                <div className="h-6 w-px bg-gray-200" />
                 <LogoutButton />
               </>
             ) : (
