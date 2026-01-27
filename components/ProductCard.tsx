@@ -72,6 +72,12 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   };
 
+  // On récupère les infos vendeur éventuelles depuis metadata
+  const vendorName =
+    (product.metadata && product.metadata.vendor_name) || 'Vendeur';
+  const vendorLogo =
+    (product.metadata && product.metadata.vendor_logo) || null;
+
   const productForCart = {
     id: product.id,
     name: product.name,
@@ -81,8 +87,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     image_url:
       product.images && product.images.length > 0 ? product.images[0] : null,
     vendor_id: product.vendor_id,
-    vendor_name: product.vendor_name,
-    vendor_logo: product.vendor_logo ?? null,
+    vendor_name: vendorName,
+    vendor_logo: vendorLogo,
   };
 
   return (
