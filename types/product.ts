@@ -1,7 +1,7 @@
 // types/product.ts
 export interface Product {
   id: string;
-  vendor_id: string;
+  vendor_id: string; // ✅ ajouté pour ProductCard
   name: string;
   description: string | null;
   price: number;
@@ -19,9 +19,7 @@ export interface Product {
   views?: number;
   rating?: number;
   reviews_count?: number;
-
-  // ✅ ajouté pour corriger l'erreur de ProductCard
-  weight?: number | null;
+  weight?: number | null; // ✅ ajouté pour ProductCard
 }
 
 export interface ProductFilters {
