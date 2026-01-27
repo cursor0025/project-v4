@@ -166,7 +166,7 @@ export default function RegisterVendorForm() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [lang, setLang] = useState<'FR' | 'AR'>('FR');
+  const [lang, setLang] = useState('FR');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -386,11 +386,7 @@ export default function RegisterVendorForm() {
 
         <div className="p-8 md:p-14">
           <form className="space-y-7" onSubmit={handleRegister}>
-            {/* … tout ton JSX du formulaire, inchangé … */}
-
-            {/* (je ne répète pas tout pour gagner de la place, 
-                tu gardes exactement ce que tu as déjà entre le début du form 
-                et la fin, juste avec UploadBox corrigé plus bas) */}
+            {/* tes champs de formulaire inchangés … */}
 
             <div className="bg-[#f0fdf4] p-8 rounded-[24px] border border-emerald-200">
               <h3 className="font-black text-slate-900 flex items-center gap-2 mb-4">
@@ -419,7 +415,7 @@ export default function RegisterVendorForm() {
               </div>
             </div>
 
-            {/* ... le reste du formulaire, inchangé ... */}
+            {/* bloc newsletter, conditions et bouton, inchangés … */}
           </form>
         </div>
       </div>
@@ -458,7 +454,7 @@ function UploadBox({
   const [fileName, setFileName] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // 🔴 Correction : forcer un booléen pur
+    // ✅ force un booléen pur
     const hasFile = !!(e.target.files && e.target.files.length > 0);
 
     if (hasFile && e.target.files) {
