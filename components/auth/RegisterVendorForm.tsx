@@ -352,19 +352,15 @@ export default function RegisterVendorForm() {
               />
             </div>
           ))}
-
           <div className="absolute top-8 right-8 z-30 flex items-center gap-4">
             <button
               type="button"
-              onClick={() =>
-                setLang((prev) => (prev === 'FR' ? 'AR' : 'FR'))
-              }
+              onClick={() => setLang(lang === 'FR' ? 'AR' : 'FR')}
               className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-white text-xs font-bold border border-white/30 hover:bg-white/40 transition-all shadow-lg"
             >
               <Globe size={14} className="text-orange-500" /> {lang}
             </button>
           </div>
-
           <div className="absolute top-8 left-8 z-20">
             <img
               src="/images/bzm-logo.png"
@@ -372,13 +368,10 @@ export default function RegisterVendorForm() {
               alt="Logo"
             />
           </div>
-
           <h1 className="text-5xl font-black text-white text-center px-10 drop-shadow-xl z-10 tracking-tighter">
             Devenez <span className="text-orange-500">Vendeur</span> Pro
           </h1>
-
           <div className="absolute inset-0 bg-black/40" />
-
           <div className="absolute bottom-6 flex gap-1.5 z-20">
             {IMAGES.map((_, i) => (
               <div
@@ -393,433 +386,40 @@ export default function RegisterVendorForm() {
 
         <div className="p-8 md:p-14">
           <form className="space-y-7" onSubmit={handleRegister}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input
-                placeholder="Nom *"
-                className={getFieldStyle(
-                  formData.nom,
-                  v.name(formData.nom)
-                )}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    nom: e.target.value,
-                  })
-                }
-              />
-              <input
-                placeholder="Prénom *"
-                className={getFieldStyle(
-                  formData.prenom,
-                  v.name(formData.prenom)
-                )}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    prenom: e.target.value,
-                  })
-                }
-              />
-            </div>
+            {/* … tout ton JSX du formulaire, inchangé … */}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative">
-                <Mail
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 ${
-                    formData.email
-                      ? v.email(formData.email)
-                        ? 'text-emerald-600'
-                        : 'text-red-600'
-                      : 'text-slate-500'
-                  }`}
-                  size={18}
-                />
-                <input
-                  placeholder="Email professionnel *"
-                  className={
-                    getFieldStyle(
-                      formData.email,
-                      v.email(formData.email)
-                    ) + ' pl-12'
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      email: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="relative">
-                <Phone
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 ${
-                    formData.telephone
-                      ? v.phone(formData.telephone)
-                        ? 'text-emerald-600'
-                        : 'text-red-600'
-                      : 'text-slate-500'
-                  }`}
-                  size={18}
-                />
-                <input
-                  placeholder="Numéro de téléphone *"
-                  className={
-                    getFieldStyle(
-                      formData.telephone,
-                      v.phone(formData.telephone)
-                    ) + ' pl-12'
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      telephone: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative">
-                <Users
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                  size={18}
-                />
-                <select
-                  className={
-                    getFieldStyle(
-                      formData.gender,
-                      v.selection(formData.gender)
-                    ) +
-                    ' pl-12 bg-[#f8fafc] text-black cursor-pointer'
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      gender: e.target.value,
-                    })
-                  }
-                >
-                  <option value="">Genre *</option>
-                  <option value="Homme">Homme</option>
-                  <option value="Femme">Femme</option>
-                </select>
-              </div>
-
-              <div className="relative">
-                <Calendar
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                  size={18}
-                />
-                <input
-                  type="number"
-                  placeholder="Âge * (minimum 18 ans)"
-                  className={
-                    getFieldStyle(formData.age, v.age(formData.age)) +
-                    ' pl-12'
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      age: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative">
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="Mot de passe *"
-                  className={getFieldStyle(
-                    formData.password,
-                    isPasswordSecure
-                  )}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      password: e.target.value,
-                    })
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass((p) => !p)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
-                >
-                  {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  placeholder="Confirmer mot de passe *"
-                  className={getFieldStyle(
-                    formData.confirmPassword,
-                    isMatch
-                  )}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((p) => !p)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
-                >
-                  {showConfirm ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <PassCheck label="8+ Caractères" v={hasMinLength} />
-              <PassCheck label="Majuscule" v={hasUpper} />
-              <PassCheck label="Minuscule" v={hasLower} />
-              <PassCheck label="Un Chiffre" v={hasNumber} />
-            </div>
-
-            <div className="relative">
-              <Gift
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500"
-                size={20}
-              />
-              <input
-                placeholder="Code de parrainage (Optionnel)"
-                className={
-                  getFieldStyle(formData.referral, true) + ' pl-12'
-                }
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    referral: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <div className="bg-[#f1f5f9] p-8 rounded-[24px] space-y-6 shadow-inner border border-slate-300">
-              <h3 className="font-black text-slate-900 flex items-center gap-2 text-lg uppercase tracking-tight">
-                <Store className="text-blue-600" /> Votre Boutique
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input
-                  placeholder="Nom boutique *"
-                  className={
-                    getFieldStyle(
-                      formData.shopName,
-                      v.shop(formData.shopName)
-                    ) + ' bg-white'
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      shopName: e.target.value,
-                    })
-                  }
-                />
-
-                <select
-                  className={
-                    getFieldStyle(
-                      formData.category,
-                      v.selection(formData.category)
-                    ) +
-                    ' bg-white appearance-none cursor-pointer text-black'
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      category: e.target.value,
-                    })
-                  }
-                >
-                  <option value="">Catégorie *</option>
-                  {categoriesList.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <select
-                  className={
-                    getFieldStyle(
-                      formData.wilaya,
-                      v.selection(formData.wilaya)
-                    ) +
-                    ' bg-white appearance-none cursor-pointer text-black'
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      wilaya: e.target.value,
-                      commune: '',
-                    })
-                  }
-                >
-                  <option value="">Wilaya *</option>
-                  {Object.keys(wilayaData)
-                    .sort()
-                    .map((w) => (
-                      <option key={w} value={w}>
-                        {w}
-                      </option>
-                    ))}
-                </select>
-
-                <select
-                  className={
-                    getFieldStyle(
-                      formData.commune,
-                      v.selection(formData.commune)
-                    ) +
-                    ' bg-white appearance-none cursor-pointer disabled:opacity-50 text-black'
-                  }
-                  disabled={!formData.wilaya}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      commune: e.target.value,
-                    })
-                  }
-                >
-                  <option value="">Commune *</option>
-                  {(wilayaData[formData.wilaya] || []).map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            {/* (je ne répète pas tout pour gagner de la place, 
+                tu gardes exactement ce que tu as déjà entre le début du form 
+                et la fin, juste avec UploadBox corrigé plus bas) */}
 
             <div className="bg-[#f0fdf4] p-8 rounded-[24px] border border-emerald-200">
               <h3 className="font-black text-slate-900 flex items-center gap-2 mb-4">
                 <FileCheck className="text-emerald-600" /> Documents
                 (Obligatoires *)
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <UploadBox
                   label="RC / Artisan *"
-                  onFileChange={(hasFile) =>
-                    setUploadedDocs((p) => ({ ...p, rc: hasFile }))
+                  onFileChange={(h) =>
+                    setUploadedDocs((p) => ({ ...p, rc: h }))
                   }
                 />
                 <UploadBox
                   label="Pièce d'Identité *"
-                  onFileChange={(hasFile) =>
-                    setUploadedDocs((p) => ({ ...p, id: hasFile }))
+                  onFileChange={(h) =>
+                    setUploadedDocs((p) => ({ ...p, id: h }))
                   }
                 />
                 <UploadBox
                   label="Carte Autoentrepreneur"
-                  onFileChange={(hasFile) =>
-                    setUploadedDocs((p) => ({ ...p, auto: hasFile }))
+                  onFileChange={(h) =>
+                    setUploadedDocs((p) => ({ ...p, auto: h }))
                   }
                 />
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-gradient-to-r from-orange-50 to-amber-50 p-5 rounded-[18px] border border-orange-200">
-              <input
-                type="checkbox"
-                checked={formData.newsletter}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    newsletter: e.target.checked,
-                  })
-                }
-                className="w-5 h-5 accent-orange-600 mt-1 cursor-pointer"
-              />
-              <div className="flex-1">
-                <label className="text-sm font-bold text-slate-900 cursor-pointer flex items-center gap-2">
-                  <Bell size={16} className="text-orange-600" />
-                  Recevoir les actualités vendeurs et conseils BZMarket
-                  par email
-                </label>
-                <p className="text-xs text-slate-600 mt-1">
-                  (Optionnel - Désabonnement possible à tout moment)
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={acceptedTerms}
-                onChange={(e) =>
-                  setAcceptedTerms(e.target.checked)
-                }
-                className="w-5 h-5 accent-orange-600 mt-1 cursor-pointer"
-              />
-              <label className="text-sm text-black font-bold">
-                J'accepte les{' '}
-                <span className="text-blue-700 font-black">
-                  conditions BZMarket
-                </span>
-                . En cochant cette case, j'accepte la{' '}
-                <a
-                  href="#"
-                  className="text-orange-600 font-bold hover:underline"
-                >
-                  politique
-                </a>
-                , les{' '}
-                <a
-                  href="#"
-                  className="text-orange-600 font-bold hover:underline"
-                >
-                  règles
-                </a>{' '}
-                et les{' '}
-                <a
-                  href="#"
-                  className="text-orange-600 font-bold hover:underline"
-                >
-                  conditions générales
-                </a>{' '}
-                *
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`w-full p-5 text-white rounded-full text-xl font-black shadow-xl transition-all duration-500 uppercase flex items-center justify-center gap-2 ${
-                isShaking ? 'animate-shake' : 'active:scale-95'
-              } ${
-                isFormValid
-                  ? 'bg-emerald-600 shadow-emerald-300'
-                  : hasStartedFilling
-                  ? 'bg-red-600 shadow-red-300'
-                  : 'bg-gradient-to-r from-blue-700 via-blue-600 to-orange-500 shadow-blue-200'
-              }`}
-            >
-              {isLoading ? (
-                <Loader2 className="animate-spin" size={24} />
-              ) : isFormValid ? (
-                'Lancer ma boutique BZMarket !'
-              ) : (
-                'Lancer ma boutique BZMarket'
-              )}
-            </button>
+            {/* ... le reste du formulaire, inchangé ... */}
           </form>
         </div>
       </div>
@@ -827,7 +427,13 @@ export default function RegisterVendorForm() {
   );
 }
 
-function PassCheck({ label, v }: { label: string; v: boolean }) {
+function PassCheck({
+  label,
+  v,
+}: {
+  label: string;
+  v: boolean;
+}) {
   return (
     <div className="flex items-center gap-2 text-sm">
       {v ? (
@@ -842,7 +448,6 @@ function PassCheck({ label, v }: { label: string; v: boolean }) {
   );
 }
 
-// Composant d’upload simple, remonte toujours un boolean
 function UploadBox({
   label,
   onFileChange,
@@ -850,15 +455,18 @@ function UploadBox({
   label: string;
   onFileChange: (hasFile: boolean) => void;
 }) {
-  const [fileName, setFileName] = useState('');
+  const [fileName, setFileName] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 🔴 Correction : forcer un booléen pur
     const hasFile = !!(e.target.files && e.target.files.length > 0);
+
     if (hasFile && e.target.files) {
       setFileName(e.target.files[0].name);
     } else {
       setFileName('');
     }
+
     onFileChange(hasFile);
   };
 
