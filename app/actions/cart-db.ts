@@ -10,12 +10,12 @@ import { revalidatePath } from 'next/cache';
 export async function addToCartDB(productId: string, quantity: number = 1) {
   try {
     const userId = await getCurrentUserId();
-    
+
     if (!userId) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: 'Non authentifié',
-        requiresAuth: true 
+        requiresAuth: true,
       };
     }
 
@@ -29,6 +29,7 @@ export async function addToCartDB(productId: string, quantity: number = 1) {
       .eq('product_id', productId)
       .single();
 
+    // PGRST116 = no rows returned
     if (checkError && checkError.code !== 'PGRST116') {
       console.error('Erreur vérification panier:', checkError);
       return { success: false, error: checkError.message };
@@ -38,9 +39,9 @@ export async function addToCartDB(productId: string, quantity: number = 1) {
     if (existingItem) {
       const { error: updateError } = await supabase
         .from('cart')
-        .update({ 
+        .update({
           quantity: existingItem.quantity + quantity,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', existingItem.id);
 
@@ -54,13 +55,11 @@ export async function addToCartDB(productId: string, quantity: number = 1) {
     }
 
     // Sinon, créer une nouvelle ligne
-    const { error: insertError } = await supabase
-      .from('cart')
-      .insert({
-        user_id: userId,
-        product_id: productId,
-        quantity: quantity,
-      });
+    const { error: insertError } = await supabase.from('cart').insert({
+      user_id: userId,
+      product_id: productId,
+      quantity,
+    });
 
     if (insertError) {
       console.error('Erreur ajout panier:', insertError);
@@ -69,7 +68,6 @@ export async function addToCartDB(productId: string, quantity: number = 1) {
 
     revalidatePath('/cart');
     return { success: true, message: 'Produit ajouté au panier' };
-
   } catch (error) {
     console.error('Erreur inattendue addToCartDB:', error);
     return { success: false, error: 'Erreur inattendue' };
@@ -82,12 +80,12 @@ export async function addToCartDB(productId: string, quantity: number = 1) {
 export async function updateCartQuantityDB(productId: string, quantity: number) {
   try {
     const userId = await getCurrentUserId();
-    
+
     if (!userId) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: 'Non authentifié',
-        requiresAuth: true 
+        requiresAuth: true,
       };
     }
 
@@ -101,9 +99,9 @@ export async function updateCartQuantityDB(productId: string, quantity: number) 
     // Sinon, mettre à jour
     const { error } = await supabase
       .from('cart')
-      .update({ 
+      .update({
         quantity,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
       .eq('product_id', productId);
@@ -115,7 +113,6 @@ export async function updateCartQuantityDB(productId: string, quantity: number) 
 
     revalidatePath('/cart');
     return { success: true, message: 'Quantité mise à jour' };
-
   } catch (error) {
     console.error('Erreur inattendue updateCartQuantityDB:', error);
     return { success: false, error: 'Erreur inattendue' };
@@ -128,12 +125,12 @@ export async function updateCartQuantityDB(productId: string, quantity: number) 
 export async function removeFromCartDB(productId: string) {
   try {
     const userId = await getCurrentUserId();
-    
+
     if (!userId) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: 'Non authentifié',
-        requiresAuth: true 
+        requiresAuth: true,
       };
     }
 
@@ -152,7 +149,6 @@ export async function removeFromCartDB(productId: string) {
 
     revalidatePath('/cart');
     return { success: true, message: 'Produit retiré du panier' };
-
   } catch (error) {
     console.error('Erreur inattendue removeFromCartDB:', error);
     return { success: false, error: 'Erreur inattendue' };
@@ -165,22 +161,22 @@ export async function removeFromCartDB(productId: string) {
 export async function loadUserCart() {
   try {
     const userId = await getCurrentUserId();
-    
+
     if (!userId) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         items: [],
         error: 'Non authentifié',
-        requiresAuth: true 
+        requiresAuth: true,
       };
     }
 
     const supabase = await createClient();
 
-    // ✅ CORRIGÉ : shop_name et shop_logo au lieu de business_name et logo_url
     const { data, error } = await supabase
       .from('cart')
-      .select(`
+      .select(
+        `
         id,
         product_id,
         quantity,
@@ -197,7 +193,8 @@ export async function loadUserCart() {
             shop_logo
           )
         )
-      `)
+      `
+      )
       .eq('user_id', userId);
 
     if (error) {
@@ -205,22 +202,21 @@ export async function loadUserCart() {
       return { success: false, items: [], error: error.message };
     }
 
-    // ✅ CORRIGÉ : shop_name et shop_logo
-    const items = data?.map((item: any) => ({
-      cart_id: item.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      name: item.products?.name || 'Produit',
-      price: item.products?.price || 0,
-      max_stock: item.products?.stock || 0,
-      image_url: item.products?.images?.[0] || null,
-      vendor_id: item.products?.vendor_id || '',
-      vendor_name: item.products?.vendors?.shop_name || 'Vendeur',
-      vendor_logo: item.products?.vendors?.shop_logo || null,
-    })) || [];
+    const items =
+      data?.map((item: any) => ({
+        cart_id: item.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        name: item.products?.name || 'Produit',
+        price: item.products?.price || 0,
+        max_stock: item.products?.stock || 0,
+        image_url: item.products?.images?.[0] || null,
+        vendor_id: item.products?.vendor_id || '',
+        vendor_name: item.products?.vendors?.shop_name || 'Vendeur',
+        vendor_logo: item.products?.vendors?.shop_logo || null,
+      })) || [];
 
     return { success: true, items };
-
   } catch (error) {
     console.error('Erreur inattendue loadUserCart:', error);
     return { success: false, items: [], error: 'Erreur inattendue' };
@@ -233,7 +229,7 @@ export async function loadUserCart() {
 export async function getCartCount() {
   try {
     const userId = await getCurrentUserId();
-    
+
     if (!userId) {
       return { success: false, count: 0 };
     }
@@ -250,12 +246,12 @@ export async function getCartCount() {
       return { success: false, count: 0 };
     }
 
-    const count = data?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-    
-    return { success: true, count };
+    const count =
+      data?.reduce((sum, item) => sum + (item.quantity ?? 0), 0) || 0;
 
+    return { success: true, count };
   } catch (error) {
-    console.error('Erreur inattenue getCartCount:', error);
+    console.error('Erreur inattendue getCartCount:', error);
     return { success: false, count: 0 };
   }
 }
@@ -266,12 +262,12 @@ export async function getCartCount() {
 export async function clearUserCart() {
   try {
     const userId = await getCurrentUserId();
-    
+
     if (!userId) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: 'Non authentifié',
-        requiresAuth: true 
+        requiresAuth: true,
       };
     }
 
@@ -289,7 +285,6 @@ export async function clearUserCart() {
 
     revalidatePath('/cart');
     return { success: true, message: 'Panier vidé' };
-
   } catch (error) {
     console.error('Erreur inattendue clearUserCart:', error);
     return { success: false, error: 'Erreur inattendue' };
@@ -302,7 +297,7 @@ export async function clearUserCart() {
 export async function isProductInCart(productId: string) {
   try {
     const userId = await getCurrentUserId();
-    
+
     if (!userId) {
       return { success: false, inCart: false };
     }
@@ -321,12 +316,11 @@ export async function isProductInCart(productId: string) {
       return { success: false, inCart: false };
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       inCart: !!data,
-      quantity: data?.quantity || 0
+      quantity: data?.quantity || 0,
     };
-
   } catch (error) {
     console.error('Erreur inattendue isProductInCart:', error);
     return { success: false, inCart: false };

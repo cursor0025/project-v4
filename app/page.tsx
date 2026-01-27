@@ -1,19 +1,33 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Search, ShoppingCart, Heart, Bell, User, ChevronDown, 
-  Menu, ArrowRight, X, ChevronRight, 
-  LogIn, UserPlus, LifeBuoy, Package, LayoutDashboard, LogOut,
-  Sparkles
+import {
+  Search,
+  ShoppingCart,
+  Heart,
+  Bell,
+  User,
+  ChevronDown,
+  Menu,
+  ArrowRight,
+  X,
+  ChevronRight,
+  LogIn,
+  UserPlus,
+  LifeBuoy,
+  Package,
+  LayoutDashboard,
+  LogOut,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Product } from '@/types/product';
 import ProductGrid from '@/components/ProductGrid';
+import { useCartStore } from '@/store/cart';
+import { useCartHydration } from '@/hooks/useCartHydration';
 
-// 1. BASE DE DONNÉES INTÉGRALE DES 44 CATÉGORIES (CONSERVÉE À 100%)
 const BZM_DATA = [
   { id: 1, name: 'Téléphones & Accessoires', subs: ['Smartphones', 'Téléphones basiques', 'Écouteurs & Casques', 'Chargeurs & Cables', 'Batteries', 'Coques & Protection', 'Accessoires divers', 'Montres connectées'] },
   { id: 2, name: 'Accessoires Auto & Moto', subs: ['Accessoires voiture', 'Accessoires moto', 'Sécurité', 'Entretien', 'Casques & Gants', 'Éclairage'] },
@@ -50,7 +64,7 @@ const BZM_DATA = [
   { id: 33, name: 'Alimentation & Épicerie', subs: ['Épicerie', 'Frais', 'Bio', 'Boissons', 'Boulangerie', 'Produits laitiers', 'Viandes & Poissons'] },
   { id: 34, name: 'Agences de Voyage', subs: ['Voyages', 'Hajj & Omra', 'Hôtels', 'Circuits', 'Locations voitures', 'Assurance voyage'] },
   { id: 35, name: 'Éducation', subs: ['Cours particuliers', 'Écoles privées', 'Garderies', 'Soutien scolaire', 'Cours en ligne', 'Cours de langues', 'Cours de musique'] },
-  { id: 36, name: 'Bijoux', subs: ['Colliers', 'Bracelets', 'Bagues', 'Boucles d\'oreilles', 'Argent', 'Or', 'Parures', 'Piercings', 'Bijoux fantaisie'] },
+  { id: 36, name: 'Bijoux', subs: ['Colliers', 'Bracelets', 'Bagues', "Boucles d'oreilles", 'Argent', 'Or', 'Parures', 'Piercings', 'Bijoux fantaisie'] },
   { id: 37, name: 'Montres & Lunettes', subs: ['Montres homme', 'Montres femme', 'Smartwatches', 'Bracelets', 'Lunettes de soleil', 'Lunettes mode', 'Étuis'] },
   { id: 38, name: 'Vape & Cigarettes Électroniques', subs: ['E-cigarettes', 'Pods', 'Clearomiseurs', 'Résistances', 'Batteries', 'Chargeurs', 'DIY'] },
   { id: 39, name: 'Matériel Médical', subs: ['Fauteuils roulants', 'Déambulateurs', 'Orthèses', 'Tensiomètres', 'Thermomètres', 'Matelas médicaux', 'Rééducation', 'Béquilles'] },
@@ -58,20 +72,22 @@ const BZM_DATA = [
   { id: 41, name: 'Engins de Travaux Publics', subs: ['Rétrochargeuses', 'Grues', 'Excavatrices', 'Bulldozers', 'Camions', 'Chargeurs', 'Compacteurs', 'Pelles mini'] },
   { id: 42, name: 'Fête & Mariage', subs: ['Robes de soirée', 'Robes de mariage', 'Tenues traditionnelles', 'Accessoires mariage', 'Décoration', 'Salles', 'Traiteurs', 'Photographes', 'DJ & Animation'] },
   { id: 43, name: 'Kaba', subs: ['Articles Kaba', 'Importations Directes'] },
-  { id: 44, name: 'Divers', subs: ['Articles variés', 'Objets insolites', 'Accessoires divers', 'Produits généraux'] }
+  { id: 44, name: 'Divers', subs: ['Articles variés', 'Objets insolites', 'Accessoires divers', 'Produits généraux'] },
 ];
 
 const AMAZON_OVERLAY_CARDS = [
   { title: 'Ventes Flash', items: [{ n: 'Cuisine', img: '101' }, { n: 'Maison', img: '102' }, { n: 'Déco', img: '103' }, { n: 'Outils', img: '104' }], link: 'Voir', color: 'blue' },
   { title: 'Nouveautés', items: [{ n: 'Beauté', img: '105' }, { n: 'Tech', img: '106' }, { n: 'Gaming', img: '107' }, { n: 'Mode', img: '108' }], link: 'Découvrir', color: 'orange' },
   { title: 'Maison', items: [{ n: 'Électro', img: '109' }, { n: 'Cuisine', img: '110' }, { n: 'Salon', img: '111' }, { n: 'Range', img: '112' }], link: 'Explorer', color: 'blue' },
-  { title: 'Tendances', items: [{ n: 'Literie', img: '113' }, { n: 'Lumière', img: '114' }, { n: 'Jardin', img: '115' }, { n: 'Orga', img: '116' }], link: 'Voir', color: 'orange' }
+  { title: 'Tendances', items: [{ n: 'Literie', img: '113' }, { n: 'Lumière', img: '114' }, { n: 'Jardin', img: '115' }, { n: 'Orga', img: '116' }], link: 'Voir', color: 'orange' },
 ];
 
 export default function HomePage() {
+  useCartHydration();
+
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [lang, setLang] = useState('FR');
+  const [lang, setLang] = useState<'FR' | 'AR'>('FR');
   const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeCatIdx, setActiveCatIdx] = useState(0);
@@ -84,6 +100,10 @@ export default function HomePage() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
   const supabase = createSupabaseBrowserClient();
+
+  const totalItems = useCartStore((state) =>
+    state.items.reduce((sum, item) => sum + item.quantity, 0)
+  );
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -113,7 +133,9 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchUserAndRole = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
       if (authUser) {
         setUser(authUser);
         const { data: profile } = await supabase
@@ -128,7 +150,7 @@ export default function HomePage() {
     fetchUserAndRole();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         if (session?.user) {
           setUser(session.user);
           const { data: profile } = await supabase
@@ -154,7 +176,10 @@ export default function HomePage() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setIsUserMenuOpen(false);
       }
     }
@@ -163,11 +188,41 @@ export default function HomePage() {
   }, []);
 
   const slides = [
-    { title: "L'Ère du", word: 'Numérique', color: 'text-blue-500', subtitle: 'Dernières technologies', img: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1600' },
-    { title: 'Devenez', word: 'Vendeur', color: 'text-[#ff7011]', subtitle: 'Vendez sur BZMarket', img: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=1600' },
-    { title: 'Mode &', word: 'Style', color: 'text-blue-500', subtitle: 'Collections exclusives', img: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600' },
-    { title: 'Univers', word: 'Gaming', color: 'text-[#ff7011]', subtitle: 'Matériel gaming pro', img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1600' },
-    { title: 'Maison &', word: 'Déco', color: 'text-blue-500', subtitle: 'Sublimez votre intérieur', img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=1600' }
+    {
+      title: "L'Ère du",
+      word: 'Numérique',
+      color: 'text-blue-500',
+      subtitle: 'Dernières technologies',
+      img: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1600',
+    },
+    {
+      title: 'Devenez',
+      word: 'Vendeur',
+      color: 'text-[#ff7011]',
+      subtitle: 'Vendez sur BZMarket',
+      img: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=1600',
+    },
+    {
+      title: 'Mode &',
+      word: 'Style',
+      color: 'text-blue-500',
+      subtitle: 'Collections exclusives',
+      img: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600',
+    },
+    {
+      title: 'Univers',
+      word: 'Gaming',
+      color: 'text-[#ff7011]',
+      subtitle: 'Matériel gaming pro',
+      img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1600',
+    },
+    {
+      title: 'Maison &',
+      word: 'Déco',
+      color: 'text-blue-500',
+      subtitle: 'Sublimez votre intérieur',
+      img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=1600',
+    },
   ];
 
   useEffect(() => {
@@ -180,11 +235,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0c0c0c] font-sans text-slate-900">
-      {/* HEADER RESPONSIVE */}
       <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-slate-100">
-        {/* Top Bar - Mobile & Desktop */}
         <div className="max-w-[1440px] mx-auto px-3 md:px-4 h-16 md:h-20 flex items-center gap-2 md:gap-6">
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
@@ -192,7 +244,6 @@ export default function HomePage() {
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
 
-          {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             <img
               src="/images/bzm-logo.png"
@@ -201,7 +252,6 @@ export default function HomePage() {
             />
           </Link>
 
-          {/* Search Bar - Hidden on mobile, shown on tablet+ */}
           <div className="hidden md:flex flex-1 items-center">
             <div className="flex-1 flex border-2 border-[#ff7011] rounded-l-md overflow-hidden bg-white h-10 md:h-[42px]">
               <input
@@ -215,9 +265,7 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Right Icons */}
           <div className="flex items-center gap-2 md:gap-4 ml-auto">
-            {/* Language Selector - Hidden on mobile */}
             <div className="hidden lg:flex items-center gap-2">
               <img
                 src={
@@ -232,7 +280,7 @@ export default function HomePage() {
                 <select
                   className="text-sm font-normal bg-transparent outline-none cursor-pointer appearance-none pr-6"
                   value={lang}
-                  onChange={(e) => setLang(e.target.value)}
+                  onChange={(e) => setLang(e.target.value as 'FR' | 'AR')}
                 >
                   <option value="FR">FR</option>
                   <option value="AR">AR</option>
@@ -244,7 +292,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Devenir Vendeur - Hidden on small mobile */}
             {userRole !== 'vendor' && (
               <Link
                 href="/register/vendor"
@@ -254,7 +301,6 @@ export default function HomePage() {
               </Link>
             )}
 
-            {/* Icons - Compact on mobile */}
             <div className="flex items-center gap-3 md:gap-5 text-slate-600">
               <Heart
                 size={20}
@@ -267,7 +313,6 @@ export default function HomePage() {
                 </span>
               </div>
 
-              {/* Icône Panier : login si pas connecté */}
               <button
                 onClick={() => {
                   if (!user) {
@@ -283,9 +328,13 @@ export default function HomePage() {
                   size={20}
                   className="md:w-[22px] md:h-[22px]"
                 />
+                {user && totalItems > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-[#ff7011] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                    {totalItems > 99 ? '99+' : totalItems}
+                  </span>
+                )}
               </button>
 
-              {/* User Menu */}
               <div className="relative" ref={userMenuRef}>
                 <div
                   className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-all"
@@ -320,7 +369,9 @@ export default function HomePage() {
                                 : 'text-blue-600'
                             }`}
                           >
-                            {userRole === 'vendor' ? '⭐ Vendeur' : '👤 Client'}
+                            {userRole === 'vendor'
+                              ? '⭐ Vendeur'
+                              : '👤 Client'}
                           </span>
                         </div>
                         <ChevronDown
@@ -448,7 +499,7 @@ export default function HomePage() {
                           </Link>
                         </>
                       )}
-                      <div className="border-t border-slate-100 my-1"></div>
+                      <div className="border-t border-slate-100 my-1" />
                       <Link
                         href="#"
                         className="group flex items-center gap-3 px-4 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
@@ -463,7 +514,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile Search Bar - Full width below header */}
         <div className="md:hidden px-3 pb-3">
           <div className="flex border-2 border-[#ff7011] rounded-md overflow-hidden bg-white">
             <input
@@ -477,7 +527,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Desktop Navigation Bar */}
         <div className="hidden lg:block bg-[#0f172a] text-white">
           <div className="max-w-[1440px] mx-auto px-4 flex items-center h-[52px]">
             <div
@@ -523,7 +572,7 @@ export default function HomePage() {
                           <div className="w-24 h-24 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden group-hover:border-orange-500 transition-all shadow-inner">
                             <img
                               src={`https://picsum.photos/seed/${s}/100/100`}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform durée-500"
                               alt={s}
                             />
                           </div>
@@ -546,7 +595,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
           <div
             className="lg:hidden fixed inset-0 bg-black/50 z-40 top-16"
@@ -558,7 +606,10 @@ export default function HomePage() {
             >
               <div className="p-4 space-y-2">
                 {BZM_DATA.map((cat) => (
-                  <div key={cat.id} className="border-b border-gray-100 pb-2">
+                  <div
+                    key={cat.id}
+                    className="border-b border-gray-100 pb-2"
+                  >
                     <button className="w-full text-left font-bold text-sm text-slate-800 py-2">
                       {cat.name}
                     </button>
@@ -570,13 +621,12 @@ export default function HomePage() {
         )}
       </header>
 
-      {/* BANNER - RESPONSIVE */}
       <section className="relative w-full overflow-hidden bg-[#0c0c0c] pb-4 md:pb-6">
         <div className="relative h-[400px] md:h-[600px] lg:h-[750px]">
           {slides.map((s, i) => (
             <div
               key={i}
-              className={`absolute inset-0 transition-all duration-1000 ${
+              className={`absolute inset-0 transition-all durée-1000 ${
                 i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
               }`}
             >
@@ -585,7 +635,7 @@ export default function HomePage() {
                 className="w-full h-full object-cover brightness-75"
                 alt="Banner"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-black/40"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-black/40" />
               <div className="absolute top-[15%] md:top-[20%] left-0 right-0 mx-auto text-center space-y-3 md:space-y-6 max-w-4xl px-4">
                 <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-none text-white">
                   {s.title} <span className={s.color}>{s.word}</span>
@@ -601,7 +651,6 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Cards Overlay - RESPONSIVE GRID */}
         <div className="max-w-[1440px] mx-auto px-3 md:px-4 -mt-32 md:-mt-64 lg:-mt-[320px] relative z-30 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
           {AMAZON_OVERLAY_CARDS.map((card, i) => (
             <div
@@ -610,7 +659,7 @@ export default function HomePage() {
                 card.color === 'blue'
                   ? 'border-blue-500 bg-blue-50/50'
                   : 'border-[#ff7011] bg-orange-50/50'
-              } group transition-all duration-500 hover:-translate-y-2`}
+              } group transition-all durée-500 hover:-translate-y-2`}
             >
               <h3 className="text-sm md:text-2xl font-black text-[#0f172a] mb-4 md:mb-8 tracking-tight uppercase">
                 {card.title}
@@ -624,7 +673,7 @@ export default function HomePage() {
                     <div className="aspect-square w-full bg-white rounded-xl md:rounded-2xl overflow-hidden flex items-center justify-center p-1 border border-slate-100 shadow-sm">
                       <img
                         src={`https://picsum.photos/seed/bzm_${it.img}/300/300`}
-                        className="w-full h-full object-contain mix-blend-multiply hover:scale-110 transition-transform duration-500"
+                        className="w-full h-full object-contain mix-blend-multiply hover:scale-110 transition-transform durée-500"
                         alt={it.n}
                       />
                     </div>
@@ -650,7 +699,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* SECTION PRODUITS - RESPONSIVE */}
       <section className="max-w-[1440px] mx-auto px-3 md:px-4 mt-10 md:mt-20 mb-16 md:mb-32">
         <div className="text-center mb-8 md:mb-12">
           <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
@@ -660,13 +708,12 @@ export default function HomePage() {
             </h2>
             <Sparkles className="text-orange-500" size={24} />
           </div>
-          <div className="w-20 md:w-32 h-1 bg-gradient-to-r from-blue-500 to-orange-500 mx-auto rounded-full"></div>
+          <div className="w-20 md:w-32 h-1 bg-gradient-to-r from-blue-500 to-orange-500 mx-auto rounded-full" />
         </div>
 
         <ProductGrid products={products} isLoading={isLoadingProducts} />
       </section>
 
-      {/* FOOTER - RESPONSIVE */}
       <footer className="bg-[#131a22] text-slate-400 py-12 md:py-24 text-center px-4">
         <img
           src="/images/bzm-logo.png"

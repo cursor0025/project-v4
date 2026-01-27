@@ -2,16 +2,13 @@
 
 import Link from 'next/link';
 import LogoutButton from '@/components/auth/LogoutButton';
+import CartBadge from '@/components/cart/CartBadge';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
-import { useCartStore } from '@/store/cart';
 
 export default function Nav() {
   const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<any>(null);
-
-  const { items } = useCartStore();
-  const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   useEffect(() => {
     const init = async () => {
@@ -45,18 +42,8 @@ export default function Nav() {
           </div>
 
           <div className="flex items-center space-x-6">
-            {/* Lien Panier avec badge */}
-            <Link
-              href="/cart"
-              className="relative text-sm font-medium text-gray-700 hover:text-orange-600 transition-colors"
-            >
-              Panier
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartCount > 99 ? '99+' : cartCount}
-                </span>
-              )}
-            </Link>
+            {/* ✅ UTILISE CartBadge au lieu du code manuel */}
+            <CartBadge />
 
             {user ? (
               <>

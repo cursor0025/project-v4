@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { addToCartDB } from '@/app/actions/cart-db';
 import { checkAuth } from '@/app/actions/auth';
+import { useCartStore } from '@/store/cart';
 import { toast } from 'sonner';
 import { ShoppingCart, Check, LogIn } from 'lucide-react';
+import type { CartItem } from '@/store/cart';
 
 interface AddToCartButtonProps {
   product: {
@@ -27,7 +29,11 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Vérifier l'authentification au montage
+  const items = useCartStore((state) => state.items);
+  const addItemLocally = useCartStore((state) => state.addItemLocally);
+  const updateItemLocally = useCartStore((state) => state.updateItemLocally);
+  const removeItemLocally = useCartStore((state) => state.removeItemLocally);
+
   useEffect(() => {
     async function verifyAuth() {
       const { isAuth } = await checkAuth();
@@ -37,30 +43,25 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     verifyAuth();
   }, []);
 
+  const redirectToLogin = () => {
+    const currentUrl = window.location.pathname;
+    router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+  };
+
   const handleAddToCart = async () => {
-    // ✅ Vérifier l'auth avant d'ajouter
     if (!isAuthenticated) {
       toast.error('Connectez-vous pour ajouter au panier', {
         icon: <LogIn className="w-4 h-4" />,
         action: {
           label: 'Se connecter',
-          onClick: () => {
-            const currentUrl = window.location.pathname;
-            router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
-          },
+          onClick: redirectToLogin,
         },
       });
-      
-      // Rediriger après 2 secondes
-      setTimeout(() => {
-        const currentUrl = window.location.pathname;
-        router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
-      }, 2000);
-      
+
+      setTimeout(redirectToLogin, 2000);
       return;
     }
 
-    // Vérifier le stock
     if (product.stock <= 0) {
       toast.error('Produit en rupture de stock');
       return;
@@ -68,25 +69,50 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
 
     setIsAdding(true);
 
+    const existingItem = items.find((item) => item.product_id === product.id);
+
     try {
-      // ✅ Appeler l'action serveur Supabase
+      // ÉTAPE 1 : mettre à jour le store local immédiatement
+      if (existingItem) {
+        updateItemLocally(product.id, existingItem.quantity + 1);
+      } else {
+        const newItem: CartItem = {
+          cart_id: undefined,
+          product_id: product.id,
+          vendor_id: product.vendor_id,
+          vendor_name: product.vendor_name || 'Vendeur',
+          vendor_logo: product.vendor_logo || null,
+          name: product.name,
+          price: product.price,
+          image_url: product.image_url,
+          max_stock: product.stock,
+          quantity: 1,
+        };
+        addItemLocally(newItem);
+      }
+
+      // ÉTAPE 2 : sync Supabase
       const result = await addToCartDB(product.id, 1);
 
       if (result.requiresAuth) {
         toast.error('Session expirée, reconnectez-vous', {
           icon: <LogIn className="w-4 h-4" />,
         });
-        const currentUrl = window.location.pathname;
-        router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+        redirectToLogin();
         return;
       }
 
       if (!result.success) {
-        toast.error(result.error || 'Erreur lors de l\'ajout au panier');
+        // rollback si échec côté Supabase
+        if (existingItem) {
+          updateItemLocally(product.id, existingItem.quantity);
+        } else {
+          removeItemLocally(product.id);
+        }
+        toast.error(result.error || "Erreur lors de l'ajout au panier");
         return;
       }
 
-      // ✅ Succès
       toast.success(result.message || 'Produit ajouté au panier !', {
         icon: <Check className="w-4 h-4" />,
         action: {
@@ -94,19 +120,20 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           onClick: () => router.push('/cart'),
         },
       });
-
-      // Rafraîchir pour mettre à jour le badge panier
-      router.refresh();
-
     } catch (error) {
       console.error('Erreur ajout panier:', error);
+      // rollback en cas d’exception
+      if (existingItem) {
+        updateItemLocally(product.id, existingItem.quantity);
+      } else {
+        removeItemLocally(product.id);
+      }
       toast.error('Une erreur est survenue');
     } finally {
       setIsAdding(false);
     }
   };
 
-  // État de chargement initial
   if (isChecking) {
     return (
       <button
@@ -119,7 +146,6 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     );
   }
 
-  // Produit en rupture de stock
   if (product.stock === 0) {
     return (
       <button
@@ -131,7 +157,6 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     );
   }
 
-  // Bouton principal
   return (
     <button
       onClick={handleAddToCart}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Heart,
   Eye,
@@ -10,39 +10,23 @@ import {
   Handshake,
   Calendar,
   Lock,
-  Check,
-  LogIn,
 } from 'lucide-react';
 import { Product } from '@/types/product';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { addToCartDB } from '@/app/actions/cart-db';
+import AddToCartButton from '@/components/AddToCartButton';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
-
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    checkUser();
-  }, [supabase]);
 
   const discountPercent = product.old_price
-    ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
+    ? Math.round(
+        ((product.old_price - product.price) / product.old_price) * 100
+      )
     : 0;
 
   const rating = product.rating || 4.5;
@@ -88,70 +72,17 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   };
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // ✅ 1) Auth obligatoire → redirection login
-    if (!user) {
-      toast.error('Connectez-vous pour ajouter au panier', {
-        icon: <LogIn className="w-4 h-4" />,
-        action: {
-          label: 'Se connecter',
-          onClick: () => router.push('/login'),
-        },
-      });
-      
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-      
-      return;
-    }
-
-    // ✅ 2) Vérification stock
-    if (product.stock === 0) {
-      toast.error('Produit en rupture de stock');
-      return;
-    }
-
-    setIsAdding(true);
-
-    try {
-      // ✅ 3) Ajout dans Supabase via action serveur
-      const result = await addToCartDB(product.id, 1);
-
-      if (result.requiresAuth) {
-        toast.error('Session expirée, reconnectez-vous', {
-          icon: <LogIn className="w-4 h-4" />,
-        });
-        router.push('/login');
-        return;
-      }
-
-      if (!result.success) {
-        toast.error(result.error || 'Erreur lors de l\'ajout au panier');
-        return;
-      }
-
-      // ✅ 4) Succès
-      toast.success(result.message || 'Produit ajouté au panier !', {
-        icon: <Check className="w-4 h-4" />,
-        action: {
-          label: 'Voir le panier',
-          onClick: () => router.push('/cart'),
-        },
-      });
-
-      // Rafraîchir pour mettre à jour le badge panier
-      router.refresh();
-
-    } catch (error) {
-      console.error('Erreur ajout panier:', error);
-      toast.error('Une erreur est survenue');
-    } finally {
-      setIsAdding(false);
-    }
+  const productForCart = {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    weight: product.weight ?? undefined,
+    stock: product.stock,
+    image_url:
+      product.images && product.images.length > 0 ? product.images[0] : null,
+    vendor_id: product.vendor_id,
+    vendor_name: product.vendor_name,
+    vendor_logo: product.vendor_logo ?? null,
   };
 
   return (
@@ -162,7 +93,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             <img
               src={product.images[0]}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform durée-500"
               onError={() => setImageError(true)}
             />
           ) : (
@@ -230,7 +161,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               className={`w-1.5 h-1.5 rounded-full ${
                 product.stock > 0 ? 'bg-green-500' : 'bg-orange-500'
               }`}
-            ></div>
+            />
             <span className="text-[10px] font-semibold text-gray-300">
               {product.stock > 0 ? 'Stock' : 'Limité'}
             </span>
@@ -274,24 +205,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        <button
-          onClick={handleAddToCart}
-          disabled={isAdding || product.stock === 0}
-          className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-lg mt-auto ${
-            product.stock === 0
-              ? 'bg-gray-600 cursor-not-allowed opacity-50'
-              : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:scale-[1.02] shadow-green-500/20'
-          } text-white`}
-        >
-          <ShoppingCart size={16} />
-          <span>
-            {isAdding
-              ? 'Ajout...'
-              : product.stock === 0
-              ? 'Rupture de stock'
-              : 'Ajouter au panier'}
-          </span>
-        </button>
+        <AddToCartButton product={productForCart} />
       </div>
     </div>
   );
