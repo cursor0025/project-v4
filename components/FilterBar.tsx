@@ -1,128 +1,158 @@
 'use client';
 
-import { SlidersHorizontal } from 'lucide-react';
-import { ProductFilters, WILAYAS } from '@/types/product';
+import { WILAYAS } from '@/types/product';
+
+type SortBy = 'price_asc' | 'price_desc' | 'newest' | 'popular';
+type PriceType = 'fixe' | 'negociable' | 'facilite';
+
+interface FilterBarState {
+  wilaya?: string;
+  etat?: string;
+  priceType?: PriceType;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: SortBy;
+}
 
 interface FilterBarProps {
-  filters: ProductFilters;
-  onFilterChange: (filters: ProductFilters) => void;
+  current: FilterBarState;
+  onChange: (patch: Partial<FilterBarState>) => void;
   totalProducts: number;
 }
 
-export default function FilterBar({ filters, onFilterChange, totalProducts }: FilterBarProps) {
+export default function FilterBar({ current, onChange, totalProducts }: FilterBarProps) {
+  const handleReset = () => {
+    onChange({
+      wilaya: undefined,
+      etat: undefined,
+      priceType: undefined,
+      minPrice: undefined,
+      maxPrice: undefined,
+      sortBy: 'newest',
+    });
+  };
+
   return (
-    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 mb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-          <SlidersHorizontal className="text-white" size={20} />
-        </div>
-        <div>
-          <h3 className="text-white font-bold text-lg">Filtres de recherche</h3>
-          <p className="text-gray-400 text-sm">{totalProducts} produits disponibles</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Wilaya Filter - 58 WILAYAS COMPLÈTES */}
-        <div className="relative">
-          <label className="block text-sm font-semibold text-gray-300 mb-2">Wilaya</label>
-          <div className="relative">
-            <select
-              value={filters.wilaya || ''}
-              onChange={(e) => onFilterChange({ ...filters, wilaya: e.target.value || undefined })}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer hover:border-white/20 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                backgroundSize: '1.25rem'
-              }}
-            >
-              <option value="" className="bg-[#1a1a1a]">Toutes les wilayas (58)</option>
-              {WILAYAS.map(wilaya => (
-                <option key={wilaya.code} value={wilaya.name} className="bg-[#1a1a1a]">
-                  {wilaya.code} - {wilaya.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* État Filter */}
-        <div className="relative">
-          <label className="block text-sm font-semibold text-gray-300 mb-2">État</label>
+    <div className="bg-[#111827] border border-white/10 rounded-2xl p-4 md:p-5 flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3 md:gap-4">
+        {/* Wilaya */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-300">Wilaya</span>
           <select
-            value={filters.etat || ''}
-            onChange={(e) => onFilterChange({ ...filters, etat: e.target.value || undefined })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer hover:border-white/20 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 1rem center',
-              backgroundSize: '1.25rem'
-            }}
+            className="bg-[#020617] border border-white/10 rounded-xl px-3 py-2 text-xs md:text-sm text-gray-200 outline-none"
+            value={current.wilaya || ''}
+            onChange={(e) =>
+              onChange({ wilaya: e.target.value || undefined })
+            }
           >
-            <option value="" className="bg-[#1a1a1a]">Tous les états</option>
-            <option value="Neuf scellé" className="bg-[#1a1a1a]">Neuf scellé</option>
-            <option value="Neuf déballé" className="bg-[#1a1a1a]">Neuf déballé</option>
-            <option value="Occasion excellent" className="bg-[#1a1a1a]">Occasion excellent</option>
-            <option value="Occasion bon" className="bg-[#1a1a1a]">Occasion bon</option>
+            <option value="">Toutes</option>
+            {WILAYAS.map((w) => (
+              <option key={w.code} value={w.name}>
+                {w.name}
+              </option>
+            ))}
           </select>
         </div>
 
-        {/* Type de Prix Filter */}
-        <div className="relative">
-          <label className="block text-sm font-semibold text-gray-300 mb-2">Type de prix</label>
+        {/* État (neuf / occasion) */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-300">État</span>
           <select
-            value={filters.priceType || ''}
-            onChange={(e) => onFilterChange({ ...filters, priceType: e.target.value as any || undefined })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer hover:border-white/20 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 1rem center',
-              backgroundSize: '1.25rem'
-            }}
+            className="bg-[#020617] border border-white/10 rounded-xl px-3 py-2 text-xs md:text-sm text-gray-200 outline-none"
+            value={current.etat || ''}
+            onChange={(e) =>
+              onChange({ etat: e.target.value || undefined })
+            }
           >
-            <option value="" className="bg-[#1a1a1a]">Tous les types</option>
-            <option value="fixe" className="bg-[#1a1a1a]">Prix fixe</option>
-            <option value="negociable" className="bg-[#1a1a1a]">Négociable</option>
-            <option value="facilite" className="bg-[#1a1a1a]">Avec facilité</option>
+            <option value="">Tous</option>
+            <option value="neuf">Neuf</option>
+            <option value="occasion">Occasion</option>
           </select>
         </div>
 
-        {/* Sort By */}
-        <div className="relative">
-          <label className="block text-sm font-semibold text-gray-300 mb-2">Trier par</label>
+        {/* Type de prix */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-300">Type de prix</span>
           <select
-            value={filters.sortBy || 'newest'}
-            onChange={(e) => onFilterChange({ ...filters, sortBy: e.target.value as any })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer hover:border-white/20 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 1rem center',
-              backgroundSize: '1.25rem'
-            }}
+            className="bg-[#020617] border border-white/10 rounded-xl px-3 py-2 text-xs md:text-sm text-gray-200 outline-none"
+            value={current.priceType || ''}
+            onChange={(e) =>
+              onChange({
+                priceType: (e.target.value as PriceType) || undefined,
+              })
+            }
           >
-            <option value="newest" className="bg-[#1a1a1a]">Plus récents</option>
-            <option value="price_asc" className="bg-[#1a1a1a]">Prix croissant</option>
-            <option value="price_desc" className="bg-[#1a1a1a]">Prix décroissant</option>
-            <option value="popular" className="bg-[#1a1a1a]">Plus populaires</option>
+            <option value="">Tous</option>
+            <option value="fixe">Prix fixe</option>
+            <option value="negociable">Négociable</option>
+            <option value="facilite">Facilité</option>
           </select>
         </div>
-      </div>
 
-      {/* Reset Filters Button */}
-      {(filters.wilaya || filters.etat || filters.priceType) && (
+        {/* Prix min / max */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-300">Prix min</span>
+          <input
+            type="number"
+            min={0}
+            className="bg-[#020617] border border-white/10 rounded-xl px-3 py-2 text-xs md:text-sm text-gray-200 outline-none w-28"
+            value={current.minPrice ?? ''}
+            onChange={(e) =>
+              onChange({
+                minPrice: e.target.value ? Number(e.target.value) : undefined,
+              })
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-300">Prix max</span>
+          <input
+            type="number"
+            min={0}
+            className="bg-[#020617] border border-white/10 rounded-xl px-3 py-2 text-xs md:text-sm text-gray-200 outline-none w-28"
+            value={current.maxPrice ?? ''}
+            onChange={(e) =>
+              onChange({
+                maxPrice: e.target.value ? Number(e.target.value) : undefined,
+              })
+            }
+          />
+        </div>
+
+        {/* Tri */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-300">Trier par</span>
+          <select
+            className="bg-[#020617] border border-white/10 rounded-xl px-3 py-2 text-xs md:text-sm text-gray-200 outline-none"
+            value={current.sortBy || 'newest'}
+            onChange={(e) =>
+              onChange({
+                sortBy: (e.target.value as SortBy) || 'newest',
+              })
+            }
+          >
+            <option value="newest">Plus récents</option>
+            <option value="price_asc">Prix croissant</option>
+            <option value="price_desc">Prix décroissant</option>
+            <option value="popular">Popularité</option>
+          </select>
+        </div>
+
+        {/* Bouton reset */}
         <button
-          onClick={() => onFilterChange({ sortBy: filters.sortBy })}
-          className="mt-4 px-6 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition-all"
+          type="button"
+          onClick={handleReset}
+          className="ml-auto px-3 py-2 rounded-xl border border-white/10 text-xs md:text-sm text-gray-200 hover:bg-white/5 transition"
         >
-          Réinitialiser les filtres
+          Réinitialiser
         </button>
-      )}
+      </div>
+
+      {/* Compteur de résultats */}
+      <div className="text-xs text-gray-400">
+        {totalProducts} produit(s) trouvé(s)
+      </div>
     </div>
   );
 }

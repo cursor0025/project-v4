@@ -30,6 +30,7 @@ export interface ProductFilters {
   maxPrice?: number;
   category?: string;
   sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
+  search?: string; // ✅ champ de recherche texte
 }
 
 // Liste complète et officielle des 58 wilayas d'Algérie (2024)

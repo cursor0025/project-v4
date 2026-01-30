@@ -21,71 +21,664 @@ import {
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Product } from '@/types/product';
 import ProductGrid from '@/components/ProductGrid';
 import { useCartStore } from '@/store/cart';
 import { useCartHydration } from '@/hooks/useCartHydration';
+import { useUpdateSearchParams } from '@/hooks/useUpdateSearchParams';
 
 const BZM_DATA = [
-  { id: 1, name: 'Téléphones & Accessoires', subs: ['Smartphones', 'Téléphones basiques', 'Écouteurs & Casques', 'Chargeurs & Cables', 'Batteries', 'Coques & Protection', 'Accessoires divers', 'Montres connectées'] },
-  { id: 2, name: 'Accessoires Auto & Moto', subs: ['Accessoires voiture', 'Accessoires moto', 'Sécurité', 'Entretien', 'Casques & Gants', 'Éclairage'] },
-  { id: 3, name: 'Véhicules', subs: ['Voitures', 'Motos', 'Camions', 'Utilitaires', 'Camping-cars'] },
-  { id: 4, name: 'Immobilier', subs: ['À vendre', 'À louer', 'Appartements', 'Villas', 'Terrains', 'Locaux commerciaux', 'Promotion immobilière', 'Colocation'] },
-  { id: 5, name: 'Informatique & IT', subs: ['PC portables', 'PC de bureau', 'Composants', 'Stockage', 'Imprimantes & Scanners', 'Accessoires PC', 'Réseau', 'Écrans', 'Mobilier informatique'] },
-  { id: 6, name: 'Électronique', subs: ['Appareils photo', 'Caméscopes', 'Home cinéma', 'Audio & Enceintes', 'Accessoires électroniques'] },
-  { id: 7, name: 'Électroménager', subs: ['Machines à laver', 'Réfrigérateurs', 'Télévisions', 'Fours', 'Micro-ondes', 'Lave-vaisselle', 'Cuisinières & Plaques', 'Climatisation & Chauffage', 'Aspirateurs', 'Congélateurs', 'Mixeurs / Blenders'] },
-  { id: 8, name: 'Gaming', subs: ['Consoles', 'Jeux vidéo', 'Manettes', 'Casques gaming', 'Souris & Claviers gaming', 'Tapis de souris', 'Chaises gaming', 'Matériel de streaming', 'PC Gaming'] },
-  { id: 9, name: 'Vêtements Femme', subs: ['Robes', 'Tops & Chemisiers', 'Pantalons', 'Jupes', 'Abayas', 'Chaussures', 'Sacs & Accessoires', 'Lingerie', 'Sportswear femme', 'Bijoux'] },
-  { id: 10, name: 'Vêtements Homme', subs: ['T-shirts', 'Chemises', 'Pantalons', 'Jeans', 'Pulls', 'Vestes & Manteaux', 'Chaussures', 'Accessoires', 'Sportswear homme', 'Tenues traditionnelles'] },
-  { id: 11, name: 'Vêtements Homme Classique', subs: ['Costumes', 'Chemises classiques', 'Pantalons classiques', 'Vestes & Blazers', 'Chaussures habillées', 'Cravates', 'Ceintures'] },
-  { id: 12, name: 'Sportswear', subs: ['T-shirts', 'Survêtements', 'Shorts', 'Leggings', 'Brassières', 'Vestes', 'Chaussures', 'Accessoires', 'Tenues sport'] },
-  { id: 13, name: 'Vêtements Bébé', subs: ['Bodies', 'Pyjamas', 'Ensembles', 'Pulls & Gilets', 'Chaussures bébé', 'Bonnets & Gants', 'Tenues nouveau-né', 'Couvertures'] },
-  { id: 14, name: 'Santé & Beauté', subs: ['Parfums', 'Maquillage', 'Soin visage', 'Soin cheveux', 'Hygiène', 'Bien-être', 'Appareils beauté'] },
-  { id: 15, name: 'Cosmétiques', subs: ['Fond de teint', 'Rouge à lèvres', 'Mascara', 'Eyeliner', 'Correcteurs', 'Poudres', 'Palettes', 'Soin visage', 'Soin cheveux', 'Soin corps'] },
-  { id: 16, name: 'Salon de Coiffure Homme', subs: ['Coupe homme', 'Dégradé / Fade', 'Rasage & Taille de barbe', 'Coloration homme', 'Lissage / Soin cheveux', 'Coiffure événementielle', 'Produits capillaires'] },
-  { id: 17, name: 'Salon de Coiffure & Esthétique - Femme', subs: ['Coupe femme', 'Brushing', 'Coloration / Mèches', 'Balayage / Ombré', 'Lissage', 'Maquillage', 'Manucure & Pédicure', 'Épilation', 'Extensions'] },
-  { id: 18, name: 'Produits Naturels & Herboristerie', subs: ['Plantes médicinales', 'Tisanes', 'Huiles essentielles', 'Savons naturels', 'Produits de la ruche', 'Compléments naturels', 'Épices naturelles'] },
-  { id: 19, name: 'Meubles & Maison', subs: ['Salon', 'Chambre', 'Bureau', 'Cuisine', 'Salle de bain', 'Déco intérieure', 'Déco extérieure', 'Jardin', 'Textiles maison', 'Éclairage'] },
-  { id: 20, name: 'Textiles Maison', subs: ['Parures', 'Couvertures', 'Protège-matelas', 'Serviettes', 'Rideaux', 'Nappes', 'Stores', 'Tapis', 'Coussins', 'Plaids'] },
-  { id: 21, name: 'Décoration Maison', subs: ['Objets déco', 'Tableaux', 'Bougies', 'Décoration saisonnière', 'Plantes & pots', 'Tapis', 'Accessoires design'] },
-  { id: 22, name: 'Ustensiles de Cuisine', subs: ['Poêles', 'Casseroles', 'Cocottes', 'Couteaux', 'Ustensiles', 'Bols / Saladiers', 'Plats & Plateaux', 'Boîtes alimentaires', 'Moules', 'Passoires', 'Grills BBQ'] },
-  { id: 23, name: 'Services Alimentaires', subs: ['Restaurants', 'Fast-food', 'Cafés', 'Pâtisseries', 'Boulangeries', 'Traiteurs', 'Livraison repas', 'Grillades', 'Cuisine traditionnelle', 'Healthy food'] },
-  { id: 24, name: 'Équipement Magasin & Pro', subs: ['Frigos professionnels', 'Chambres froides', 'Tables inox', 'Vitrines & Comptoirs', 'Matériel boulangerie', 'Cuisine pro', 'Matériel pizzeria', 'Rayonnages', 'Caisse & POS', 'Boucherie'] },
-  { id: 25, name: 'Cuisinistes & Cuisines Complètes', subs: ['Cuisines équipées', 'Cuisines sur mesure', 'Plans de travail', 'Rangements', 'Installation', 'Électroménagers intégrés', 'Conception 3D'] },
-  { id: 26, name: 'Sport & Matériel Sportif', subs: ['Musculation', 'Cardio', 'Yoga', 'Boxe', 'Natation', 'Accessoires fitness', 'Sports individuels', 'Sports collectifs'] },
-  { id: 27, name: 'Bricolage', subs: ['Outils manuels', 'Outils électriques', 'Visserie', 'Serrurerie', 'Colles', 'Peinture', 'Éclairage technique', 'Matériel professionnel'] },
-  { id: 28, name: 'Matériaux & Équipements Construction', subs: ['Matériaux', 'Outils', 'Équipement industriel', 'Plomberie', 'Électricité', 'Peinture', 'Sécurité'] },
-  { id: 29, name: 'Pièces Détachées', subs: ['Pièces moteur', 'Carrosserie', 'Batteries', 'Pneus & Jantes', 'Pièces moto', 'Accessoires auto'] },
-  { id: 30, name: 'Équipement Bébé', subs: ['Poussettes', 'Sièges auto', 'Lits bébé', 'Biberons', 'Jouets bébé', 'Hygiène bébé', 'Accessoires repas'] },
-  { id: 31, name: 'Artisanat', subs: ['Produits faits main', 'Broderie', 'Bijoux artisanaux', 'Poterie', 'Tapis', 'Décoration traditionnelle'] },
-  { id: 32, name: 'Loisirs & Divertissement', subs: ['Livres', 'Jouets', 'Musique', 'Films', 'Arts créatifs', 'Jeux vidéo', 'Consoles'] },
-  { id: 33, name: 'Alimentation & Épicerie', subs: ['Épicerie', 'Frais', 'Bio', 'Boissons', 'Boulangerie', 'Produits laitiers', 'Viandes & Poissons'] },
-  { id: 34, name: 'Agences de Voyage', subs: ['Voyages', 'Hajj & Omra', 'Hôtels', 'Circuits', 'Locations voitures', 'Assurance voyage'] },
-  { id: 35, name: 'Éducation', subs: ['Cours particuliers', 'Écoles privées', 'Garderies', 'Soutien scolaire', 'Cours en ligne', 'Cours de langues', 'Cours de musique'] },
-  { id: 36, name: 'Bijoux', subs: ['Colliers', 'Bracelets', 'Bagues', "Boucles d'oreilles", 'Argent', 'Or', 'Parures', 'Piercings', 'Bijoux fantaisie'] },
-  { id: 37, name: 'Montres & Lunettes', subs: ['Montres homme', 'Montres femme', 'Smartwatches', 'Bracelets', 'Lunettes de soleil', 'Lunettes mode', 'Étuis'] },
-  { id: 38, name: 'Vape & Cigarettes Électroniques', subs: ['E-cigarettes', 'Pods', 'Clearomiseurs', 'Résistances', 'Batteries', 'Chargeurs', 'DIY'] },
-  { id: 39, name: 'Matériel Médical', subs: ['Fauteuils roulants', 'Déambulateurs', 'Orthèses', 'Tensiomètres', 'Thermomètres', 'Matelas médicaux', 'Rééducation', 'Béquilles'] },
-  { id: 40, name: 'Promoteurs Immobiliers', subs: ['Projets immobiliers', 'Programmes neufs', 'Résidences en construction', 'Appartements promo', 'Villas promo', 'Terrains promo', 'Plans'] },
-  { id: 41, name: 'Engins de Travaux Publics', subs: ['Rétrochargeuses', 'Grues', 'Excavatrices', 'Bulldozers', 'Camions', 'Chargeurs', 'Compacteurs', 'Pelles mini'] },
-  { id: 42, name: 'Fête & Mariage', subs: ['Robes de soirée', 'Robes de mariage', 'Tenues traditionnelles', 'Accessoires mariage', 'Décoration', 'Salles', 'Traiteurs', 'Photographes', 'DJ & Animation'] },
-  { id: 43, name: 'Kaba', subs: ['Articles Kaba', 'Importations Directes'] },
-  { id: 44, name: 'Divers', subs: ['Articles variés', 'Objets insolites', 'Accessoires divers', 'Produits généraux'] },
+  {
+    id: 1,
+    name: 'Téléphones & Accessoires',
+    subs: [
+      'Smartphones',
+      'Téléphones basiques',
+      'Écouteurs & Casques',
+      'Chargeurs & Cables',
+      'Batteries',
+      'Coques & Protection',
+      'Accessoires divers',
+      'Montres connectées',
+    ],
+  },
+  {
+    id: 2,
+    name: 'Accessoires Auto & Moto',
+    subs: [
+      'Accessoires voiture',
+      'Accessoires moto',
+      'Sécurité',
+      'Entretien',
+      'Casques & Gants',
+      'Éclairage',
+    ],
+  },
+  {
+    id: 3,
+    name: 'Véhicules',
+    subs: ['Voitures', 'Motos', 'Camions', 'Utilitaires', 'Camping-cars'],
+  },
+  {
+    id: 4,
+    name: 'Immobilier',
+    subs: [
+      'À vendre',
+      'À louer',
+      'Appartements',
+      'Villas',
+      'Terrains',
+      'Locaux commerciaux',
+      'Promotion immobilière',
+      'Colocation',
+    ],
+  },
+  {
+    id: 5,
+    name: 'Informatique & IT',
+    subs: [
+      'PC portables',
+      'PC de bureau',
+      'Composants',
+      'Stockage',
+      'Imprimantes & Scanners',
+      'Accessoires PC',
+      'Réseau',
+      'Écrans',
+      'Mobilier informatique',
+    ],
+  },
+  {
+    id: 6,
+    name: 'Électronique',
+    subs: [
+      'Appareils photo',
+      'Caméscopes',
+      'Home cinéma',
+      'Audio & Enceintes',
+      'Accessoires électroniques',
+    ],
+  },
+  {
+    id: 7,
+    name: 'Électroménager',
+    subs: [
+      'Machines à laver',
+      'Réfrigérateurs',
+      'Télévisions',
+      'Fours',
+      'Micro-ondes',
+      'Lave-vaisselle',
+      'Cuisinières & Plaques',
+      'Climatisation & Chauffage',
+      'Aspirateurs',
+      'Congélateurs',
+      'Mixeurs / Blenders',
+    ],
+  },
+  {
+    id: 8,
+    name: 'Gaming',
+    subs: [
+      'Consoles',
+      'Jeux vidéo',
+      'Manettes',
+      'Casques gaming',
+      'Souris & Claviers gaming',
+      'Tapis de souris',
+      'Chaises gaming',
+      'Matériel de streaming',
+      'PC Gaming',
+    ],
+  },
+  {
+    id: 9,
+    name: 'Vêtements Femme',
+    subs: [
+      'Robes',
+      'Tops & Chemisiers',
+      'Pantalons',
+      'Jupes',
+      'Abayas',
+      'Chaussures',
+      'Sacs & Accessoires',
+      'Lingerie',
+      'Sportswear femme',
+      'Bijoux',
+    ],
+  },
+  {
+    id: 10,
+    name: 'Vêtements Homme',
+    subs: [
+      'T-shirts',
+      'Chemises',
+      'Pantalons',
+      'Jeans',
+      'Pulls',
+      'Vestes & Manteaux',
+      'Chaussures',
+      'Accessoires',
+      'Sportswear homme',
+      'Tenues traditionnelles',
+    ],
+  },
+  {
+    id: 11,
+    name: 'Vêtements Homme Classique',
+    subs: [
+      'Costumes',
+      'Chemises classiques',
+      'Pantalons classiques',
+      'Vestes & Blazers',
+      'Chaussures habillées',
+      'Cravates',
+      'Ceintures',
+    ],
+  },
+  {
+    id: 12,
+    name: 'Sportswear',
+    subs: [
+      'T-shirts',
+      'Survêtements',
+      'Shorts',
+      'Leggings',
+      'Brassières',
+      'Vestes',
+      'Chaussures',
+      'Accessoires',
+      'Tenues sport',
+    ],
+  },
+  {
+    id: 13,
+    name: 'Vêtements Bébé',
+    subs: [
+      'Bodies',
+      'Pyjamas',
+      'Ensembles',
+      'Pulls & Gilets',
+      'Chaussures bébé',
+      'Bonnets & Gants',
+      'Tenues nouveau-né',
+      'Couvertures',
+    ],
+  },
+  {
+    id: 14,
+    name: 'Santé & Beauté',
+    subs: [
+      'Parfums',
+      'Maquillage',
+      'Soin visage',
+      'Soin cheveux',
+      'Hygiène',
+      'Bien-être',
+      'Appareils beauté',
+    ],
+  },
+  {
+    id: 15,
+    name: 'Cosmétiques',
+    subs: [
+      'Fond de teint',
+      'Rouge à lèvres',
+      'Mascara',
+      'Eyeliner',
+      'Correcteurs',
+      'Poudres',
+      'Palettes',
+      'Soin visage',
+      'Soin cheveux',
+      'Soin corps',
+    ],
+  },
+  {
+    id: 16,
+    name: 'Salon de Coiffure Homme',
+    subs: [
+      'Coupe homme',
+      'Dégradé / Fade',
+      'Rasage & Taille de barbe',
+      'Coloration homme',
+      'Lissage / Soin cheveux',
+      'Coiffure événementielle',
+      'Produits capillaires',
+    ],
+  },
+  {
+    id: 17,
+    name: 'Salon de Coiffure & Esthétique - Femme',
+    subs: [
+      'Coupe femme',
+      'Brushing',
+      'Coloration / Mèches',
+      'Balayage / Ombré',
+      'Lissage',
+      'Maquillage',
+      'Manucure & Pédicure',
+      'Épilation',
+      'Extensions',
+    ],
+  },
+  {
+    id: 18,
+    name: 'Produits Naturels & Herboristerie',
+    subs: [
+      'Plantes médicinales',
+      'Tisanes',
+      'Huiles essentielles',
+      'Savons naturels',
+      'Produits de la ruche',
+      'Compléments naturels',
+      'Épices naturelles',
+    ],
+  },
+  {
+    id: 19,
+    name: 'Meubles & Maison',
+    subs: [
+      'Salon',
+      'Chambre',
+      'Bureau',
+      'Cuisine',
+      'Salle de bain',
+      'Déco intérieure',
+      'Déco extérieure',
+      'Jardin',
+      'Textiles maison',
+      'Éclairage',
+    ],
+  },
+  {
+    id: 20,
+    name: 'Textiles Maison',
+    subs: [
+      'Parures',
+      'Couvertures',
+      'Protège-matelas',
+      'Serviettes',
+      'Rideaux',
+      'Nappes',
+      'Stores',
+      'Tapis',
+      'Coussins',
+      'Plaids',
+    ],
+  },
+  {
+    id: 21,
+    name: 'Décoration Maison',
+    subs: [
+      'Objets déco',
+      'Tableaux',
+      'Bougies',
+      'Décoration saisonnière',
+      'Plantes & pots',
+      'Tapis',
+      'Accessoires design',
+    ],
+  },
+  {
+    id: 22,
+    name: 'Ustensiles de Cuisine',
+    subs: [
+      'Poêles',
+      'Casseroles',
+      'Cocottes',
+      'Couteaux',
+      'Ustensiles',
+      'Bols / Saladiers',
+      'Plats & Plateaux',
+      'Boîtes alimentaires',
+      'Moules',
+      'Passoires',
+      'Grills BBQ',
+    ],
+  },
+  {
+    id: 23,
+    name: 'Services Alimentaires',
+    subs: [
+      'Restaurants',
+      'Fast-food',
+      'Cafés',
+      'Pâtisseries',
+      'Boulangeries',
+      'Traiteurs',
+      'Livraison repas',
+      'Grillades',
+      'Cuisine traditionnelle',
+      'Healthy food',
+    ],
+  },
+  {
+    id: 24,
+    name: 'Équipement Magasin & Pro',
+    subs: [
+      'Frigos professionnels',
+      'Chambres froides',
+      'Tables inox',
+      'Vitrines & Comptoirs',
+      'Matériel boulangerie',
+      'Cuisine pro',
+      'Matériel pizzeria',
+      'Rayonnages',
+      'Caisse & POS',
+      'Boucherie',
+    ],
+  },
+  {
+    id: 25,
+    name: 'Cuisinistes & Cuisines Complètes',
+    subs: [
+      'Cuisines équipées',
+      'Cuisines sur mesure',
+      'Plans de travail',
+      'Rangements',
+      'Installation',
+      'Électroménagers intégrés',
+      'Conception 3D',
+    ],
+  },
+  {
+    id: 26,
+    name: 'Sport & Matériel Sportif',
+    subs: [
+      'Musculation',
+      'Cardio',
+      'Yoga',
+      'Boxe',
+      'Natation',
+      'Accessoires fitness',
+      'Sports individuels',
+      'Sports collectifs',
+    ],
+  },
+  {
+    id: 27,
+    name: 'Bricolage',
+    subs: [
+      'Outils manuels',
+      'Outils électriques',
+      'Visserie',
+      'Serrurerie',
+      'Colles',
+      'Peinture',
+      'Éclairage technique',
+      'Matériel professionnel',
+    ],
+  },
+  {
+    id: 28,
+    name: 'Matériaux & Équipements Construction',
+    subs: [
+      'Matériaux',
+      'Outils',
+      'Équipement industriel',
+      'Plomberie',
+      'Électricité',
+      'Peinture',
+      'Sécurité',
+    ],
+  },
+  {
+    id: 29,
+    name: 'Pièces Détachées',
+    subs: [
+      'Pièces moteur',
+      'Carrosserie',
+      'Batteries',
+      'Pneus & Jantes',
+      'Pièces moto',
+      'Accessoires auto',
+    ],
+  },
+  {
+    id: 30,
+    name: 'Équipement Bébé',
+    subs: [
+      'Poussettes',
+      'Sièges auto',
+      'Lits bébé',
+      'Biberons',
+      'Jouets bébé',
+      'Hygiène bébé',
+      'Accessoires repas',
+    ],
+  },
+  {
+    id: 31,
+    name: 'Artisanat',
+    subs: [
+      'Produits faits main',
+      'Broderie',
+      'Bijoux artisanaux',
+      'Poterie',
+      'Tapis',
+      'Décoration traditionnelle',
+    ],
+  },
+  {
+    id: 32,
+    name: 'Loisirs & Divertissement',
+    subs: [
+      'Livres',
+      'Jouets',
+      'Musique',
+      'Films',
+      'Arts créatifs',
+      'Jeux vidéo',
+      'Consoles',
+    ],
+  },
+  {
+    id: 33,
+    name: 'Alimentation & Épicerie',
+    subs: [
+      'Épicerie',
+      'Frais',
+      'Bio',
+      'Boissons',
+      'Boulangerie',
+      'Produits laitiers',
+      'Viandes & Poissons',
+    ],
+  },
+  {
+    id: 34,
+    name: 'Agences de Voyage',
+    subs: [
+      'Voyages',
+      'Hajj & Omra',
+      'Hôtels',
+      'Circuits',
+      'Locations voitures',
+      'Assurance voyage',
+    ],
+  },
+  {
+    id: 35,
+    name: 'Éducation',
+    subs: [
+      'Cours particuliers',
+      'Écoles privées',
+      'Garderies',
+      'Soutien scolaire',
+      'Cours en ligne',
+      'Cours de langues',
+      'Cours de musique',
+    ],
+  },
+  {
+    id: 36,
+    name: 'Bijoux',
+    subs: [
+      'Colliers',
+      'Bracelets',
+      'Bagues',
+      "Boucles d'oreilles",
+      'Argent',
+      'Or',
+      'Parures',
+      'Piercings',
+      'Bijoux fantaisie',
+    ],
+  },
+  {
+    id: 37,
+    name: 'Montres & Lunettes',
+    subs: [
+      'Montres homme',
+      'Montres femme',
+      'Smartwatches',
+      'Bracelets',
+      'Lunettes de soleil',
+      'Lunettes mode',
+      'Étuis',
+    ],
+  },
+  {
+    id: 38,
+    name: 'Vape & Cigarettes Électroniques',
+    subs: [
+      'E-cigarettes',
+      'Pods',
+      'Clearomiseurs',
+      'Résistances',
+      'Batteries',
+      'Chargeurs',
+      'DIY',
+    ],
+  },
+  {
+    id: 39,
+    name: 'Matériel Médical',
+    subs: [
+      'Fauteuils roulants',
+      'Déambulateurs',
+      'Orthèses',
+      'Tensiomètres',
+      'Thermomètres',
+      'Matelas médicaux',
+      'Rééducation',
+      'Béquilles',
+    ],
+  },
+  {
+    id: 40,
+    name: 'Promoteurs Immobiliers',
+    subs: [
+      'Projets immobiliers',
+      'Programmes neufs',
+      'Résidences en construction',
+      'Appartements promo',
+      'Villas promo',
+      'Terrains promo',
+      'Plans',
+    ],
+  },
+  {
+    id: 41,
+    name: 'Engins de Travaux Publics',
+    subs: [
+      'Rétrochargeuses',
+      'Grues',
+      'Excavatrices',
+      'Bulldozers',
+      'Camions',
+      'Chargeurs',
+      'Compacteurs',
+      'Pelles mini',
+    ],
+  },
+  {
+    id: 42,
+    name: 'Fête & Mariage',
+    subs: [
+      'Robes de soirée',
+      'Robes de mariage',
+      'Tenues traditionnelles',
+      'Accessoires mariage',
+      'Décoration',
+      'Salles',
+      'Traiteurs',
+      'Photographes',
+      'DJ & Animation',
+    ],
+  },
+  {
+    id: 43,
+    name: 'Kaba',
+    subs: ['Articles Kaba', 'Importations Directes'],
+  },
+  {
+    id: 44,
+    name: 'Divers',
+    subs: ['Articles variés', 'Objets insolites', 'Accessoires divers', 'Produits généraux'],
+  },
 ];
 
 const AMAZON_OVERLAY_CARDS = [
-  { title: 'Ventes Flash', items: [{ n: 'Cuisine', img: '101' }, { n: 'Maison', img: '102' }, { n: 'Déco', img: '103' }, { n: 'Outils', img: '104' }], link: 'Voir', color: 'blue' },
-  { title: 'Nouveautés', items: [{ n: 'Beauté', img: '105' }, { n: 'Tech', img: '106' }, { n: 'Gaming', img: '107' }, { n: 'Mode', img: '108' }], link: 'Découvrir', color: 'orange' },
-  { title: 'Maison', items: [{ n: 'Électro', img: '109' }, { n: 'Cuisine', img: '110' }, { n: 'Salon', img: '111' }, { n: 'Range', img: '112' }], link: 'Explorer', color: 'blue' },
-  { title: 'Tendances', items: [{ n: 'Literie', img: '113' }, { n: 'Lumière', img: '114' }, { n: 'Jardin', img: '115' }, { n: 'Orga', img: '116' }], link: 'Voir', color: 'orange' },
+  {
+    title: 'Ventes Flash',
+    items: [
+      { n: 'Cuisine', img: '101' },
+      { n: 'Maison', img: '102' },
+      { n: 'Déco', img: '103' },
+      { n: 'Outils', img: '104' },
+    ],
+    link: 'Voir',
+    color: 'blue',
+  },
+  {
+    title: 'Nouveautés',
+    items: [
+      { n: 'Beauté', img: '105' },
+      { n: 'Tech', img: '106' },
+      { n: 'Gaming', img: '107' },
+      { n: 'Mode', img: '108' },
+    ],
+    link: 'Découvrir',
+    color: 'orange',
+  },
+  {
+    title: 'Maison',
+    items: [
+      { n: 'Électro', img: '109' },
+      { n: 'Cuisine', img: '110' },
+      { n: 'Salon', img: '111' },
+      { n: 'Range', img: '112' },
+    ],
+    link: 'Explorer',
+    color: 'blue',
+  },
+  {
+    title: 'Tendances',
+    items: [
+      { n: 'Literie', img: '113' },
+      { n: 'Lumière', img: '114' },
+      { n: 'Jardin', img: '115' },
+      { n: 'Orga', img: '116' },
+    ],
+    link: 'Voir',
+    color: 'orange',
+  },
 ];
+
+type SortBy = 'price_asc' | 'price_desc' | 'newest' | 'popular';
+type PriceType = 'fixe' | 'negociable' | 'facilite';
 
 export default function HomePage() {
   useCartHydration();
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const updateParams = useUpdateSearchParams();
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [lang, setLang] = useState<'FR' | 'AR'>('FR');
   const [isCatMenuOpen, setIsCatMenuOpen] = useState(false);
@@ -99,10 +692,16 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
+  const [searchResults, setSearchResults] = useState<Product[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const initialQ = searchParams.get('q') || '';
+  const [searchTerm, setSearchTerm] = useState(initialQ);
+
   const supabase = createSupabaseBrowserClient();
 
   const totalItems = useCartStore((state) =>
-    state.items.reduce((sum, item) => sum + item.quantity, 0)
+    state.items.reduce((sum, item) => sum + item.quantity, 0),
   );
 
   useEffect(() => {
@@ -117,12 +716,14 @@ export default function HomePage() {
           .limit(20);
 
         if (error) {
-          console.error('Erreur lors de la récupération des produits:', error);
+          console.warn('Erreur lors de la récupération des produits (ignorée):', error);
+          setProducts([]);
         } else {
           setProducts(data || []);
         }
       } catch (err) {
         console.error('Erreur:', err);
+        setProducts([]);
       } finally {
         setIsLoadingProducts(false);
       }
@@ -163,7 +764,7 @@ export default function HomePage() {
           setUser(null);
           setUserRole(null);
         }
-      }
+      },
     );
 
     return () => authListener.subscription.unsubscribe();
@@ -228,10 +829,132 @@ export default function HomePage() {
   useEffect(() => {
     const timer = setInterval(
       () => setCurrentSlide((s) => (s + 1) % slides.length),
-      8000
+      8000,
     );
     return () => clearInterval(timer);
   }, [slides.length]);
+
+  useEffect(() => {
+    const qs = searchParams.toString();
+
+    if (!qs) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const doSearch = async () => {
+      try {
+        setIsSearching(true);
+        const res = await fetch(`/api/search?${qs}`, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          console.error('Erreur /api/search', res.status);
+          setSearchResults([]);
+          return;
+        }
+
+        const data = await res.json();
+        let hits = (data.hits ?? []) as Product[];
+
+        // Tri: résultats dont le nom contient exactement la requête en premier
+        const qRaw =
+          searchParams
+            .get('q')
+            ?.toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') || '';
+
+        if (qRaw && hits.length > 0) {
+          hits = [...hits].sort((a, b) => {
+            const nameA =
+              (a.name || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '') || '';
+            const nameB =
+              (b.name || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '') || '';
+
+            const aExact = nameA.includes(qRaw);
+            const bExact = nameB.includes(qRaw);
+
+            if (aExact && !bExact) return -1;
+            if (!aExact && bExact) return 1;
+            return 0;
+          });
+        }
+
+        setSearchResults(hits);
+      } catch (err) {
+        const e = err as any;
+        if (e?.name === 'AbortError') {
+          return;
+        }
+        console.error('Erreur recherche:', e);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    doSearch();
+
+    return () => controller.abort();
+  }, [searchParams]);
+
+  const hasSearchParams = !!searchParams.toString();
+
+  const currentFilters = {
+    wilaya: searchParams.get('wilaya') || undefined,
+    etat: searchParams.get('etat') || undefined,
+    priceType: (searchParams.get('priceType') as PriceType) || undefined,
+    minPrice: searchParams.get('minPrice')
+      ? Number(searchParams.get('minPrice'))
+      : undefined,
+    maxPrice: searchParams.get('maxPrice')
+      ? Number(searchParams.get('maxPrice'))
+      : undefined,
+    sortBy: (searchParams.get('sortBy') as SortBy) || 'newest',
+  };
+
+  const handleFilterChange = (patch: Partial<typeof currentFilters>) => {
+    const toUpdate: Record<string, string | number | null> = {};
+
+    if ('wilaya' in patch) {
+      toUpdate.wilaya = patch.wilaya || null;
+    }
+    if ('etat' in patch) {
+      toUpdate.etat = patch.etat || null;
+    }
+    if ('priceType' in patch) {
+      toUpdate.priceType = patch.priceType || null;
+    }
+    if ('minPrice' in patch) {
+      toUpdate.minPrice =
+        patch.minPrice != null ? String(patch.minPrice) : null;
+    }
+    if ('maxPrice' in patch) {
+      toUpdate.maxPrice =
+        patch.maxPrice != null ? String(patch.maxPrice) : null;
+    }
+    if ('sortBy' in patch) {
+      toUpdate.sortBy = patch.sortBy || null;
+    }
+
+    updateParams(toUpdate);
+  };
+
+  const handleSearchSubmit = () => {
+    updateParams({ q: searchTerm.trim() || null });
+  };
 
   return (
     <div className="min-h-screen bg-[#0c0c0c] font-sans text-slate-900">
@@ -258,9 +981,19 @@ export default function HomePage() {
                 type="text"
                 placeholder="Rechercher..."
                 className="flex-1 px-3 md:px-4 outline-none text-xs md:text-sm font-medium"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearchSubmit();
+                  }
+                }}
               />
             </div>
-            <button className="bg-[#ff7011] text-white px-4 md:px-6 h-10 md:h-[42px] rounded-r-md hover:bg-[#e6630f] transition-all">
+            <button
+              className="bg-[#ff7011] text-white px-4 md:px-6 h-10 md:h-[42px] rounded-r-md hover:bg-[#e6630f] transition-all"
+              onClick={handleSearchSubmit}
+            >
               <Search size={18} className="md:w-5 md:h-5" />
             </button>
           </div>
@@ -514,14 +1247,25 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Barre de recherche mobile */}
         <div className="md:hidden px-3 pb-3">
           <div className="flex border-2 border-[#ff7011] rounded-md overflow-hidden bg-white">
             <input
               type="text"
               placeholder="Rechercher des produits..."
               className="flex-1 px-3 py-2 outline-none text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearchSubmit();
+                }
+              }}
             />
-            <button className="bg-[#ff7011] text-white px-4 hover:bg-[#e6630f] transition-all">
+            <button
+              className="bg-[#ff7011] text-white px-4 hover:bg-[#e6630f] transition-all"
+              onClick={handleSearchSubmit}
+            >
               <Search size={18} />
             </button>
           </div>
@@ -572,7 +1316,7 @@ export default function HomePage() {
                           <div className="w-24 h-24 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden group-hover:border-orange-500 transition-all shadow-inner">
                             <img
                               src={`https://picsum.photos/seed/${s}/100/100`}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform durée-500"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                               alt={s}
                             />
                           </div>
@@ -626,7 +1370,7 @@ export default function HomePage() {
           {slides.map((s, i) => (
             <div
               key={i}
-              className={`absolute inset-0 transition-all durée-1000 ${
+              className={`absolute inset-0 transition-all duration-1000 ${
                 i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
               }`}
             >
@@ -659,7 +1403,7 @@ export default function HomePage() {
                 card.color === 'blue'
                   ? 'border-blue-500 bg-blue-50/50'
                   : 'border-[#ff7011] bg-orange-50/50'
-              } group transition-all durée-500 hover:-translate-y-2`}
+              } group transition-all duration-500 hover:-translate-y-2`}
             >
               <h3 className="text-sm md:text-2xl font-black text-[#0f172a] mb-4 md:mb-8 tracking-tight uppercase">
                 {card.title}
@@ -673,7 +1417,7 @@ export default function HomePage() {
                     <div className="aspect-square w-full bg-white rounded-xl md:rounded-2xl overflow-hidden flex items-center justify-center p-1 border border-slate-100 shadow-sm">
                       <img
                         src={`https://picsum.photos/seed/bzm_${it.img}/300/300`}
-                        className="w-full h-full object-contain mix-blend-multiply hover:scale-110 transition-transform durée-500"
+                        className="w-full h-full object-contain mix-blend-multiply hover:scale-110 transition-transform duration-500"
                         alt={it.n}
                       />
                     </div>
@@ -711,7 +1455,12 @@ export default function HomePage() {
           <div className="w-20 md:w-32 h-1 bg-gradient-to-r from-blue-500 to-orange-500 mx-auto rounded-full" />
         </div>
 
-        <ProductGrid products={products} isLoading={isLoadingProducts} />
+        <ProductGrid
+          products={hasSearchParams ? searchResults : products}
+          isLoading={hasSearchParams ? isSearching : isLoadingProducts}
+          currentFilters={currentFilters}
+          onFilterChange={handleFilterChange}
+        />
       </section>
 
       <footer className="bg-[#131a22] text-slate-400 py-12 md:py-24 text-center px-4">
