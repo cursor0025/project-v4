@@ -1,940 +1,969 @@
 'use client'
 
-import './styles.css'
-import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import toast, { Toaster } from 'react-hot-toast'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import imageCompression from 'browser-image-compression'
-import { 
-  Upload, X, ChevronRight, ChevronLeft, Save, AlertCircle, 
-  Percent, Image as ImageIcon, Tag, DollarSign, Package,
-  Sparkles, CheckCircle2, Loader2, Truck, Banknote, Home
-} from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
-import DynamicAttributesForm from '@/components/product/DynamicAttributesForm'
-import { Subcategory, ProductAttributes } from '@/types/product-attributes'
+import ModeSpecificationsForm from '@/components/product/ModeSpecificationsForm'
+import type { AttributeField, ProductAttributes } from '@/types/product-attributes'
+import SimpleVariantGrid, { SimpleVariant } from '@/components/product/SimpleVariantGrid'
 
-// ==================== TYPES ====================
-interface ProductImage {
-  id: string
-  file: File
-  preview: string
-  compressed: boolean
-  size: number
+/* --------- Icônes locales --------- */
+
+const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" {...props}>
+    <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
+const UploadIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" {...props}>
+    <path d="M4 17v3h16v-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M8 7l4-4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
+const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" {...props}>
+    <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
+const SparklesIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" {...props}>
+    <path
+      d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+  </svg>
+)
+
+const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" {...props}>
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+    <path d="M12 16v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="12" cy="8" r="1" fill="currentColor" />
+  </svg>
+)
+
+const ImageIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" {...props}>
+    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+    <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
+/* --------- Config catégories / tailles --------- */
+
+const VARIANT_CATEGORIES = [
+  'vetements-femme',
+  'vetements-homme',
+  'vetements-homme-classique',
+  'sportswear',
+  'vetements-bebe',
+  'fete-mariage',
+  'chaussures',
+]
+
+const SIZE_PRESETS = {
+  standard: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
+  pants: ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56'],
+  shoes: ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'],
+  kids: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
+} as const
+
+interface Category {
+  id: number
+  name: string
+  slug: string
 }
 
-// ==================== COMPOSANT PRINCIPAL ====================
+interface Subcategory {
+  id: number
+  name: string
+  slug: string
+  category_id: number
+  attributes_config?: AttributeField[]
+}
+
 export default function CreateProductPage() {
+  const router = useRouter()
+  const supabase = createSupabaseBrowserClient()
+
+  /* --------- État global --------- */
+
   const [currentStep, setCurrentStep] = useState(1)
-  const [category, setCategory] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [productData, setProductData] = useState({
     name: '',
     description: '',
     price: '',
     old_price: '',
-    stock: '1'
+    stock: '',
   })
-  const [images, setImages] = useState<ProductImage[]>([])
-  const [isDragging, setIsDragging] = useState(false)
-  const [isCompressing, setIsCompressing] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  
-  // ========== NOUVEAUX ÉTATS POUR LIVRAISON & TYPE DE PRIX ==========
+
+  const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('')
+
+  const [productAttributes, setProductAttributes] = useState<ProductAttributes>({})
+
+  const [images, setImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [imageSizes, setImageSizes] = useState<number[]>([])
+
   const [deliveryAvailable, setDeliveryAvailable] = useState(true)
   const [priceType, setPriceType] = useState<'fixe' | 'negociable' | 'facilite'>('fixe')
-  
-  // ========== NOUVEAUX ÉTATS POUR CHARGEMENT DYNAMIQUE ==========
-  const [categories, setCategories] = useState<any[]>([])
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | null>(null)
-  const [productAttributes, setProductAttributes] = useState<ProductAttributes>({})
-  
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const discountPercent = productData.price && productData.old_price
-    ? Math.round(((parseFloat(productData.old_price) - parseFloat(productData.price)) / parseFloat(productData.old_price)) * 100)
-    : 0
+  const [hasVariants, setHasVariants] = useState(false)
+  const [variants, setVariants] = useState<SimpleVariant[]>([])
+  const [basePrice, setBasePrice] = useState(2500)
+  const [baseSKU] = useState('PROD')
+  const [availableSizes, setAvailableSizes] = useState<string[]>([])
 
-  // ========== RÉCUPÉRATION DES CATÉGORIES ET SOUS-CATÉGORIES ==========
+  /* --------- Chargement catégories --------- */
+
   useEffect(() => {
-    async function fetchData() {
-      console.log('🔍 Début du chargement des données...')
-      const supabase = createSupabaseBrowserClient()
-      
-      // Récupérer les catégories
-      const { data: cats, error: catsError } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order')
-      
-      console.log('📦 Catégories reçues:', cats)
-      console.log('📦 Nombre de catégories:', cats?.length)
-      console.log('❌ Erreur catégories:', catsError)
-      
-      // Récupérer les sous-catégories
-      const { data: subs, error: subsError } = await supabase
-        .from('subcategories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order')
-      
-      console.log('📦 Sous-catégories reçues:', subs)
-      console.log('📦 Nombre de sous-catégories:', subs?.length)
-      console.log('❌ Erreur sous-catégories:', subsError)
-      
-      if (cats) {
-        setCategories(cats)
-        console.log('✅ État categories mis à jour')
-      }
-      if (subs) {
-        setSubcategories(subs)
-        console.log('✅ État subcategories mis à jour')
-      }
-    }
-    fetchData()
+    loadCategories()
   }, [])
 
-  // Log pour vérifier l'état des catégories
   useEffect(() => {
-    console.log('📊 État actuel categories:', categories)
-    console.log('📊 Nombre dans l\'état:', categories.length)
-  }, [categories])
+    if (!selectedCategoryId) return
+    loadSubcategories(Number(selectedCategoryId))
+  }, [selectedCategoryId])
 
-  // Récupérer la config des attributs de la sous-catégorie sélectionnée
-  const selectedConfig = subcategories.find(s => s.id === selectedSubcategoryId)?.attributes_config
+  /* --------- Détection mode variantes + tailles --------- */
 
-  // ==================== COMPRESSION D'IMAGES ====================
-  const compressImage = async (file: File): Promise<File> => {
-    const options = {
-      maxSizeMB: 0.29,
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-      initialQuality: 0.85,
-      fileType: 'image/jpeg'
-    }
-    
-    try {
-      const compressedFile = await imageCompression(file, options)
-      console.log(`Image compressée: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`)
-      return compressedFile
-    } catch (error) {
-      console.error('Erreur de compression:', error)
-      toast.error('Erreur lors de la compression de l\'image')
-      return file
-    }
-  }
-
-  const handleImageUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-    
-    const remainingSlots = 5 - images.length
-    if (remainingSlots === 0) {
-      toast.error('Maximum 5 photos atteint')
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setHasVariants(false)
+      setAvailableSizes([])
       return
     }
 
-    const fileArray = Array.from(files).slice(0, remainingSlots)
-    setIsCompressing(true)
-    toast.loading(`Compression de ${fileArray.length} image(s)...`, { id: 'compressing' })
+    const currentCategory = categories.find(
+      (c) => c.id === Number(selectedCategoryId),
+    )
+    if (!currentCategory) return
 
-    try {
-      const newImages: ProductImage[] = []
+    const categorySlug = currentCategory.slug.toLowerCase()
+    const catName = currentCategory.name.toLowerCase()
 
-      for (let i = 0; i < fileArray.length; i++) {
-        const file = fileArray[i]
-        
-        if (!file.type.startsWith('image/')) {
-          toast.error(`${file.name} n'est pas une image valide`)
-          continue
+    const isClothingCategory = VARIANT_CATEGORIES.some((keyword) =>
+      categorySlug.includes(keyword),
+    )
+
+    setHasVariants(isClothingCategory)
+
+    if (!isClothingCategory) {
+      setAvailableSizes([])
+      return
+    }
+
+    const currentSubcategory = subcategories.find(
+      (s) => s.id === Number(selectedSubcategoryId),
+    )
+
+    const subName = (currentSubcategory?.name || '').toLowerCase()
+    const subSlug = (currentSubcategory?.slug || '').toLowerCase()
+
+    if (
+      subName.includes('chaussure') ||
+      subName.includes('basket') ||
+      subName.includes('botte') ||
+      subSlug.includes('chaussure') ||
+      subSlug.includes('basket')
+    ) {
+      setAvailableSizes(SIZE_PRESETS.shoes as unknown as string[])
+    } else if (
+      subName.includes('pantalon') ||
+      subName.includes('jean') ||
+      subName.includes('jogging') ||
+      subName.includes('short')
+    ) {
+      setAvailableSizes(SIZE_PRESETS.pants as unknown as string[])
+    } else if (
+      catName.includes('bébé') ||
+      catName.includes('bebe') ||
+      catName.includes('enfant') ||
+      subName.includes('bébé') ||
+      subName.includes('bebe') ||
+      subName.includes('enfant')
+    ) {
+      setAvailableSizes(SIZE_PRESETS.kids as unknown as string[])
+    } else {
+      setAvailableSizes(SIZE_PRESETS.standard as unknown as string[])
+    }
+  }, [selectedCategoryId, selectedSubcategoryId, categories, subcategories])
+
+  /* --------- Supabase helpers --------- */
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order')
+
+    if (error) {
+      toast.error('Erreur chargement catégories')
+      return
+    }
+    setCategories(data || [])
+  }
+
+  const loadSubcategories = async (categoryId: number) => {
+    const { data, error } = await supabase
+      .from('subcategories')
+      .select('*')
+      .eq('category_id', categoryId)
+      .eq('is_active', true)
+      .order('display_order')
+
+    if (error) {
+      toast.error('Erreur chargement sous-catégories')
+      return
+    }
+    setSubcategories(data || [])
+  }
+
+  /* --------- Helper format taille --------- */
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+  }
+
+  /* --------- Images principales --------- */
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    if (images.length + files.length > 5) {
+      toast.error('Maximum 5 images')
+      return
+    }
+
+    const compressedFiles = await Promise.all(
+      files.map(async (file) => {
+        try {
+          return await imageCompression(file, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+          })
+        } catch {
+          return file
         }
+      }),
+    )
 
-        const compressedFile = await compressImage(file)
-        const preview = URL.createObjectURL(compressedFile)
+    setImages((prev) => [...prev, ...compressedFiles])
+    setImageSizes((prev) => [...prev, ...compressedFiles.map((f) => f.size)])
 
-        newImages.push({
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          file: compressedFile,
-          preview,
-          compressed: true,
-          size: compressedFile.size
-        })
+    const newPreviews = await Promise.all(
+      compressedFiles.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(file)
+          }),
+      ),
+    )
+
+    setImagePreviews((prev) => [...prev, ...newPreviews])
+  }
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+    setImageSizes((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const uploadImages = async (
+    files: File[],
+    path = 'products',
+  ): Promise<string[]> => {
+    const uploadedUrls: string[] = []
+
+    for (const file of files) {
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(7)}.jpg`
+      const filePath = `${path}/${fileName}`
+
+      const { data, error } = await supabase.storage
+        .from('products')
+        .upload(filePath, file)
+
+      if (error) {
+        console.error('Supabase upload error:', error)
+        continue
       }
 
-      setImages(prev => [...prev, ...newImages])
-      toast.success(
-        `${newImages.length} image(s) compressée(s) avec succès ! 🎉`, 
-        { id: 'compressing', duration: 3000 }
-      )
-    } catch (error) {
-      console.error('Erreur:', error)
-      toast.error('Erreur lors du traitement des images', { id: 'compressing' })
-    } finally {
-      setIsCompressing(false)
+      const { data: publicData } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath)
+
+      uploadedUrls.push(publicData.publicUrl)
     }
+
+    return uploadedUrls
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+  /* --------- Submit --------- */
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    handleImageUpload(e.dataTransfer.files)
-  }
-
-  const removeImage = (id: string) => {
-    const imgToRemove = images.find(img => img.id === id)
-    if (imgToRemove) {
-      URL.revokeObjectURL(imgToRemove.preview)
-    }
-    setImages(prev => prev.filter(img => img.id !== id))
-    toast.success('Image supprimée', { duration: 2000 })
-  }
-
-  // ==================== VALIDATION ====================
-  const validateStep1 = (): boolean => {
-    if (!category) {
-      toast.error('Veuillez sélectionner une catégorie')
-      return false
-    }
-    if (!selectedSubcategoryId) {
-      toast.error('Veuillez sélectionner une sous-catégorie')
-      return false
-    }
-    if (!productData.name.trim()) {
-      toast.error('Le nom du produit est obligatoire')
-      return false
-    }
-    if (!productData.price || parseFloat(productData.price) <= 0) {
-      toast.error('Le prix de vente doit être supérieur à 0')
-      return false
-    }
-    if (productData.old_price && parseFloat(productData.old_price) <= parseFloat(productData.price)) {
-      toast.error('L\'ancien prix doit être supérieur au prix de vente')
-      return false
-    }
-    return true
-  }
-
-  const validateStep2 = (): boolean => {
-    return true // Tous les champs sont optionnels
-  }
-
-  // ==================== SOUMISSION ====================
   const handleSubmit = async () => {
-    if (!validateStep1() || !validateStep2()) {
+    if (!productData.name || !selectedCategoryId || !selectedSubcategoryId) {
+      toast.error('Veuillez remplir tous les champs obligatoires')
+      return
+    }
+
+    if (hasVariants && variants.length === 0) {
+      toast.error('Veuillez définir le stock dans la grille')
+      return
+    }
+
+    if (!hasVariants && (!productData.price || !productData.stock)) {
+      toast.error('Prix et stock sont obligatoires')
       return
     }
 
     if (images.length === 0) {
-      toast.error('Veuillez ajouter au moins une photo')
+      toast.error('Au moins une image principale est requise')
       return
     }
 
     setIsSubmitting(true)
-    setUploadProgress(0)
-    toast.loading('Création du produit en cours...', { id: 'submit' })
 
     try {
-      const supabase = createSupabaseBrowserClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError || !user) {
-        throw new Error('Vous devez être connecté pour créer un produit')
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast.error('Non authentifié')
+        setIsSubmitting(false)
+        return
       }
 
-      const imageUrls: string[] = []
-      const totalImages = images.length
+      toast.loading('Upload des images...')
+      const imageUrls = await uploadImages(images)
+      toast.dismiss()
 
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i]
-        const fileName = `${user.id}/${Date.now()}-${img.id}.jpg`
-        
-        setUploadProgress(Math.round(((i + 0.5) / totalImages) * 100))
+      if (imageUrls.length === 0) throw new Error('Erreur upload images')
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('products')
-          .upload(fileName, img.file, {
-            contentType: 'image/jpeg',
-            cacheControl: '3600',
-            upsert: false
-          })
+      const selectedCategory = categories.find(
+        (c) => c.id === Number(selectedCategoryId),
+      )
 
-        if (uploadError) {
-          console.error('Erreur upload:', uploadError)
-          throw new Error(`Erreur lors de l'upload de l'image ${i + 1}`)
+      const finalProductData: any = {
+        vendor_id: user.id,
+        name: productData.name,
+        description: productData.description,
+        category: selectedCategory?.name || '',
+        subcategory_id: Number(selectedSubcategoryId),
+        images: imageUrls,
+        delivery_available: deliveryAvailable,
+        price_type: priceType,
+        status: 'active',
+      }
+
+      if (hasVariants && variants.length > 0) {
+        const prices = variants.map((v) => v.price)
+        finalProductData.price = Math.min(...prices)
+        finalProductData.stock = variants.reduce(
+          (sum, v) => sum + v.stock,
+          0,
+        )
+        finalProductData.old_price = productData.old_price
+          ? parseFloat(productData.old_price)
+          : null
+
+        const colors = Array.from(new Set(variants.map((v) => v.color)))
+        const sizes = Array.from(new Set(variants.map((v) => v.size)))
+
+        finalProductData.specifications = {
+          template: [
+            { name: 'Couleur', values: colors },
+            { name: 'Taille', values: sizes },
+          ],
+          imageMapping: {},
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('products')
-          .getPublicUrl(fileName)
-
-        imageUrls.push(publicUrl)
-        setUploadProgress(Math.round(((i + 1) / totalImages) * 100))
+        finalProductData.attributes = null
+        finalProductData.variants = variants
+      } else {
+        finalProductData.price = parseFloat(productData.price)
+        finalProductData.old_price = productData.old_price
+          ? parseFloat(productData.old_price)
+          : null
+        finalProductData.stock = parseInt(productData.stock)
+        finalProductData.attributes = productAttributes
+        finalProductData.specifications = {}
+        finalProductData.variants = []
       }
 
-      const { data: product, error: insertError } = await supabase
-        .from('products')
-        .insert({
-          vendor_id: user.id,
-          name: productData.name.trim(),
-          description: productData.description.trim() || null,
-          price: parseFloat(productData.price),
-          old_price: productData.old_price ? parseFloat(productData.old_price) : null,
-          category: category,
-          subcategory_id: selectedSubcategoryId,
-          stock: parseInt(productData.stock) || 1,
-          images: imageUrls,
-          attributes: productAttributes,
-          delivery_available: deliveryAvailable,
-          price_type: priceType,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single()
+      const { error } = await supabase.from('products').insert(finalProductData)
 
-      if (insertError) {
-        console.error('Erreur insertion:', insertError)
-        throw new Error('Erreur lors de la création du produit')
+      if (error) {
+        console.error('Supabase insert error:', error)
+        toast.error('Erreur enregistrement produit')
+        setIsSubmitting(false)
+        return
       }
 
-      toast.success('🎉 Produit créé avec succès !', { 
-        id: 'submit',
-        duration: 4000
-      })
-
-      setTimeout(() => {
-        images.forEach(img => URL.revokeObjectURL(img.preview))
-        window.location.href = '/dashboard/vendor/products'
-      }, 2000)
-
+      toast.success('Produit publié avec succès !')
+      setTimeout(() => router.push('/dashboard/vendor/products'), 1000)
     } catch (error: any) {
-      console.error('Erreur complète:', error)
-      toast.error(error.message || 'Une erreur est survenue lors de la création', { 
-        id: 'submit',
-        duration: 5000
-      })
+      console.error('Erreur création:', error)
+      toast.error(error.message || 'Erreur lors de la création')
       setIsSubmitting(false)
-      setUploadProgress(0)
     }
   }
 
-  // ==================== RENDU DES CHAMPS DYNAMIQUES ====================
-  const renderDynamicFields = () => {
-    if (!selectedSubcategoryId) {
-      return (
-        <div className="text-center py-12">
-          <AlertCircle className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-400 text-lg">
-            Sélectionnez d'abord une sous-catégorie à l'étape 1
-          </p>
-        </div>
-      )
-    }
+  /* --------- Styles utilitaires --------- */
 
-    if (!selectedConfig || selectedConfig.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <CheckCircle2 className="w-16 h-16 mx-auto text-green-500 mb-4" />
-          <p className="text-white text-lg font-semibold mb-2">
-            Aucune fiche technique requise
-          </p>
-          <p className="text-gray-400">
-            Vous pouvez passer directement à l'étape suivante
-          </p>
-        </div>
-      )
-    }
+  const inputClass =
+    'w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+  const labelClass = 'block text-sm font-medium text-gray-300 mb-2'
 
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="space-y-6"
-      >
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 
-                        flex items-center justify-center border border-white/10">
-            <Tag className="w-6 h-6 text-blue-400" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-white">Attributs du produit</h3>
-            <p className="text-sm text-gray-400">
-              Remplissez les champs selon la catégorie sélectionnée
-            </p>
-          </div>
-        </div>
+  /* --------- Rendu --------- */
 
-        <DynamicAttributesForm
-          attributesConfig={selectedConfig}
-          initialValues={productAttributes}
-          onChange={setProductAttributes}
-        />
-      </motion.div>
-    )
-  }
-
-  // ==================== RENDU PRINCIPAL ====================
   return (
-    <div className="min-h-screen bg-[#0c0c0c] px-4 py-8 md:px-6 lg:px-8">
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#1a1a1a',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px'
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff'
-            }
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff'
-            }
-          }
-        }}
-      />
+    <div className="min-h-screen bg-black py-10">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header global */}
+        <div className="mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+            <span>Retour</span>
+          </button>
+          <h1 className="text-4xl font-bold text-white">Créer un nouveau produit</h1>
+          <p className="text-gray-400 mt-2">Étape {currentStep} sur 3</p>
+        </div>
 
-      <div className="max-w-6xl mx-auto mb-10">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 
-                          flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Sparkles className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black text-white tracking-tight">
-                Créer un produit
-              </h1>
-              <p className="text-gray-400 text-sm mt-1">
-                Ajoutez un nouveau produit à votre boutique BZMarket
-              </p>
-            </div>
+        {/* Étapes progress bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            {[1, 2, 3].map((step) => (
+              <div
+                key={step}
+                className={`flex-1 h-2 rounded-full mx-1 ${
+                  currentStep >= step
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500'
+                    : 'bg-gray-800'
+                }`}
+              />
+            ))}
           </div>
-        </motion.div>
+          <div className="flex justify-between text-sm text-gray-500 px-1">
+            <span className={currentStep >= 1 ? 'text-blue-400' : ''}>Infos</span>
+            <span className={currentStep >= 2 ? 'text-purple-400' : ''}>
+              Spécifications
+            </span>
+            <span className={currentStep >= 3 ? 'text-pink-400' : ''}>Images</span>
+          </div>
+        </div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="flex items-center gap-3 mt-8 bg-white/5 backdrop-blur-xl border border-white/10 
-                   rounded-3xl p-6"
-        >
-          {[
-            { num: 1, label: 'Informations de base' },
-            { num: 2, label: 'Fiche technique' },
-            { num: 3, label: 'Photos du produit' }
-          ].map((step, index) => (
-            <div key={step.num} className="flex items-center flex-1">
-              <div className="flex items-center gap-3 flex-1">
-                <motion.div 
-                  animate={{ 
-                    scale: currentStep === step.num ? 1.1 : 1,
-                    backgroundColor: currentStep >= step.num ? '#3b82f6' : 'rgba(255, 255, 255, 0.05)'
-                  }}
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white 
-                           border-2 border-white/10 shadow-lg"
-                >
-                  {currentStep > step.num ? <CheckCircle2 className="w-6 h-6" /> : step.num}
-                </motion.div>
-                <span className={`font-semibold text-sm ${
-                  currentStep === step.num ? 'text-white' : 'text-gray-400'
-                }`}>
-                  {step.label}
-                </span>
+        {/* Étape 2 */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Étape 2 : Spécifications
+            </h2>
+
+            {/* Bannière variantes intelligentes */}
+            {hasVariants && (
+              <div className="rounded-2xl bg-gradient-to-r from-purple-700 via-fuchsia-600 to-blue-600 p-[1px] mb-4">
+                <div className="bg-[#020617] rounded-2xl px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-lg">
+                      <SparklesIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">
+                        Mode Variantes Intelligent
+                      </p>
+                      <p className="text-xs text-gray-300">
+                        Tailles détectées :{' '}
+                        {availableSizes.length
+                          ? availableSizes.join(', ')
+                          : 'XS, S, M, L, XL, XXL, 3XL'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              {index < 2 && (
-                <ChevronRight className="w-5 h-5 text-gray-600 flex-shrink-0" />
-              )}
-            </div>
-          ))}
-        </motion.div>
-      </div>
+            )}
 
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl"
-        >
-          <AnimatePresence mode="wait">
-            {/* ==================== ÉTAPE 1 : INFORMATIONS DE BASE ==================== */}
-            {currentStep === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 
-                                flex items-center justify-center border border-white/10">
-                    <Package className="w-6 h-6 text-blue-400" />
+            {/* Carte principale : grille intelligente */}
+            {hasVariants ? (
+              <SimpleVariantGrid
+                basePrice={basePrice}
+                setBasePrice={setBasePrice}
+                baseSKU={baseSKU}
+                availableSizes={availableSizes}
+                onChange={setVariants}
+              />
+            ) : (
+              <div className="bg-gray-900/70 border border-gray-700 rounded-2xl p-6 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-gray-700 rounded-full p-2">
+                    <InfoIcon className="w-5 h-5 text-gray-200" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Informations du produit</h3>
+                    <h3 className="text-white font-semibold text-lg">
+                      Produit simple (pas de grille)
+                    </h3>
                     <p className="text-sm text-gray-400">
-                      Les champs marqués d'un <span className="text-red-400">*</span> sont obligatoires
+                      Cette catégorie n&apos;utilise pas encore les variantes. Remplissez les
+                      spécifications classiques.
                     </p>
                   </div>
                 </div>
+                <ModeSpecificationsForm
+                  subcategoryId={Number(selectedSubcategoryId)}
+                  subcategories={subcategories}
+                  attributes={productAttributes}
+                  onChange={setProductAttributes}
+                />
+              </div>
+            )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Catégorie */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-300">
-                      Catégorie
-                      <span className="text-red-400 ml-1">*</span>
-                    </label>
-                    <select
-                      value={category}
-                      onChange={(e) => {
-                        console.log('🎯 Catégorie sélectionnée:', e.target.value)
-                        setCategory(e.target.value)
-                        setSelectedSubcategoryId(null)
-                      }}
-                      required
-                      className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white 
-                               hover:border-white/20 focus:outline-none focus:border-blue-500 focus:ring-2 
-                               focus:ring-blue-500/20 transition-all duration-200 appearance-none cursor-pointer"
-                      style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 0.75rem center',
-                        backgroundSize: '1.25rem'
-                      }}
-                    >
-                      <option value="" className="bg-[#1a1a1a]">
-                        Sélectionner une catégorie...
-                      </option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.slug} className="bg-[#1a1a1a] py-2">
-                          {cat.icon || '📦'} {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Sous-catégorie */}
-                  {category && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-2"
-                    >
-                      <label className="block text-sm font-semibold text-gray-300">
-                        Sous-catégorie
-                        <span className="text-red-400 ml-1">*</span>
-                      </label>
-                      <select
-                        value={selectedSubcategoryId || ''}
-                        onChange={(e) => {
-                          console.log('🎯 Sous-catégorie sélectionnée:', e.target.value)
-                          setSelectedSubcategoryId(Number(e.target.value))
-                        }}
-                        required
-                        className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white 
-                                 hover:border-white/20 focus:outline-none focus:border-blue-500 focus:ring-2 
-                                 focus:ring-blue-500/20 transition-all duration-200 appearance-none cursor-pointer"
-                        style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 0.75rem center',
-                          backgroundSize: '1.25rem'
-                        }}
-                      >
-                        <option value="" className="bg-[#1a1a1a]">
-                          Sélectionner une sous-catégorie...
-                        </option>
-                        {subcategories
-                          .filter(sub => {
-                            const selectedCat = categories.find(c => c.slug === category)
-                            return selectedCat && sub.category_id === selectedCat.id
-                          })
-                          .map(sub => (
-                            <option key={sub.id} value={sub.id} className="bg-[#1a1a1a]">
-                              {sub.name}
-                            </option>
-                          ))}
-                      </select>
-                    </motion.div>
-                  )}
-
-                  {/* Nom du produit */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="block text-sm font-semibold text-gray-300">
-                      Nom du produit
-                      <span className="text-red-400 ml-1">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={productData.name}
-                      onChange={(e) => setProductData({ ...productData, name: e.target.value })}
-                      placeholder="Ex: iPhone 15 Pro Max 256Go..."
-                      required
-                      maxLength={100}
-                      className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white 
-                               placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                               focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                    />
-                    <p className="text-xs text-gray-500">
-                      {productData.name.length}/100 caractères
-                    </p>
-                  </div>
-
-                  {/* Description */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="block text-sm font-semibold text-gray-300">
-                      Description
-                    </label>
-                    <textarea
-                      value={productData.description}
-                      onChange={(e) => setProductData({ ...productData, description: e.target.value })}
-                      placeholder="Décrivez votre produit en détail..."
-                      rows={4}
-                      maxLength={1000}
-                      className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white 
-                               placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                               focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all 
-                               duration-200 resize-none"
-                    />
-                    <p className="text-xs text-gray-500">
-                      {productData.description.length}/1000 caractères
-                    </p>
-                  </div>
-
-                  {/* Prix de vente */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-300">
-                      Prix de vente
-                      <span className="text-red-400 ml-1">*</span>
-                    </label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="number"
-                        value={productData.price}
-                        onChange={(e) => setProductData({ ...productData, price: e.target.value })}
-                        placeholder="5000"
-                        required
-                        min="0"
-                        step="0.01"
-                        className="w-full pl-11 pr-16 py-3.5 bg-white/5 border border-white/10 rounded-xl 
-                                 text-white placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                                 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">
-                        DA
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Ancien prix */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-300">
-                      Ancien prix (optionnel)
-                      {discountPercent > 0 && (
-                        <span className="ml-2 text-green-400 text-xs">
-                          -{discountPercent}%
-                        </span>
-                      )}
-                    </label>
-                    <div className="relative">
-                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="number"
-                        value={productData.old_price}
-                        onChange={(e) => setProductData({ ...productData, old_price: e.target.value })}
-                        placeholder="8000"
-                        min="0"
-                        step="0.01"
-                        className="w-full pl-11 pr-16 py-3.5 bg-white/5 border border-white/10 rounded-xl 
-                                 text-white placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                                 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">
-                        DA
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Stock */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-300">
-                      Stock disponible
-                    </label>
+            {/* Bloc promo + livraison + type de prix (vêtements/chaussures) */}
+            {hasVariants && (
+              <div className="bg-gray-900/70 border border-gray-700 rounded-2xl p-6 space-y-4">
+                <div>
+                  <label className={labelClass}>
+                    Ancien prix global (DA){' '}
+                    <span className="text-xs text-gray-500">
+                      (optionnel, pour afficher une promotion)
+                    </span>
+                  </label>
+                  <div className="flex gap-3 items-center">
                     <input
                       type="number"
-                      value={productData.stock}
-                      onChange={(e) => setProductData({ ...productData, stock: e.target.value })}
-                      placeholder="1"
-                      min="0"
-                      className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white 
-                               placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                               focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                      value={productData.old_price}
+                      onChange={(e) =>
+                        setProductData({
+                          ...productData,
+                          old_price: e.target.value,
+                        })
+                      }
+                      className={`${inputClass} flex-1`}
+                      placeholder="15000"
                     />
+                    <div className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/60 text-emerald-400 font-semibold text-sm min-w-[90px] text-center">
+                      {productData.old_price && basePrice
+                        ? `%-${Math.max(
+                            0,
+                            Math.min(
+                              99,
+                              Math.round(
+                                ((parseFloat(productData.old_price || '0') -
+                                  Number(basePrice || 0)) /
+                                  parseFloat(productData.old_price || '1')) *
+                                  100,
+                              ),
+                            ),
+                          )}`
+                        : '% 0'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Livraison oui / non (camions) */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-gray-300">
+                      Livraison
+                    </span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryAvailable(true)}
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${
+                          deliveryAvailable
+                            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300 shadow-lg'
+                            : 'bg-gray-900/60 border-gray-700 text-gray-300 hover:border-emerald-500/60'
+                        }`}
+                      >
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-600 text-white text-lg">
+                          🚚
+                        </span>
+                        <span className="text-sm font-semibold">
+                          Livraison disponible
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryAvailable(false)}
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${
+                          !deliveryAvailable
+                            ? 'bg-red-600/20 border-red-500 text-red-300 shadow-lg'
+                            : 'bg-gray-900/60 border-gray-700 text-gray-300 hover:border-red-500/60'
+                        }`}
+                      >
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-600 text-white text-lg">
+                          🚚
+                        </span>
+                        <span className="text-sm font-semibold">
+                          Livraison non disponible
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Type de prix */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-300">
-                      Type de prix
-                    </label>
-                    <div className="flex gap-3">
-                      {[
-                        { value: 'fixe', label: 'Fixe', icon: <Banknote className="w-4 h-4" /> },
-                        { value: 'negociable', label: 'Négociable', icon: <DollarSign className="w-4 h-4" /> },
-                        { value: 'facilite', label: 'Facilité', icon: <Home className="w-4 h-4" /> }
-                      ].map(option => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setPriceType(option.value as any)}
-                          className={`flex-1 px-4 py-3 rounded-xl border-2 transition-all duration-200 
-                                   flex items-center justify-center gap-2 font-semibold text-sm
-                                   ${priceType === option.value 
-                                     ? 'bg-blue-500/20 border-blue-500 text-blue-400' 
-                                     : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'}`}
-                        >
-                          {option.icon}
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Livraison disponible */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <div className="relative">
-                        <input
-                          type="checkbox"
-                          checked={deliveryAvailable}
-                          onChange={(e) => setDeliveryAvailable(e.target.checked)}
-                          className="sr-only"
-                        />
-                        <div className={`w-14 h-7 rounded-full transition-all duration-300 
-                                     ${deliveryAvailable ? 'bg-blue-500' : 'bg-white/10'}`}>
-                          <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all 
-                                       duration-300 ${deliveryAvailable ? 'translate-x-7' : 'translate-x-0'}`} />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Truck className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors" />
-                        <span className="text-sm font-semibold text-gray-300 group-hover:text-white transition-colors">
-                          Livraison disponible
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-6 border-t border-white/10">
-                  <button
-                    onClick={() => {
-                      if (validateStep1()) {
-                        setCurrentStep(2)
+                  <div>
+                    <label className={labelClass}>Type de prix</label>
+                    <select
+                      value={priceType}
+                      onChange={(e) =>
+                        setPriceType(
+                          e.target.value as 'fixe' | 'negociable' | 'facilite',
+                        )
                       }
-                    }}
-                    className="px-8 py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold 
-                             rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 
-                             flex items-center gap-2 shadow-lg shadow-blue-500/20"
-                  >
-                    Suivant
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
+                      className={inputClass}
+                    >
+                      <option value="fixe">Prix fixe</option>
+                      <option value="negociable">Négociable</option>
+                      <option value="facilite">Paiement facilité</option>
+                    </select>
+                  </div>
                 </div>
-              </motion.div>
+
+                <p className="text-xs text-amber-300 mt-2">
+                  Pour les vêtements et chaussures, le prix de base utilisé pour la
+                  promotion est celui défini dans la grille (prix de base global).
+                </p>
+              </div>
             )}
 
-            {/* ==================== ÉTAPE 2 : FICHE TECHNIQUE ==================== */}
-            {currentStep === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
+            <div className="flex justify-between pt-6">
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="px-6 py-3 border-2 border-gray-700 text-gray-300 rounded-xl hover:bg-gray-700/50 transition-all"
               >
-                {renderDynamicFields()}
-
-                <div className="flex justify-between pt-6 mt-6 border-t border-white/10">
-                  <button
-                    onClick={() => setCurrentStep(1)}
-                    className="px-8 py-3.5 bg-white/5 border border-white/10 text-white font-semibold 
-                             rounded-xl hover:bg-white/10 transition-all duration-200 flex items-center gap-2"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                    Retour
-                  </button>
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    className="px-8 py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold 
-                             rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 
-                             flex items-center gap-2 shadow-lg shadow-blue-500/20"
-                  >
-                    Suivant
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ==================== ÉTAPE 3 : PHOTOS ==================== */}
-            {currentStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
+                ← Précédent
+              </button>
+              <button
+                onClick={() => {
+                  if (hasVariants && variants.length === 0) {
+                    toast.error('Veuillez ajouter du stock dans la grille')
+                    return
+                  }
+                  setCurrentStep(3)
+                }}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 font-medium shadow-lg transition-all"
               >
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 
-                                flex items-center justify-center border border-white/10">
-                    <ImageIcon className="w-6 h-6 text-blue-400" />
+                Suivant →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Étape 1 */}
+        {currentStep === 1 && (
+          <div className="bg-gray-900/60 rounded-2xl border border-gray-700/60 shadow-2xl p-8 space-y-6">
+            <h2 className="text-2xl font-bold text-white">
+              Étape 1 : Informations de base
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className={labelClass}>Catégorie *</label>
+                <select
+                  value={selectedCategoryId}
+                  onChange={(e) => {
+                    setSelectedCategoryId(e.target.value)
+                    setSelectedSubcategoryId('')
+                  }}
+                  className={inputClass}
+                >
+                  <option value="">Sélectionner une catégorie</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Sous-catégorie *</label>
+                <select
+                  value={selectedSubcategoryId}
+                  onChange={(e) => setSelectedSubcategoryId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Sélectionner une sous-catégorie</option>
+                  {subcategories.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Nom du produit *</label>
+              <input
+                type="text"
+                value={productData.name}
+                onChange={(e) =>
+                  setProductData({ ...productData, name: e.target.value })
+                }
+                className={inputClass}
+                placeholder="Ex : Robe élégante"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={productData.description}
+                onChange={(e) =>
+                  setProductData({ ...productData, description: e.target.value })
+                }
+                rows={4}
+                className={inputClass}
+                placeholder="Décrivez votre produit..."
+              />
+            </div>
+
+            {!hasVariants && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Prix (DA) *</label>
+                    <input
+                      type="number"
+                      value={productData.price}
+                      onChange={(e) =>
+                        setProductData({
+                          ...productData,
+                          price: e.target.value,
+                        })
+                      }
+                      className={inputClass}
+                      placeholder="5000"
+                    />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Photos du produit</h3>
-                    <p className="text-sm text-gray-400">
-                      Ajoutez jusqu'à 5 photos (compression automatique)
-                    </p>
+                    <label className={labelClass}>Stock *</label>
+                    <input
+                      type="number"
+                      value={productData.stock}
+                      onChange={(e) =>
+                        setProductData({
+                          ...productData,
+                          stock: e.target.value,
+                        })
+                      }
+                      className={inputClass}
+                      placeholder="10"
+                    />
                   </div>
                 </div>
 
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`relative border-2 border-dashed rounded-2xl p-12 cursor-pointer transition-all 
-                           duration-300 ${isDragging 
-                             ? 'border-blue-500 bg-blue-500/10' 
-                             : 'border-white/10 hover:border-white/20 bg-white/5'}`}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => handleImageUpload(e.target.files)}
-                    className="hidden"
-                  />
-                  <div className="text-center">
-                    <Upload className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                    <p className="text-white font-semibold mb-2">
-                      Cliquez ou glissez-déposez vos images ici
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      JPEG, PNG • Max 5 photos • Compression automatique
-                    </p>
+                <div className="mt-4">
+                  <label className={labelClass}>
+                    Ancien prix (DA){' '}
+                    <span className="text-xs text-gray-500">
+                      (optionnel, pour afficher une promo)
+                    </span>
+                  </label>
+                  <div className="flex gap-3 items-center">
+                    <input
+                      type="number"
+                      value={productData.old_price}
+                      onChange={(e) =>
+                        setProductData({
+                          ...productData,
+                          old_price: e.target.value,
+                        })
+                      }
+                      className={`${inputClass} flex-1`}
+                      placeholder="15000"
+                    />
+                    <div className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/60 text-emerald-400 font-semibold text-sm min-w-[90px] text-center">
+                      {productData.old_price && productData.price
+                        ? `%-${Math.max(
+                            0,
+                            Math.min(
+                              99,
+                              Math.round(
+                                ((parseFloat(productData.old_price || '0') -
+                                  parseFloat(productData.price || '0')) /
+                                  parseFloat(productData.old_price || '1')) *
+                                  100,
+                              ),
+                            ),
+                          )}`
+                        : '% 0'}
+                    </div>
                   </div>
                 </div>
+              </>
+            )}
 
-                {isCompressing && (
-                  <div className="flex items-center justify-center gap-3 py-4">
-                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-                    <span className="text-blue-400 font-semibold">Compression en cours...</span>
-                  </div>
-                )}
+            <div className="flex justify-end pt-6">
+              <button
+                onClick={() => setCurrentStep(2)}
+                disabled={
+                  !productData.name ||
+                  !selectedCategoryId ||
+                  !selectedSubcategoryId
+                }
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 font-medium shadow-lg transition-all"
+              >
+                Suivant →
+              </button>
+            </div>
+          </div>
+        )}
 
-                {images.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {images.map((img, index) => (
-                      <motion.div
-                        key={img.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="relative group"
-                      >
-                        <div className="aspect-square rounded-xl overflow-hidden border border-white/10 
-                                      bg-white/5">
+        {/* Étape 3 : 5 emplacements fixes */}
+        {currentStep === 3 && (
+          <div className="bg-gray-900/60 rounded-2xl border border-gray-700/60 shadow-2xl p-8 space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  Étape 3 : Images & publication
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Ajoutez jusqu&apos;à 5 photos de haute qualité (1/5)
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-blue-400 text-sm">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                Compression automatique &lt; 300Ko
+              </div>
+            </div>
+
+            {/* Zone d'upload principale */}
+            <div className="border-2 border-dashed border-gray-700 rounded-2xl p-12 text-center bg-gray-900/30 hover:border-blue-500/50 transition-all group cursor-pointer">
+              <UploadIcon className="mx-auto text-gray-500 mb-4 group-hover:text-blue-400 w-12 h-12 transition-colors" />
+              <label className="cursor-pointer">
+                <span className="text-blue-400 hover:text-blue-300 font-medium text-lg">
+                  Glissez vos images ici ou cliquez
+                </span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </label>
+              <p className="text-sm text-gray-500 mt-2">
+                Formats acceptés : JPG, PNG, WebP • Poids max par image: 10 Mo
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Compression automatique activée pour des performances optimales
+              </p>
+            </div>
+
+            {/* Grille 5 emplacements fixes */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <p className="text-sm font-medium text-gray-300">
+                  Images ajoutées ({images.length})
+                </p>
+              </div>
+              <div className="grid grid-cols-5 gap-4">
+                {[...Array(5)].map((_, index) => {
+                  const hasImage = index < imagePreviews.length
+                  return (
+                    <div
+                      key={index}
+                      className={`relative aspect-square rounded-xl border-2 overflow-hidden transition-all ${
+                        hasImage
+                          ? 'border-blue-500/60 shadow-lg shadow-blue-500/20'
+                          : 'border-dashed border-gray-700 bg-gray-900/30'
+                      }`}
+                    >
+                      {hasImage ? (
+                        <>
                           <img
-                            src={img.preview}
-                            alt={`Produit ${index + 1}`}
+                            src={imagePreviews[index]}
+                            alt={`Photo ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 p-1.5 rounded-full text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-all shadow-lg z-10"
+                          >
+                            <XIcon className="w-4 h-4" />
+                          </button>
+                          {index === 0 && (
+                            <span className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-bold shadow-lg">
+                              Principal
+                            </span>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                            <span className="text-[10px] text-emerald-300 font-semibold">
+                              {formatFileSize(imageSizes[index])}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-600">
+                          <ImageIcon className="w-8 h-8 mb-1" />
+                          <span className="text-xs">Emplacement {index + 1}</span>
                         </div>
-                        <button
-                          onClick={() => removeImage(img.id)}
-                          className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 rounded-full flex items-center 
-                                   justify-center text-white opacity-0 group-hover:opacity-100 transition-all 
-                                   duration-200 hover:scale-110 shadow-lg"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                        <div className="absolute bottom-2 left-2 right-2 bg-black/50 backdrop-blur-sm rounded-lg 
-                                      px-2 py-1 text-xs text-white">
-                          {(img.size / 1024).toFixed(0)} KB
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
-                <div className="flex justify-between pt-6 border-t border-white/10">
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    disabled={isSubmitting}
-                    className="px-8 py-3.5 bg-white/5 border border-white/10 text-white font-semibold 
-                             rounded-xl hover:bg-white/10 transition-all duration-200 flex items-center gap-2
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                    Retour
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || images.length === 0}
-                    className="px-8 py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold 
-                             rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 
-                             flex items-center gap-2 shadow-lg shadow-green-500/20
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        {uploadProgress > 0 ? `${uploadProgress}%` : 'Création...'}
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Créer le produit
-                      </>
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+            {/* Conseil */}
+            <div className="bg-blue-900/20 border border-blue-700/40 rounded-xl p-4 flex items-start gap-3">
+              <span className="text-2xl">💡</span>
+              <div>
+                <p className="text-sm font-semibold text-blue-300 mb-1">
+                  Conseil: Ajoutez plus de photos
+                </p>
+                <p className="text-xs text-gray-400">
+                  Les produits avec 4-5 photos génèrent en moyenne 3x plus de vues et se vendent 2x plus rapidement.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-6">
+              <button
+                onClick={() => setCurrentStep(2)}
+                className="px-6 py-3 border-2 border-gray-700 text-gray-300 rounded-xl hover:bg-gray-700/50 transition-all"
+              >
+                ← Précédent
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || images.length === 0}
+                className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 font-bold shadow-lg disabled:opacity-50 transition-all"
+              >
+                {isSubmitting ? 'Publication en cours...' : 'PUBLIER LE PRODUIT'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
