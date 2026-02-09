@@ -49,6 +49,7 @@ interface Props {
   baseSKU: string
   availableSizes: string[]
   onChange: (v: SimpleVariant[]) => void
+  initialVariants?: SimpleVariant[] // ✅ NOUVEAU : Pour pré-remplir en mode édition
 }
 
 /* ---------------- Presets ---------------- */
@@ -74,18 +75,51 @@ export default function SimpleVariantGrid({
   baseSKU,
   availableSizes,
   onChange,
+  initialVariants, // ✅ NOUVEAU
 }: Props) {
   const [selectedColors, setSelectedColors] = useState<string[]>([])
-  const [advanced, setAdvanced] = useState(true) // ✅ Coché par défaut
+  const [advanced, setAdvanced] = useState(true)
   const [images, setImages] = useState<Record<string, string>>({})
   const [grid, setGrid] = useState<
     Record<string, Record<string, { stock: number; price: number }>>
   >({})
   const [showApplyMenu, setShowApplyMenu] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false) // ✅ NOUVEAU : Évite double init
 
   const sizes = availableSizes.length
     ? availableSizes
     : ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
+
+  // ✅ NOUVEAU : Pré-remplir la grille avec les variantes existantes
+  useEffect(() => {
+    if (initialVariants && initialVariants.length > 0 && !isInitialized) {
+      console.log('🔄 Chargement des variantes existantes:', initialVariants)
+
+      // Extraire les couleurs uniques
+      const colors = Array.from(new Set(initialVariants.map(v => v.color)))
+      setSelectedColors(colors)
+
+      // Reconstruire la grille
+      const reconstructedGrid: Record<string, Record<string, { stock: number; price: number }>> = {}
+      
+      colors.forEach(color => {
+        reconstructedGrid[color] = {}
+        sizes.forEach(size => {
+          // Chercher la variante correspondante
+          const variant = initialVariants.find(v => v.color === color && v.size === size)
+          reconstructedGrid[color][size] = {
+            stock: variant?.stock || 0,
+            price: variant?.price || basePrice
+          }
+        })
+      })
+
+      setGrid(reconstructedGrid)
+      setIsInitialized(true)
+      
+      console.log('✅ Grille reconstruite:', reconstructedGrid)
+    }
+  }, [initialVariants, basePrice, sizes, isInitialized])
 
   const toggleColor = (color: string) => {
     if (selectedColors.includes(color)) {
@@ -124,7 +158,6 @@ export default function SimpleVariantGrid({
       [c]: { ...p[c], [s]: { ...p[c][s], price: v || basePrice } },
     }))
 
-  // Fonction "Appliquer pour tous" depuis la première couleur
   const applyFromFirstColor = (mode: 'price' | 'stock' | 'both') => {
     if (selectedColors.length === 0) return
     const first = selectedColors[0]
@@ -203,12 +236,10 @@ export default function SimpleVariantGrid({
         </div>
       </div>
 
-      {/* Prix avec 3 colonnes : Prix par taille | Appliquer pour tous | Prix de base */}
+      {/* Prix avec 3 colonnes */}
       <div className="grid grid-cols-3 border-b border-[#1f1f1f] items-center">
-        {/* Colonne 1 : Prix par taille */}
         <div className="p-6 flex items-center">
           <div className="flex items-center gap-3">
-            {/* ✅ Texte plus grand */}
             <span className="text-gray-300 text-sm font-medium">Prix par taille</span>
             <input
               type="checkbox"
@@ -219,7 +250,6 @@ export default function SimpleVariantGrid({
           </div>
         </div>
 
-        {/* Colonne 2 : Bouton "Appliquer pour tous" */}
         <div className="p-6 flex items-center justify-center border-l border-r border-[#1f1f1f]">
           <div className="relative">
             <button
@@ -268,9 +298,7 @@ export default function SimpleVariantGrid({
           </div>
         </div>
 
-        {/* Colonne 3 : Prix de base global (aligné plus à gauche) */}
         <div className="p-6">
-          {/* ✅ Aligné à gauche pour commencer au trait rouge */}
           <p className="text-xs text-gray-400 uppercase mb-2">Prix de base global</p>
           <div className="flex items-center gap-2">
             <input
@@ -279,7 +307,6 @@ export default function SimpleVariantGrid({
               onChange={(e) => setBasePrice(+e.target.value || 0)}
               className="bg-black border border-gray-700 rounded-xl text-white text-3xl px-4 py-2 w-32"
             />
-            {/* ✅ DA ajouté ici */}
             <span className="text-gray-400 font-semibold text-lg">DA</span>
           </div>
         </div>
@@ -319,14 +346,12 @@ export default function SimpleVariantGrid({
                   {sizes.map((s) => (
                     <td key={s} className="p-2">
                       <div className="flex flex-col items-center gap-1">
-                        {/* Stock */}
                         <input
                           type="number"
                           value={grid[c]?.[s]?.stock || 0}
                           onChange={(e) => updateStock(c, s, +e.target.value)}
                           className="w-20 bg-black border border-gray-700 rounded-lg text-white text-sm text-center py-1"
                         />
-                        {/* Prix + DA */}
                         {advanced && (
                           <>
                             <input
@@ -335,7 +360,6 @@ export default function SimpleVariantGrid({
                               onChange={(e) => updatePrice(c, s, +e.target.value)}
                               className="w-20 bg-black border border-gray-700 rounded-lg text-blue-400 text-sm text-center py-1"
                             />
-                            {/* ✅ DA affiché sous chaque prix */}
                             <span className="text-[10px] text-gray-500">DA</span>
                           </>
                         )}
@@ -343,7 +367,6 @@ export default function SimpleVariantGrid({
                     </td>
                   ))}
 
-                  {/* Colonne Poubelle */}
                   <td className="p-3">
                     <button
                       type="button"

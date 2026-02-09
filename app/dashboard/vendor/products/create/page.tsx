@@ -8,6 +8,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import ModeSpecificationsForm from '@/components/product/ModeSpecificationsForm'
 import type { AttributeField, ProductAttributes } from '@/types/product-attributes'
 import SimpleVariantGrid, { SimpleVariant } from '@/components/product/SimpleVariantGrid'
+import DynamicTemplateFields from '@/components/product/DynamicTemplateFields'  // ✅ NOUVEAU
 
 /* --------- Icônes locales --------- */
 
@@ -114,6 +115,7 @@ export default function CreateProductPage() {
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('')
 
   const [productAttributes, setProductAttributes] = useState<ProductAttributes>({})
+  const [templateFields, setTemplateFields] = useState<Record<string, any>>({})  // ✅ NOUVEAU
 
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -369,22 +371,21 @@ export default function CreateProductPage() {
       const finalProductData: any = {
         vendor_id: user.id,
         name: productData.name,
-        description: productData.description,
+        description: productData.description || null,
         category: selectedCategory?.name || '',
-        subcategory_id: Number(selectedSubcategoryId),
+        subcategory_id: parseInt(selectedSubcategoryId),
         images: imageUrls,
         delivery_available: deliveryAvailable,
         price_type: priceType,
         status: 'active',
+        metadata: {},
+        attributes: {},
       }
 
       if (hasVariants && variants.length > 0) {
         const prices = variants.map((v) => v.price)
         finalProductData.price = Math.min(...prices)
-        finalProductData.stock = variants.reduce(
-          (sum, v) => sum + v.stock,
-          0,
-        )
+        finalProductData.stock = variants.reduce((sum, v) => sum + v.stock, 0)
         finalProductData.old_price = productData.old_price
           ? parseFloat(productData.old_price)
           : null
@@ -392,15 +393,24 @@ export default function CreateProductPage() {
         const colors = Array.from(new Set(variants.map((v) => v.color)))
         const sizes = Array.from(new Set(variants.map((v) => v.size)))
 
-        finalProductData.specifications = {
-          template: [
-            { name: 'Couleur', values: colors },
-            { name: 'Taille', values: sizes },
-          ],
-          imageMapping: {},
+        finalProductData.metadata = {
+          specifications: {
+            template: [
+              { name: 'Couleur', values: colors },
+              { name: 'Taille', values: sizes },
+            ],
+            imageMapping: {},
+          },
+          variants: variants.map(v => ({
+            color: v.color,
+            size: v.size,
+            stock: v.stock,
+            price: v.price,
+            sku: v.sku
+          })),
+          template_fields: templateFields  // ✅ NOUVEAU
         }
-        finalProductData.attributes = null
-        finalProductData.variants = variants
+        finalProductData.attributes = {}
       } else {
         finalProductData.price = parseFloat(productData.price)
         finalProductData.old_price = productData.old_price
@@ -408,15 +418,24 @@ export default function CreateProductPage() {
           : null
         finalProductData.stock = parseInt(productData.stock)
         finalProductData.attributes = productAttributes
-        finalProductData.specifications = {}
-        finalProductData.variants = []
+        finalProductData.metadata = {
+          template_fields: templateFields  // ✅ NOUVEAU
+        }
       }
+
+      console.log('📦 Données envoyées à Supabase:', finalProductData)
 
       const { error } = await supabase.from('products').insert(finalProductData)
 
       if (error) {
-        console.error('Supabase insert error:', error)
-        toast.error('Erreur enregistrement produit')
+        console.error('=== ERREUR SUPABASE COMPLÈTE ===')
+        console.error('Message:', error.message)
+        console.error('Code:', error.code)
+        console.error('Details:', error.details)
+        console.error('Hint:', error.hint)
+        console.error('Full error:', JSON.stringify(error, null, 2))
+        
+        toast.error(`Erreur: ${error.message}`)
         setIsSubmitting(false)
         return
       }
@@ -477,205 +496,6 @@ export default function CreateProductPage() {
           </div>
         </div>
 
-        {/* Étape 2 */}
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white mb-2">
-              Étape 2 : Spécifications
-            </h2>
-
-            {/* Bannière variantes intelligentes */}
-            {hasVariants && (
-              <div className="rounded-2xl bg-gradient-to-r from-purple-700 via-fuchsia-600 to-blue-600 p-[1px] mb-4">
-                <div className="bg-[#020617] rounded-2xl px-6 py-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-lg">
-                      <SparklesIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold">
-                        Mode Variantes Intelligent
-                      </p>
-                      <p className="text-xs text-gray-300">
-                        Tailles détectées :{' '}
-                        {availableSizes.length
-                          ? availableSizes.join(', ')
-                          : 'XS, S, M, L, XL, XXL, 3XL'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Carte principale : grille intelligente */}
-            {hasVariants ? (
-              <SimpleVariantGrid
-                basePrice={basePrice}
-                setBasePrice={setBasePrice}
-                baseSKU={baseSKU}
-                availableSizes={availableSizes}
-                onChange={setVariants}
-              />
-            ) : (
-              <div className="bg-gray-900/70 border border-gray-700 rounded-2xl p-6 space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-gray-700 rounded-full p-2">
-                    <InfoIcon className="w-5 h-5 text-gray-200" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold text-lg">
-                      Produit simple (pas de grille)
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      Cette catégorie n&apos;utilise pas encore les variantes. Remplissez les
-                      spécifications classiques.
-                    </p>
-                  </div>
-                </div>
-                <ModeSpecificationsForm
-                  subcategoryId={Number(selectedSubcategoryId)}
-                  subcategories={subcategories}
-                  attributes={productAttributes}
-                  onChange={setProductAttributes}
-                />
-              </div>
-            )}
-
-            {/* Bloc promo + livraison + type de prix (vêtements/chaussures) */}
-            {hasVariants && (
-              <div className="bg-gray-900/70 border border-gray-700 rounded-2xl p-6 space-y-4">
-                <div>
-                  <label className={labelClass}>
-                    Ancien prix global (DA){' '}
-                    <span className="text-xs text-gray-500">
-                      (optionnel, pour afficher une promotion)
-                    </span>
-                  </label>
-                  <div className="flex gap-3 items-center">
-                    <input
-                      type="number"
-                      value={productData.old_price}
-                      onChange={(e) =>
-                        setProductData({
-                          ...productData,
-                          old_price: e.target.value,
-                        })
-                      }
-                      className={`${inputClass} flex-1`}
-                      placeholder="15000"
-                    />
-                    <div className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/60 text-emerald-400 font-semibold text-sm min-w-[90px] text-center">
-                      {productData.old_price && basePrice
-                        ? `%-${Math.max(
-                            0,
-                            Math.min(
-                              99,
-                              Math.round(
-                                ((parseFloat(productData.old_price || '0') -
-                                  Number(basePrice || 0)) /
-                                  parseFloat(productData.old_price || '1')) *
-                                  100,
-                              ),
-                            ),
-                          )}`
-                        : '% 0'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  {/* Livraison oui / non (camions) */}
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-gray-300">
-                      Livraison
-                    </span>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setDeliveryAvailable(true)}
-                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${
-                          deliveryAvailable
-                            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300 shadow-lg'
-                            : 'bg-gray-900/60 border-gray-700 text-gray-300 hover:border-emerald-500/60'
-                        }`}
-                      >
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-600 text-white text-lg">
-                          🚚
-                        </span>
-                        <span className="text-sm font-semibold">
-                          Livraison disponible
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setDeliveryAvailable(false)}
-                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${
-                          !deliveryAvailable
-                            ? 'bg-red-600/20 border-red-500 text-red-300 shadow-lg'
-                            : 'bg-gray-900/60 border-gray-700 text-gray-300 hover:border-red-500/60'
-                        }`}
-                      >
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-600 text-white text-lg">
-                          🚚
-                        </span>
-                        <span className="text-sm font-semibold">
-                          Livraison non disponible
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Type de prix */}
-                  <div>
-                    <label className={labelClass}>Type de prix</label>
-                    <select
-                      value={priceType}
-                      onChange={(e) =>
-                        setPriceType(
-                          e.target.value as 'fixe' | 'negociable' | 'facilite',
-                        )
-                      }
-                      className={inputClass}
-                    >
-                      <option value="fixe">Prix fixe</option>
-                      <option value="negociable">Négociable</option>
-                      <option value="facilite">Paiement facilité</option>
-                    </select>
-                  </div>
-                </div>
-
-                <p className="text-xs text-amber-300 mt-2">
-                  Pour les vêtements et chaussures, le prix de base utilisé pour la
-                  promotion est celui défini dans la grille (prix de base global).
-                </p>
-              </div>
-            )}
-
-            <div className="flex justify-between pt-6">
-              <button
-                onClick={() => setCurrentStep(1)}
-                className="px-6 py-3 border-2 border-gray-700 text-gray-300 rounded-xl hover:bg-gray-700/50 transition-all"
-              >
-                ← Précédent
-              </button>
-              <button
-                onClick={() => {
-                  if (hasVariants && variants.length === 0) {
-                    toast.error('Veuillez ajouter du stock dans la grille')
-                    return
-                  }
-                  setCurrentStep(3)
-                }}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 font-medium shadow-lg transition-all"
-              >
-                Suivant →
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Étape 1 */}
         {currentStep === 1 && (
           <div className="bg-gray-900/60 rounded-2xl border border-gray-700/60 shadow-2xl p-8 space-y-6">
@@ -691,6 +511,7 @@ export default function CreateProductPage() {
                   onChange={(e) => {
                     setSelectedCategoryId(e.target.value)
                     setSelectedSubcategoryId('')
+                    setTemplateFields({})  // ✅ NOUVEAU : Réinitialiser les champs template
                   }}
                   className={inputClass}
                 >
@@ -837,6 +658,217 @@ export default function CreateProductPage() {
           </div>
         )}
 
+        {/* Étape 2 */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Étape 2 : Spécifications
+            </h2>
+
+            {/* Bannière variantes intelligentes */}
+            {hasVariants && (
+              <div className="rounded-2xl bg-gradient-to-r from-purple-700 via-fuchsia-600 to-blue-600 p-[1px] mb-4">
+                <div className="bg-[#020617] rounded-2xl px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-lg">
+                      <SparklesIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">
+                        Mode Variantes Intelligent
+                      </p>
+                      <p className="text-xs text-gray-300">
+                        Tailles détectées :{' '}
+                        {availableSizes.length
+                          ? availableSizes.join(', ')
+                          : 'XS, S, M, L, XL, XXL, 3XL'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Carte principale : grille intelligente OU champs dynamiques */}
+            {hasVariants ? (
+              <SimpleVariantGrid
+                basePrice={basePrice}
+                setBasePrice={setBasePrice}
+                baseSKU={baseSKU}
+                availableSizes={availableSizes}
+                onChange={setVariants}
+              />
+            ) : (
+              <>
+                <div className="bg-gray-900/70 border border-gray-700 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-gray-700 rounded-full p-2">
+                      <InfoIcon className="w-5 h-5 text-gray-200" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-lg">
+                        Produit simple (pas de grille)
+                      </h3>
+                      <p className="text-sm text-gray-400">
+                        Cette catégorie n&apos;utilise pas encore les variantes. Remplissez les
+                        spécifications classiques.
+                      </p>
+                    </div>
+                  </div>
+                  <ModeSpecificationsForm
+                    subcategoryId={Number(selectedSubcategoryId)}
+                    subcategories={subcategories}
+                    attributes={productAttributes}
+                    onChange={setProductAttributes}
+                  />
+                </div>
+
+                {/* ✅ NOUVEAU : Champs dynamiques spécifiques à la catégorie */}
+                {selectedCategoryId && (
+                  <DynamicTemplateFields
+                    category={categories.find(c => c.id === Number(selectedCategoryId))?.slug || ''}
+                    values={templateFields}
+                    onChange={setTemplateFields}
+                    disabled={isSubmitting}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Bloc promo + livraison + type de prix (vêtements/chaussures) */}
+            {hasVariants && (
+              <div className="bg-gray-900/70 border border-gray-700 rounded-2xl p-6 space-y-4">
+                <div>
+                  <label className={labelClass}>
+                    Ancien prix global (DA){' '}
+                    <span className="text-xs text-gray-500">
+                      (optionnel, pour afficher une promotion)
+                    </span>
+                  </label>
+                  <div className="flex gap-3 items-center">
+                    <input
+                      type="number"
+                      value={productData.old_price}
+                      onChange={(e) =>
+                        setProductData({
+                          ...productData,
+                          old_price: e.target.value,
+                        })
+                      }
+                      className={`${inputClass} flex-1`}
+                      placeholder="15000"
+                    />
+                    <div className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/60 text-emerald-400 font-semibold text-sm min-w-[90px] text-center">
+                      {productData.old_price && basePrice
+                        ? `%-${Math.max(
+                            0,
+                            Math.min(
+                              99,
+                              Math.round(
+                                ((parseFloat(productData.old_price || '0') -
+                                  Number(basePrice || 0)) /
+                                  parseFloat(productData.old_price || '1')) *
+                                  100,
+                              ),
+                            ),
+                          )}`
+                        : '% 0'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Livraison oui / non */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-gray-300">
+                      Livraison
+                    </span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryAvailable(true)}
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${
+                          deliveryAvailable
+                            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300 shadow-lg'
+                            : 'bg-gray-900/60 border-gray-700 text-gray-300 hover:border-emerald-500/60'
+                        }`}
+                      >
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-600 text-white text-lg">
+                          🚚
+                        </span>
+                        <span className="text-sm font-semibold">
+                          Disponible
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryAvailable(false)}
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${
+                          !deliveryAvailable
+                            ? 'bg-red-600/20 border-red-500 text-red-300 shadow-lg'
+                            : 'bg-gray-900/60 border-gray-700 text-gray-300 hover:border-red-500/60'
+                        }`}
+                      >
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-600 text-white text-lg">
+                          🚚
+                        </span>
+                        <span className="text-sm font-semibold">
+                          Non disponible
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Type de prix */}
+                  <div>
+                    <label className={labelClass}>Type de prix</label>
+                    <select
+                      value={priceType}
+                      onChange={(e) =>
+                        setPriceType(
+                          e.target.value as 'fixe' | 'negociable' | 'facilite',
+                        )
+                      }
+                      className={inputClass}
+                    >
+                      <option value="fixe">Prix fixe</option>
+                      <option value="negociable">Négociable</option>
+                      <option value="facilite">Paiement facilité</option>
+                    </select>
+                  </div>
+                </div>
+
+                <p className="text-xs text-amber-300 mt-2">
+                  Pour les vêtements et chaussures, le prix de base utilisé pour la
+                  promotion est celui défini dans la grille (prix de base global).
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-between pt-6">
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="px-6 py-3 border-2 border-gray-700 text-gray-300 rounded-xl hover:bg-gray-700/50 transition-all"
+              >
+                ← Précédent
+              </button>
+              <button
+                onClick={() => {
+                  if (hasVariants && variants.length === 0) {
+                    toast.error('Veuillez ajouter du stock dans la grille')
+                    return
+                  }
+                  setCurrentStep(3)
+                }}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 font-medium shadow-lg transition-all"
+              >
+                Suivant →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Étape 3 : 5 emplacements fixes */}
         {currentStep === 3 && (
           <div className="bg-gray-900/60 rounded-2xl border border-gray-700/60 shadow-2xl p-8 space-y-6">
@@ -846,7 +878,7 @@ export default function CreateProductPage() {
                   Étape 3 : Images & publication
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">
-                  Ajoutez jusqu&apos;à 5 photos de haute qualité (1/5)
+                  Ajoutez jusqu&apos;à 5 photos de haute qualité ({images.length}/5)
                 </p>
               </div>
               <div className="flex items-center gap-2 text-blue-400 text-sm">

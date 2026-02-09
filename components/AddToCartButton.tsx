@@ -28,20 +28,28 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isMounted, setIsMounted] = useState(false); // ✅ AJOUT
 
   const items = useCartStore((state) => state.items);
   const addItemLocally = useCartStore((state) => state.addItemLocally);
   const updateItemLocally = useCartStore((state) => state.updateItemLocally);
   const removeItemLocally = useCartStore((state) => state.removeItemLocally);
 
+  // ✅ CORRECTION : Attendre le montage côté client
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return; // ✅ Ne pas exécuter côté serveur
+    
     async function verifyAuth() {
       const { isAuth } = await checkAuth();
       setIsAuthenticated(isAuth);
       setIsChecking(false);
     }
     verifyAuth();
-  }, []);
+  }, [isMounted]);
 
   const redirectToLogin = () => {
     const currentUrl = window.location.pathname;
@@ -122,7 +130,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       });
     } catch (error) {
       console.error('Erreur ajout panier:', error);
-      // rollback en cas d’exception
+      // rollback en cas d'exception
       if (existingItem) {
         updateItemLocally(product.id, existingItem.quantity);
       } else {
@@ -134,14 +142,15 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }
   };
 
-  if (isChecking) {
+  // ✅ CORRECTION : Afficher un placeholder stable pendant l'hydratation
+  if (!isMounted || isChecking) {
     return (
       <button
         disabled
         className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold opacity-50 flex items-center justify-center gap-2"
       >
-        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        Vérification...
+        <ShoppingCart className="w-5 h-5" />
+        Ajouter au panier
       </button>
     );
   }

@@ -7,11 +7,12 @@ import Link from 'next/link'
 import { 
   ArrowLeft, Save, Loader2, Image as ImageIcon, Trash2, X, Upload,
   Package, DollarSign, Tag, AlertCircle, CheckCircle2, Sparkles, Percent,
-  Eye, Clock
+  Eye, Clock, Truck
 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import toast, { Toaster } from 'react-hot-toast'
 import imageCompression from 'browser-image-compression'
+import SimpleVariantGrid, { SimpleVariant } from '@/components/product/SimpleVariantGrid'
 
 // ==================== TYPES ====================
 interface Product {
@@ -26,6 +27,7 @@ interface Product {
   images: string[]
   metadata: Record<string, any>
   status: 'active' | 'draft' | 'archived'
+  delivery_available: boolean
   created_at: string
   updated_at: string
   vendor_id: string
@@ -39,6 +41,23 @@ interface ProductImage {
   compressed: boolean
   size?: number
 }
+
+// ==================== CATÉGORIES AVEC VARIANTES ====================
+const VARIANT_CATEGORIES = [
+  'vetement',
+  'sportswear',
+  'fete',
+  'mariage',
+  'chaussure',
+]
+
+// ==================== TAILLES PAR TYPE ====================
+const SIZE_PRESETS = {
+  standard: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
+  pants: ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56'],
+  shoes: ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'],
+  kids: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
+} as const
 
 // ==================== 44 CATÉGORIES BZMarket ====================
 const CATEGORIES = [
@@ -129,7 +148,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isCompressing, setIsCompressing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [error, setError] = useState<string | null>(null) // ✅ AJOUTÉ
+  const [error, setError] = useState<string | null>(null)
 
   const [product, setProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState({
@@ -140,10 +159,18 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     stock: '1',
     category: '',
     subcategory: '',
-    status: 'active' as 'active' | 'draft' | 'archived'
+    status: 'active' as 'active' | 'draft' | 'archived',
+    delivery_available: true  // ✅ NOUVEAU
   })
   const [images, setImages] = useState<ProductImage[]>([])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
+
+  // États pour les variantes
+  const [hasVariants, setHasVariants] = useState(false)
+  const [variants, setVariants] = useState<SimpleVariant[]>([])
+  const [basePrice, setBasePrice] = useState(2500)
+  const [baseSKU] = useState('PROD')
+  const [availableSizes, setAvailableSizes] = useState<string[]>([])
 
   const discountPercent = formData.price && formData.old_price && parseFloat(formData.old_price) > 0
     ? Math.round(((parseFloat(formData.old_price) - parseFloat(formData.price)) / parseFloat(formData.old_price)) * 100)
@@ -169,7 +196,6 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     fetchProduct()
   }, [productId])
 
-  // ✅ FONCTION CORRIGÉE - SANS REDIRECTIONS AUTOMATIQUES
   const fetchProduct = async () => {
     try {
       setLoading(true)
@@ -213,7 +239,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         stock: data.stock ? data.stock.toString() : '1',
         category: data.category || '',
         subcategory: data.subcategory || '',
-        status: data.status || 'active'
+        status: data.status || 'active',
+        delivery_available: data.delivery_available ?? true  // ✅ NOUVEAU
       })
 
       if (data.images && Array.isArray(data.images) && data.images.length > 0) {
@@ -226,11 +253,80 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setImages(existingImages)
       }
 
+      // Détection variantes
+      const hasMetadataVariants = 
+        data.metadata?.variants && 
+        Array.isArray(data.metadata.variants) && 
+        data.metadata.variants.length > 0
+
+      const normalizedCategory = data.category
+        ?.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[_\s-]/g, '')
+
+      const isVariantCategory = VARIANT_CATEGORIES.some(cat => 
+        normalizedCategory?.includes(cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+      )
+
+      console.log('🔍 Détection variantes:', { 
+        hasMetadataVariants, 
+        isVariantCategory,
+        category: data.category,
+        normalizedCategory
+      })
+
+      if (hasMetadataVariants && isVariantCategory) {
+        setHasVariants(true)
+        setVariants(data.metadata.variants)
+        
+        const prices = data.metadata.variants.map((v: SimpleVariant) => v.price)
+        setBasePrice(Math.min(...prices))
+
+        detectAvailableSizes(data.category, data.subcategory)
+
+        console.log('✅ Produit avec variantes détecté:', data.metadata.variants)
+      } else {
+        setHasVariants(false)
+        console.log('✅ Produit simple détecté')
+      }
+
     } catch (error) {
       console.error('Erreur complète:', error)
       setError('Une erreur est survenue')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const detectAvailableSizes = (category: string, subcategory: string | null) => {
+    const catName = category?.toLowerCase() || ''
+    const subName = (subcategory || '').toLowerCase()
+
+    if (
+      subName.includes('chaussure') ||
+      subName.includes('basket') ||
+      subName.includes('botte')
+    ) {
+      setAvailableSizes(SIZE_PRESETS.shoes as unknown as string[])
+    } else if (
+      subName.includes('pantalon') ||
+      subName.includes('jean') ||
+      subName.includes('jogging') ||
+      subName.includes('short')
+    ) {
+      setAvailableSizes(SIZE_PRESETS.pants as unknown as string[])
+    } else if (
+      catName.includes('bébé') ||
+      catName.includes('bebe') ||
+      catName.includes('enfant') ||
+      subName.includes('bébé') ||
+      subName.includes('bebe') ||
+      subName.includes('enfant')
+    ) {
+      setAvailableSizes(SIZE_PRESETS.kids as unknown as string[])
+    } else {
+      setAvailableSizes(SIZE_PRESETS.standard as unknown as string[])
     }
   }
 
@@ -348,7 +444,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     setImages(prev => prev.filter(i => i.id !== imageId))
   }
 
-  // ==================== VALIDATION CORRIGÉE ====================
+  // ==================== VALIDATION ====================
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       toast.error('❌ Le nom du produit est obligatoire')
@@ -360,27 +456,34 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       return false
     }
 
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      toast.error('❌ Le prix de vente doit être supérieur à 0')
-      return false
-    }
-
-    const oldPriceValue = formData.old_price ? parseFloat(formData.old_price) : 0
-    const priceValue = parseFloat(formData.price)
-
-    if (oldPriceValue > 0 && oldPriceValue <= priceValue) {
-      toast.error('❌ L\'ancien prix doit être supérieur au prix de vente pour activer la promotion')
-      return false
-    }
-
     if (!formData.category) {
       toast.error('❌ Veuillez sélectionner une catégorie')
       return false
     }
 
-    const stockValue = parseInt(formData.stock)
-    if (isNaN(stockValue) || stockValue < 0) {
-      toast.error('❌ Le stock doit être supérieur ou égal à 0')
+    if (hasVariants) {
+      if (variants.length === 0) {
+        toast.error('❌ Veuillez ajouter du stock dans la grille de variantes')
+        return false
+      }
+    } else {
+      if (!formData.price || parseFloat(formData.price) <= 0) {
+        toast.error('❌ Le prix de vente doit être supérieur à 0')
+        return false
+      }
+
+      const stockValue = parseInt(formData.stock)
+      if (isNaN(stockValue) || stockValue < 0) {
+        toast.error('❌ Le stock doit être supérieur ou égal à 0')
+        return false
+      }
+    }
+
+    const oldPriceValue = formData.old_price ? parseFloat(formData.old_price) : 0
+    const priceValue = hasVariants ? basePrice : parseFloat(formData.price)
+
+    if (oldPriceValue > 0 && oldPriceValue <= priceValue) {
+      toast.error('❌ L\'ancien prix doit être supérieur au prix de vente pour activer la promotion')
       return false
     }
 
@@ -392,7 +495,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     return true
   }
 
-  // ==================== SAUVEGARDE OPTIMISÉE ET ROBUSTE ====================
+  // ==================== SAUVEGARDE ====================
   const handleSave = async () => {
     if (!validateForm()) return
 
@@ -408,13 +511,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         throw new Error('Vous devez être connecté pour modifier ce produit')
       }
 
-      // ✅ ÉTAPE 1: Suppression robuste des anciennes images
       if (imagesToDelete.length > 0) {
         toast.loading(`🗑️ Suppression de ${imagesToDelete.length} ancienne(s) image(s)...`, { id: 'save' })
         
-        let deletedCount = 0
-        let failedCount = 0
-
         for (const imageUrl of imagesToDelete) {
           try {
             const urlParts = imageUrl.split('/products/')
@@ -427,27 +526,20 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               
               if (deleteError) {
                 console.warn(`⚠️ Impossible de supprimer ${imagePath}:`, deleteError.message)
-                failedCount++
               } else {
                 console.log(`✅ Image supprimée: ${imagePath}`)
-                deletedCount++
               }
             }
           } catch (error) {
             console.warn('⚠️ Erreur lors de la suppression d\'une image:', error)
-            failedCount++
           }
         }
-
-        console.log(`📊 Suppression: ${deletedCount} réussies, ${failedCount} échouées`)
       }
 
-      // ✅ ÉTAPE 2: Conservation des images existantes
       const existingImageUrls = images
         .filter(img => img.isExisting)
         .map(img => img.preview)
 
-      // ✅ ÉTAPE 3: Upload robuste des nouvelles images
       const newImages = images.filter(img => !img.isExisting && img.file)
       const uploadedUrls: string[] = []
       
@@ -493,7 +585,6 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         }
       }
 
-      // ✅ ÉTAPE 4: Combinaison finale des URLs
       const finalImageUrls = [...existingImageUrls, ...uploadedUrls]
 
       if (finalImageUrls.length === 0) {
@@ -502,27 +593,57 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
       toast.loading('💾 Enregistrement des modifications...', { id: 'save' })
 
-      // ✅ ÉTAPE 5: Préparation des données avec gestion des valeurs nulles
       const oldPriceValue = formData.old_price && parseFloat(formData.old_price) > 0 
         ? parseFloat(formData.old_price) 
         : null
 
-      const updateData = {
+      const updateData: any = {
         name: formData.name.trim(),
         description: formData.description.trim() || null,
-        price: parseFloat(formData.price),
-        old_price: oldPriceValue,
         category: formData.category,
         subcategory: formData.subcategory.trim() || null,
-        stock: parseInt(formData.stock) || 0,
+        old_price: oldPriceValue,
         status: formData.status,
+        delivery_available: formData.delivery_available,  // ✅ NOUVEAU
         images: finalImageUrls,
         updated_at: new Date().toISOString()
       }
 
+      if (hasVariants && variants.length > 0) {
+        const prices = variants.map(v => v.price)
+        updateData.price = Math.min(...prices)
+        updateData.stock = variants.reduce((sum, v) => sum + v.stock, 0)
+
+        const colors = Array.from(new Set(variants.map(v => v.color)))
+        const sizes = Array.from(new Set(variants.map(v => v.size)))
+
+        updateData.metadata = {
+          variants: variants.map(v => ({
+            color: v.color,
+            size: v.size,
+            stock: v.stock,
+            price: v.price,
+            sku: v.sku
+          })),
+          specifications: {
+            template: [
+              { name: 'Couleur', values: colors },
+              { name: 'Taille', values: sizes }
+            ]
+          }
+        }
+
+        console.log('💾 Sauvegarde en mode VARIANTES:', updateData.metadata)
+      } else {
+        updateData.price = parseFloat(formData.price)
+        updateData.stock = parseInt(formData.stock) || 0
+        updateData.metadata = product?.metadata || {}
+
+        console.log('💾 Sauvegarde en mode SIMPLE')
+      }
+
       console.log('📝 Données à mettre à jour:', updateData)
 
-      // ✅ ÉTAPE 6: Update dans Supabase
       const { data: updatedProduct, error: updateError } = await supabase
         .from('products')
         .update(updateData)
@@ -547,7 +668,6 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         duration: 3000
       })
 
-      // ✅ ÉTAPE 7: Nettoyage des URLs avant redirection
       setTimeout(() => {
         images.forEach(img => {
           if (!img.isExisting && img.preview) {
@@ -581,7 +701,6 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     return <PageSkeleton />
   }
 
-  // ✅ GESTION ERREUR AMÉLIORÉE
   if (error || !product) {
     return (
       <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center p-4">
@@ -699,6 +818,24 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </p>
             </div>
           </div>
+
+          {hasVariants && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-purple-500/20 border border-purple-500/50 rounded-xl p-4 mb-6"
+            >
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-purple-400" />
+                <div>
+                  <p className="text-white font-bold">Mode Variantes Actif</p>
+                  <p className="text-sm text-gray-300">
+                    Prix et stock calculés automatiquement depuis la grille
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         <motion.div
@@ -708,6 +845,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           className="bg-[#161618] border border-white/10 rounded-3xl p-6 md:p-10 shadow-2xl"
         >
           <div className="space-y-7">
+            {/* Nom */}
             <div>
               <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
                 <Tag className="w-4 h-4 text-blue-400" />
@@ -733,6 +871,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </p>
             </div>
 
+            {/* Catégorie + Statut */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
@@ -790,102 +929,180 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-              <div className="md:col-span-5">
-                <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-emerald-400" />
-                  Prix de vente (DA) <span className="text-red-400">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">
-                    DA
-                  </span>
-                  <input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0"
-                    min="0"
-                    step="100"
-                    disabled={saving}
-                    className="w-full pl-16 pr-5 py-4 bg-white/5 border border-white/10 rounded-2xl 
-                             text-white text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
-                             focus:outline-none focus:border-orange-500 focus:ring-2 
-                             focus:ring-orange-500/20 transition-all
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
+            {/* ✅ NOUVEAU : Livraison disponible */}
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <Truck className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-lg">Livraison disponible</p>
+                    <p className="text-sm text-gray-400">
+                      {formData.delivery_available 
+                        ? '✅ Les clients peuvent commander avec livraison' 
+                        : '❌ Livraison désactivée (retrait uniquement)'}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="md:col-span-5">
-                <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-yellow-400" />
-                  Ancien prix (DA)
-                  <span className="text-xs text-gray-500 font-normal">(0 = pas de promo)</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">
-                    DA
-                  </span>
-                  <input
-                    type="number"
-                    value={formData.old_price}
-                    onChange={(e) => setFormData({ ...formData, old_price: e.target.value })}
-                    placeholder="0"
-                    min="0"
-                    step="100"
-                    disabled={saving}
-                    className="w-full pl-16 pr-5 py-4 bg-white/5 border border-white/10 rounded-2xl 
-                             text-white text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
-                             focus:outline-none focus:border-orange-500 focus:ring-2 
-                             focus:ring-orange-500/20 transition-all
-                             disabled:opacity-50 disabled:cursor-not-allowed"
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, delivery_available: !formData.delivery_available })}
+                  disabled={saving}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#161618] disabled:opacity-50 disabled:cursor-not-allowed ${
+                    formData.delivery_available ? 'bg-blue-600' : 'bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                      formData.delivery_available ? 'translate-x-7' : 'translate-x-1'
+                    }`}
                   />
-                </div>
+                </button>
               </div>
-
-              {discountPercent > 0 && (
-                <div className="md:col-span-2 flex items-end">
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    className="w-full h-[56px] bg-gradient-to-br from-green-500/30 to-emerald-500/30 
-                             border-2 border-green-500/50 rounded-2xl flex items-center justify-center 
-                             gap-2 shadow-lg shadow-green-500/20"
-                  >
-                    <Percent className="w-6 h-6 text-green-400" />
-                    <span className="text-2xl font-black text-green-400">
-                      -{discountPercent}%
-                    </span>
-                  </motion.div>
-                </div>
-              )}
             </div>
 
-            <div className="md:w-1/2">
-              <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                <Package className="w-4 h-4 text-blue-400" />
-                Quantité en stock
-              </label>
-              <input
-                type="number"
-                value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                min="0"
-                step="1"
-                disabled={saving}
-                className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
-                         text-lg font-semibold hover:border-white/20 focus:outline-none focus:border-orange-500 
-                         focus:ring-2 focus:ring-orange-500/20 transition-all
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                {parseInt(formData.stock) === 0 ? '⚠️ Rupture de stock' : 
-                 parseInt(formData.stock) < 5 ? '⚠️ Stock faible' : 
-                 '✅ Stock disponible'}
-              </p>
-            </div>
+            {/* Affichage conditionnel selon le mode */}
+            {hasVariants ? (
+              <div className="border-t border-white/10 pt-7">
+                <SimpleVariantGrid
+                  basePrice={basePrice}
+                  setBasePrice={setBasePrice}
+                  baseSKU={baseSKU}
+                  availableSizes={availableSizes}
+                  onChange={setVariants}
+                  initialVariants={variants}
+                />
 
+                <div className="mt-6">
+                  <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-yellow-400" />
+                    Ancien prix global (DA)
+                    <span className="text-xs text-gray-500 font-normal">(optionnel, pour afficher une promotion)</span>
+                  </label>
+                  <div className="flex gap-3 items-center">
+                    <input
+                      type="number"
+                      value={formData.old_price}
+                      onChange={(e) => setFormData({ ...formData, old_price: e.target.value })}
+                      placeholder="15000"
+                      disabled={saving}
+                      className="flex-1 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                               text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
+                               focus:outline-none focus:border-orange-500 focus:ring-2 
+                               focus:ring-orange-500/20 transition-all
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    {formData.old_price && basePrice && (
+                      <div className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/60 text-emerald-400 font-semibold text-sm min-w-[90px] text-center">
+                        -{Math.max(0, Math.min(99, Math.round(((parseFloat(formData.old_price || '0') - basePrice) / parseFloat(formData.old_price || '1')) * 100)))}%
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                  <div className="md:col-span-5">
+                    <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-emerald-400" />
+                      Prix de vente (DA) <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">
+                        DA
+                      </span>
+                      <input
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        placeholder="0"
+                        min="0"
+                        step="100"
+                        disabled={saving}
+                        className="w-full pl-16 pr-5 py-4 bg-white/5 border border-white/10 rounded-2xl 
+                                 text-white text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
+                                 focus:outline-none focus:border-orange-500 focus:ring-2 
+                                 focus:ring-orange-500/20 transition-all
+                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-5">
+                    <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-yellow-400" />
+                      Ancien prix (DA)
+                      <span className="text-xs text-gray-500 font-normal">(0 = pas de promo)</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">
+                        DA
+                      </span>
+                      <input
+                        type="number"
+                        value={formData.old_price}
+                        onChange={(e) => setFormData({ ...formData, old_price: e.target.value })}
+                        placeholder="0"
+                        min="0"
+                        step="100"
+                        disabled={saving}
+                        className="w-full pl-16 pr-5 py-4 bg-white/5 border border-white/10 rounded-2xl 
+                                 text-white text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
+                                 focus:outline-none focus:border-orange-500 focus:ring-2 
+                                 focus:ring-orange-500/20 transition-all
+                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  {discountPercent > 0 && (
+                    <div className="md:col-span-2 flex items-end">
+                      <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                        className="w-full h-[56px] bg-gradient-to-br from-green-500/30 to-emerald-500/30 
+                                 border-2 border-green-500/50 rounded-2xl flex items-center justify-center 
+                                 gap-2 shadow-lg shadow-green-500/20"
+                      >
+                        <Percent className="w-6 h-6 text-green-400" />
+                        <span className="text-2xl font-black text-green-400">
+                          -{discountPercent}%
+                        </span>
+                      </motion.div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:w-1/2">
+                  <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                    <Package className="w-4 h-4 text-blue-400" />
+                    Quantité en stock
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.stock}
+                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    min="0"
+                    step="1"
+                    disabled={saving}
+                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                             text-lg font-semibold hover:border-white/20 focus:outline-none focus:border-orange-500 
+                             focus:ring-2 focus:ring-orange-500/20 transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    {parseInt(formData.stock) === 0 ? '⚠️ Rupture de stock' : 
+                     parseInt(formData.stock) < 5 ? '⚠️ Stock faible' : 
+                     '✅ Stock disponible'}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Description */}
             <div>
               <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-purple-400" />
@@ -911,6 +1128,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </p>
             </div>
 
+            {/* Images */}
             <div className="border-t border-white/10 pt-7">
               <label className="block text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
                 <ImageIcon className="w-5 h-5 text-pink-400" />
@@ -972,192 +1190,86 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {images.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-6"
-                >
+                <div className="mt-6">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     {images.map((img, index) => (
                       <motion.div
                         key={img.id}
-                        initial={{ scale: 0, rotate: -10 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="relative group aspect-square rounded-2xl overflow-hidden border-2 
-                                 border-white/10 bg-white/5 hover:border-orange-500/50 transition-all"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-white/10 hover:border-orange-500/50 transition-all"
                       >
                         <img
                           src={img.preview}
                           alt={`Photo ${index + 1}`}
                           className="w-full h-full object-cover"
-                          loading="lazy"
                         />
-                        
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 
-                                      to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                        <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          {index === 0 && (
-                            <motion.div
-                              initial={{ x: -20, opacity: 0 }}
-                              animate={{ x: 0, opacity: 1 }}
-                              className="px-2.5 py-1 bg-gradient-to-r from-orange-500 to-red-500 
-                                       rounded-lg text-xs font-black text-white shadow-lg"
-                            >
-                              🌟 PRINCIPALE
-                            </motion.div>
-                          )}
-                          {img.isExisting && (
-                            <motion.div
-                              initial={{ x: -20, opacity: 0 }}
-                              animate={{ x: 0, opacity: 1 }}
-                              transition={{ delay: 0.1 }}
-                              className="px-2.5 py-1 bg-blue-500 rounded-lg text-xs font-bold 
-                                       text-white shadow-lg"
-                            >
-                              📌 Actuelle
-                            </motion.div>
-                          )}
-                          {!img.isExisting && img.size && (
-                            <motion.div
-                              initial={{ x: -20, opacity: 0 }}
-                              animate={{ x: 0, opacity: 1 }}
-                              transition={{ delay: 0.15 }}
-                              className="px-2.5 py-1 bg-green-500 rounded-lg text-xs font-bold 
-                                       text-white shadow-lg"
-                            >
-                              ✨ {(img.size / 1024).toFixed(0)}Ko
-                            </motion.div>
-                          )}
-                        </div>
-
+                        {index === 0 && (
+                          <div className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-bold shadow-lg">
+                            Principale
+                          </div>
+                        )}
+                        {img.size && (
+                          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded">
+                            {(img.size / 1024).toFixed(0)} KB
+                          </div>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             removeImage(img.id, img.preview)
                           }}
                           disabled={saving}
-                          className="absolute top-2 right-2 w-9 h-9 bg-red-500 hover:bg-red-600 
-                                   rounded-xl flex items-center justify-center opacity-0 
-                                   group-hover:opacity-100 transition-all shadow-lg
-                                   disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <Trash2 className="w-5 h-5 text-white" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
-
-                        <div className="absolute bottom-2 right-2 w-8 h-8 bg-black/70 backdrop-blur-sm 
-                                      rounded-lg flex items-center justify-center opacity-0 
-                                      group-hover:opacity-100 transition-opacity">
-                          <span className="text-xs font-black text-white">#{index + 1}</span>
-                        </div>
                       </motion.div>
                     ))}
-
-                    {Array.from({ length: 5 - images.length }).map((_, index) => (
-                      <div
-                        key={`placeholder-${index}`}
-                        className="aspect-square rounded-2xl border-2 border-dashed border-white/10 
-                                 bg-white/5 flex items-center justify-center"
-                      >
-                        <ImageIcon className="w-10 h-10 text-gray-600" />
-                      </div>
-                    ))}
                   </div>
-                </motion.div>
-              )}
-
-              {images.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-5 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl 
-                           flex items-start gap-3"
-                >
-                  <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-red-200 font-bold mb-1 text-sm">
-                      ⚠️ Aucune photo ajoutée
-                    </p>
-                    <p className="text-red-200/80 text-xs">
-                      Vous devez ajouter au moins une photo pour publier votre produit.
-                    </p>
-                  </div>
-                </motion.div>
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-10 pt-8 border-t border-white/10">
-            <div className="flex items-center gap-3">
+            {/* Bouton Sauvegarder */}
+            <div className="border-t border-white/10 pt-7 flex justify-end gap-4">
               <Link href="/dashboard/vendor/products">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={saving}
-                  className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white font-semibold 
-                           rounded-xl border border-white/10 transition-all
-                           disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl 
+                           border border-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Annuler
                 </motion.button>
               </Link>
+
+              <motion.button
+                whileHover={{ scale: saving ? 1 : 1.02 }}
+                whileTap={{ scale: saving ? 1 : 0.98 }}
+                onClick={handleSave}
+                disabled={saving}
+                className="px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 
+                         hover:to-red-700 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 
+                         transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Sauvegarde en cours...
+                    {uploadProgress > 0 && ` (${uploadProgress}%)`}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Enregistrer les modifications
+                  </>
+                )}
+              </motion.button>
             </div>
-
-            <motion.button
-              whileHover={{ scale: saving ? 1 : 1.05 }}
-              whileTap={{ scale: saving ? 1 : 0.95 }}
-              onClick={handleSave}
-              disabled={saving}
-              className="px-10 py-3.5 bg-gradient-to-r from-orange-500 to-red-600 
-                       hover:from-orange-600 hover:to-red-700 text-white font-black text-lg
-                       rounded-xl flex items-center gap-3 shadow-lg shadow-orange-500/40 
-                       transition-all disabled:opacity-50 disabled:cursor-not-allowed 
-                       disabled:shadow-none"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span>
-                    {uploadProgress > 0 && uploadProgress < 100 
-                      ? `Upload ${uploadProgress}%` 
-                      : 'Enregistrement...'}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-6 h-6" />
-                  <span>Enregistrer les modifications</span>
-                </>
-              )}
-            </motion.button>
           </div>
-
-          {saving && uploadProgress > 0 && uploadProgress < 100 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 p-5 bg-orange-500/10 border border-orange-500/30 rounded-2xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-orange-200 font-bold flex items-center gap-2">
-                  <Upload className="w-4 h-4 animate-bounce" />
-                  Upload des nouvelles images en cours...
-                </span>
-                <span className="text-lg font-black text-orange-400">
-                  {uploadProgress}%
-                </span>
-              </div>
-              <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${uploadProgress}%` }}
-                  className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-            </motion.div>
-          )}
         </motion.div>
       </div>
     </div>
