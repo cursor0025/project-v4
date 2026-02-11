@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Smartwatch Ultra Series 9 Titanium - TechZone Algérie</title>
+  <meta
+    name="description"
+    content="Smartwatch Ultra Series 9 Titanium chez TechZone Algérie : écran Retina toujours activé, suivi santé avancé, GPS, autonomie jusqu'à 3 jours, livraison 58 wilayas."
+  />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+  <link
+    href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css"
+    rel="stylesheet"
+  >
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --text: #0f172a;
+      --text-light: #64748b;
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --radius: 16px;
+      --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05),
+        0 4px 6px -2px rgba(0, 0, 0, 0.025);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin: auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 30px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(8px);
+    }
+
+    .store {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .store-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #eff6ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .store-info h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .store-info small {
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .star {
+      color: #fbbf24;
+    }
+
+    .follow-btn {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--border);
+      padding: 8px 20px;
+      border-radius: 99px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .follow-btn:hover {
+      background: #eff6ff;
+      border-color: var(--primary);
+    }
+
+    /* Layout Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 320px;
+      gap: 40px;
+      padding: 40px;
+    }
+
+    /* Gallery Column */
+    .gallery-col {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .main-image-wrapper {
+      background: #f8fafc;
+      border-radius: var(--radius);
+      position: relative;
+      aspect-ratio: 1/1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .main-image-wrapper img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      transition: transform 0.3s ease, opacity 0.2s;
+      mix-blend-mode: multiply;
+    }
+
+    .main-image-wrapper img:hover {
+      transform: scale(1.05);
+    }
+
+    .badge {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 99px;
+      z-index: 2;
+    }
+
+    .heart-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: var(--text-light);
+      transition: all 0.2s;
+      z-index: 2;
+    }
+
+    .heart-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .heart-btn:active {
+      transform: scale(0.95);
+    }
+
+    .thumbnails {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .thumb {
+      aspect-ratio: 1/1;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      overflow: hidden;
+      background: #f8fafc;
+      transition: all 0.2s;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .thumb:hover img {
+      opacity: 1;
+    }
+
+    .thumb.active {
+      border-color: var(--primary);
+    }
+
+    .thumb.active img {
+      opacity: 1;
+    }
+
+    /* Details Column */
+    .details-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .product-title {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .product-desc {
+      color: var(--text-light);
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .specs-list {
+      list-style: none;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border);
+    }
+
+    .specs-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 0.95rem;
+    }
+
+    .specs-list li:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .specs-list li:first-child {
+      padding-top: 0;
+    }
+
+    .specs-list span {
+      color: var(--text-light);
+    }
+
+    .specs-list strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .delivery-box {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      gap: 14px;
+      color: #065f46;
+      align-items: center;
+    }
+
+    .delivery-icon {
+      font-size: 1.5rem;
+    }
+
+    /* Sidebar Column */
+    .buy-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 20px;
+      height: fit-content;
+    }
+
+    .price-tag {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: -1px;
+    }
+
+    .status-badge {
+      background: #e0e7ff;
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+    }
+
+    .action-btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-dark {
+      background: #0f172a;
+      color: white;
+    }
+
+    .btn-dark:hover {
+      background: #1e293b;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .icon-btn {
+      height: 48px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 1.2rem;
+      color: var(--text-light);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #f8fafc;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .buy-card {
+        grid-column: span 2;
+        position: static;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .contact-grid {
+        grid-column: span 2;
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 0;
+      }
+
+      .container {
+        border-radius: 0;
+      }
+
+      .grid {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        padding: 24px;
+      }
+
+      .buy-card {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-radius: 20px 20px 0 0;
+        z-index: 100;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        margin: 0;
+        padding: 20px;
+      }
+
+      .header {
+        padding: 16px 20px;
+      }
+
+      .container {
+        padding-bottom: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="store">
+        <div class="store-icon" aria-hidden="true">
+          <i class="ri-store-2-fill"></i>
+        </div>
+        <div class="store-info">
+          <h3>TechZone Algérie</h3>
+          <small>
+            <i class="ri-star-fill star" aria-hidden="true"></i>
+            4.8 (124 avis)
+          </small>
+        </div>
+      </div>
+      <button class="follow-btn" type="button">Suivre</button>
+    </header>
+
+    <section class="grid" aria-label="Détails du produit Smartwatch Ultra Series 9">
+      <!-- Gallery -->
+      <div class="gallery-col">
+        <div class="main-image-wrapper">
+          <span class="badge">Nouveau</span>
+          <button
+            class="heart-btn"
+            id="heartBtn"
+            type="button"
+            aria-label="Ajouter la montre aux favoris"
+          >
+            <i class="ri-heart-line"></i>
+          </button>
+          <img
+            id="mainImage"
+            src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80"
+            alt="Smartwatch Ultra Series 9 Titanium vue de face"
+          >
+        </div>
+
+        <div class="thumbnails" aria-label="Autres vues du produit">
+          <div
+            class="thumb active"
+            onclick="changeImage(this, 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80')"
+          >
+            <img
+              src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=200&auto=format&fit=crop&q=80"
+              alt="Smartwatch vue de face"
+            >
+          </div>
+          <div
+            class="thumb"
+            onclick="changeImage(this, 'https://images.unsplash.com/photo-1508685586037-3c6b6088cc4d?w=800&auto=format&fit=crop&q=80')"
+          >
+            <img
+              src="https://images.unsplash.com/photo-1508685586037-3c6b6088cc4d?w=200&auto=format&fit=crop&q=80"
+              alt="Smartwatch portée au poignet"
+            >
+          </div>
+          <div
+            class="thumb"
+            onclick="changeImage(this, 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=800&auto=format&fit=crop&q=80')"
+          >
+            <img
+              src="https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=200&auto=format&fit=crop&q=80"
+              alt="Zoom sur l'écran de la smartwatch"
+            >
+          </div>
+          <div
+            class="thumb"
+            onclick="changeImage(this, 'https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=800&auto=format&fit=crop&q=80')"
+          >
+            <img
+              src="https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=200&auto=format&fit=crop&q=80"
+              alt="Vue latérale de la smartwatch"
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="details-col">
+        <h1 class="product-title">
+          Smartwatch Ultra Series 9 Titanium
+        </h1>
+        <p class="product-desc">
+          L'expérience connectée ultime. Écran Retina toujours activé, suivi de santé avancé, capteurs de température et autonomie jusqu'à 36h. Idéale pour le sport extrême et le quotidien.
+        </p>
+
+        <ul class="specs-list">
+          <li><span>Marque</span> <strong>Apple Compatible</strong></li>
+          <li><span>Taille écran</span> <strong>49&nbsp;mm</strong></li>
+          <li><span>Connectivité</span> <strong>Bluetooth&nbsp;5.3 + GPS</strong></li>
+          <li><span>Étanchéité</span> <strong>IP68 (50&nbsp;m)</strong></li>
+          <li><span>Batterie</span> <strong>Jusqu'à 3&nbsp;jours</strong></li>
+        </ul>
+
+        <div class="delivery-box">
+          <i class="ri-truck-fast-line delivery-icon" aria-hidden="true"></i>
+          <div>
+            <strong>Livraison 58 wilayas</strong><br>
+            <small>Expédition sous 24h • Paiement à la livraison</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar (Buy) -->
+      <aside class="buy-card" aria-label="Actions d'achat">
+        <div>
+          <div class="price-tag" aria-label="Prix du produit">
+            12&nbsp;500&nbsp;DZD
+          </div>
+          <span class="status-badge">Prix négociable</span>
+        </div>
+
+        <div class="actions-wrapper">
+          <button class="action-btn btn-primary" id="cartBtn" type="button">
+            <i
+              class="ri-shopping-cart-2-line"
+              style="margin-right: 8px; vertical-align: middle;"
+              aria-hidden="true"
+            ></i>
+            Ajouter au panier
+          </button>
+
+          <button class="action-btn btn-dark" type="button">
+            Commander maintenant
+          </button>
+
+          <div class="contact-grid" aria-label="Contacter le vendeur">
+            <button class="icon-btn" type="button" title="Appeler">
+              <i class="ri-phone-fill" aria-hidden="true"></i>
+            </button>
+            <button class="icon-btn" type="button" title="WhatsApp">
+              <i class="ri-whatsapp-fill" aria-hidden="true"></i>
+            </button>
+            <button class="icon-btn" type="button" title="Message">
+              <i class="ri-message-3-fill" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const mainImg = document.getElementById('mainImage');
+    const allThumbs = document.querySelectorAll('.thumb');
+
+    function changeImage(element, newSrc) {
+      allThumbs.forEach(t => t.classList.remove('active'));
+      element.classList.add('active');
+
+      mainImg.style.opacity = 0.5;
+
+      setTimeout(() => {
+        mainImg.src = newSrc;
+        mainImg.style.opacity = 1;
+      }, 150);
+    }
+
+    const heartBtn = document.getElementById('heartBtn');
+    heartBtn.addEventListener('click', () => {
+      const icon = heartBtn.querySelector('i');
+      const isLiked = icon.classList.contains('ri-heart-fill');
+
+      if (isLiked) {
+        icon.classList.replace('ri-heart-fill', 'ri-heart-line');
+        icon.style.color = '';
+      } else {
+        icon.classList.replace('ri-heart-line', 'ri-heart-fill');
+        icon.style.color = '#ef4444';
+        heartBtn.style.transform = 'scale(1.2)';
+        setTimeout(() => (heartBtn.style.transform = 'scale(1)'), 150);
+      }
+    });
+
+    const cartBtn = document.getElementById('cartBtn');
+    cartBtn.addEventListener('click', () => {
+      const originalText =
+        '<i class="ri-shopping-cart-2-line" style="margin-right: 8px; vertical-align: middle;" aria-hidden="true"></i>Ajouter au panier';
+
+      cartBtn.style.background = '#10b981';
+      cartBtn.innerHTML =
+        '<i class="ri-check-line" style="margin-right: 8px; vertical-align: middle;" aria-hidden="true"></i>Ajouté !';
+
+      setTimeout(() => {
+        cartBtn.style.background = '';
+        cartBtn.innerHTML = originalText;
+      }, 2000);
+    });
+  </script>
+</body>
+</html>
