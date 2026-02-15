@@ -8,7 +8,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import ModeSpecificationsForm from '@/components/product/ModeSpecificationsForm'
 import type { AttributeField, ProductAttributes } from '@/types/product-attributes'
 import SimpleVariantGrid, { SimpleVariant } from '@/components/product/SimpleVariantGrid'
-import DynamicTemplateFields from '@/components/product/DynamicTemplateFields'  // ✅ NOUVEAU
+import DynamicTemplateFields from '@/components/product/DynamicTemplateFields'
 
 /* --------- Icônes locales --------- */
 
@@ -115,7 +115,7 @@ export default function CreateProductPage() {
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('')
 
   const [productAttributes, setProductAttributes] = useState<ProductAttributes>({})
-  const [templateFields, setTemplateFields] = useState<Record<string, any>>({})  // ✅ NOUVEAU
+  const [templateFields, setTemplateFields] = useState<Record<string, any>>({})
 
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -126,6 +126,7 @@ export default function CreateProductPage() {
 
   const [hasVariants, setHasVariants] = useState(false)
   const [variants, setVariants] = useState<SimpleVariant[]>([])
+  const [variantImages, setVariantImages] = useState<Record<string, File>>({}) // ✅ Images par couleur
   const [basePrice, setBasePrice] = useState(2500)
   const [baseSKU] = useState('PROD')
   const [availableSizes, setAvailableSizes] = useState<string[]>([])
@@ -358,11 +359,42 @@ export default function CreateProductPage() {
         return
       }
 
-      toast.loading('Upload des images...')
+      // ✅ Upload images générales
+      toast.loading('Upload des images générales...')
       const imageUrls = await uploadImages(images)
       toast.dismiss()
 
       if (imageUrls.length === 0) throw new Error('Erreur upload images')
+
+      // ✅ Upload images par couleur (variantes)
+      let imageMapping: Record<string, string> = {}
+
+      if (hasVariants && Object.keys(variantImages).length > 0) {
+        toast.loading('Upload des images de couleur...')
+        
+        for (const [color, file] of Object.entries(variantImages)) {
+          const fileName = `${Date.now()}-${color.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(7)}.jpg`
+          const filePath = `variant-images/${fileName}`
+
+          const { data, error } = await supabase.storage
+            .from('products')
+            .upload(filePath, file)
+
+          if (error) {
+            console.error(`Erreur upload image ${color}:`, error)
+            continue
+          }
+
+          const { data: publicData } = supabase.storage
+            .from('products')
+            .getPublicUrl(filePath)
+
+          imageMapping[color] = publicData.publicUrl
+        }
+
+        toast.dismiss()
+        toast.success(`${Object.keys(imageMapping).length} images de couleur uploadées`)
+      }
 
       const selectedCategory = categories.find(
         (c) => c.id === Number(selectedCategoryId),
@@ -399,7 +431,7 @@ export default function CreateProductPage() {
               { name: 'Couleur', values: colors },
               { name: 'Taille', values: sizes },
             ],
-            imageMapping: {},
+            imageMapping, // ✅ Mapping couleur → URL image
           },
           variants: variants.map(v => ({
             color: v.color,
@@ -408,7 +440,7 @@ export default function CreateProductPage() {
             price: v.price,
             sku: v.sku
           })),
-          template_fields: templateFields  // ✅ NOUVEAU
+          template_fields: templateFields
         }
         finalProductData.attributes = {}
       } else {
@@ -419,7 +451,7 @@ export default function CreateProductPage() {
         finalProductData.stock = parseInt(productData.stock)
         finalProductData.attributes = productAttributes
         finalProductData.metadata = {
-          template_fields: templateFields  // ✅ NOUVEAU
+          template_fields: templateFields
         }
       }
 
@@ -432,8 +464,6 @@ export default function CreateProductPage() {
         console.error('Message:', error.message)
         console.error('Code:', error.code)
         console.error('Details:', error.details)
-        console.error('Hint:', error.hint)
-        console.error('Full error:', JSON.stringify(error, null, 2))
         
         toast.error(`Erreur: ${error.message}`)
         setIsSubmitting(false)
@@ -511,7 +541,7 @@ export default function CreateProductPage() {
                   onChange={(e) => {
                     setSelectedCategoryId(e.target.value)
                     setSelectedSubcategoryId('')
-                    setTemplateFields({})  // ✅ NOUVEAU : Réinitialiser les champs template
+                    setTemplateFields({})
                   }}
                   className={inputClass}
                 >
@@ -665,7 +695,6 @@ export default function CreateProductPage() {
               Étape 2 : Spécifications
             </h2>
 
-            {/* Bannière variantes intelligentes */}
             {hasVariants && (
               <div className="rounded-2xl bg-gradient-to-r from-purple-700 via-fuchsia-600 to-blue-600 p-[1px] mb-4">
                 <div className="bg-[#020617] rounded-2xl px-6 py-4 flex items-center justify-between">
@@ -689,7 +718,6 @@ export default function CreateProductPage() {
               </div>
             )}
 
-            {/* Carte principale : grille intelligente OU champs dynamiques */}
             {hasVariants ? (
               <SimpleVariantGrid
                 basePrice={basePrice}
@@ -697,6 +725,7 @@ export default function CreateProductPage() {
                 baseSKU={baseSKU}
                 availableSizes={availableSizes}
                 onChange={setVariants}
+                onImagesChange={setVariantImages}
               />
             ) : (
               <>
@@ -723,7 +752,6 @@ export default function CreateProductPage() {
                   />
                 </div>
 
-                {/* ✅ NOUVEAU : Champs dynamiques spécifiques à la catégorie */}
                 {selectedCategoryId && (
                   <DynamicTemplateFields
                     category={categories.find(c => c.id === Number(selectedCategoryId))?.slug || ''}
@@ -735,7 +763,6 @@ export default function CreateProductPage() {
               </>
             )}
 
-            {/* Bloc promo + livraison + type de prix (vêtements/chaussures) */}
             {hasVariants && (
               <div className="bg-gray-900/70 border border-gray-700 rounded-2xl p-6 space-y-4">
                 <div>
@@ -778,7 +805,6 @@ export default function CreateProductPage() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
-                  {/* Livraison oui / non */}
                   <div className="flex flex-col gap-2">
                     <span className="text-sm font-medium text-gray-300">
                       Livraison
@@ -820,7 +846,6 @@ export default function CreateProductPage() {
                     </div>
                   </div>
 
-                  {/* Type de prix */}
                   <div>
                     <label className={labelClass}>Type de prix</label>
                     <select
@@ -887,7 +912,6 @@ export default function CreateProductPage() {
               </div>
             </div>
 
-            {/* Zone d'upload principale */}
             <div className="border-2 border-dashed border-gray-700 rounded-2xl p-12 text-center bg-gray-900/30 hover:border-blue-500/50 transition-all group cursor-pointer">
               <UploadIcon className="mx-auto text-gray-500 mb-4 group-hover:text-blue-400 w-12 h-12 transition-colors" />
               <label className="cursor-pointer">
@@ -910,7 +934,6 @@ export default function CreateProductPage() {
               </p>
             </div>
 
-            {/* Grille 5 emplacements fixes */}
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -966,7 +989,6 @@ export default function CreateProductPage() {
               </div>
             </div>
 
-            {/* Conseil */}
             <div className="bg-blue-900/20 border border-blue-700/40 rounded-xl p-4 flex items-start gap-3">
               <span className="text-2xl">💡</span>
               <div>

@@ -1,9 +1,11 @@
 @import "tailwindcss";
 
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
+
 
 @theme inline {
   --color-background: var(--background);
@@ -12,6 +14,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,11 +22,13 @@
   }
 }
 
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
 
 /* ============================================
    ✨ SCROLLBAR PERSONNALISÉE SIDEBAR
@@ -32,20 +37,37 @@ body {
   width: 6px;
 }
 
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.02);
 }
+
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(249, 115, 22, 0.3);
   border-radius: 10px;
 }
 
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(249, 115, 22, 0.5);
 }
 
+
 /* Scroll smooth */
 html {
   scroll-behavior: smooth;
+}
+
+
+/* ============================================
+   ✨ MASQUER SCROLLBAR (miniatures produit)
+   ============================================ */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari et Chrome */
 }

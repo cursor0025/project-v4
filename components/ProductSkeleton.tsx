@@ -1,34 +1,61 @@
-// components/ProductSkeleton.tsx
-export default function ProductSkeleton() {
-    return (
-      <div className="bg-[#111827] rounded-3xl overflow-hidden border border-white/5 animate-pulse flex flex-col h-full">
-        {/* Image Skeleton - ratio fixe */}
-        <div className="aspect-square bg-gray-700 flex-shrink-0"></div>
-        
-        {/* Content Skeleton */}
-        <div className="p-4 flex flex-col flex-1 space-y-3">
-          {/* Title - HAUTEUR FIXE */}
-          <div className="h-10 bg-gray-700 rounded"></div>
-          
-          {/* Rating - HAUTEUR FIXE */}
-          <div className="flex items-center justify-between h-5">
-            <div className="h-4 w-32 bg-gray-700 rounded"></div>
-            <div className="h-4 w-16 bg-gray-700 rounded"></div>
-          </div>
-          
-          {/* Price Section - HAUTEUR FIXE */}
-          <div className="flex items-start justify-between pt-2 h-20">
-            <div className="space-y-2 flex-1">
-              <div className="h-8 w-28 bg-gray-700 rounded"></div>
-              <div className="h-6 w-20 bg-gray-700 rounded-full"></div>
-            </div>
-            <div className="h-8 w-8 bg-gray-700 rounded-full"></div>
-          </div>
-          
-          {/* Button - mt-auto pour alignement */}
-          <div className="h-12 bg-gray-700 rounded-2xl mt-auto"></div>
+'use client'
+
+import { useState } from 'react'
+
+interface ImageWithSkeletonProps {
+  src: string
+  alt: string
+  className?: string
+  priority?: boolean
+  width?: string
+  height?: string
+}
+
+export default function ImageWithSkeleton({
+  src,
+  alt,
+  className = '',
+  priority = false,
+  width,
+  height,
+}: ImageWithSkeletonProps) {
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [hasError, setHasError] = useState(false)
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      {/* Animation skeleton pendant chargement */}
+      {!isLoaded && !hasError && (
+        <div 
+          className="absolute inset-0 bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 animate-pulse"
+          style={{
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 2s infinite'
+          }}
+        />
+      )}
+
+      {/* Image réelle */}
+      <img
+        src={src}
+        alt={alt}
+        className={`${className} transition-opacity duration-300 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        width={width}
+        height={height}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+      />
+
+      {/* Message erreur si image ne charge pas */}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+          <p className="text-xs text-gray-400">❌ Image indisponible</p>
         </div>
-      </div>
-    );
-  }
-  
+      )}
+    </div>
+  )
+}

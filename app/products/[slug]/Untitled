@@ -3,7 +3,6 @@
 import ProductWithVariants from '@/components/product/ProductWithVariants'
 import ProductWithSpecsPro from '@/components/product/ProductWithSpecsPro'
 import { supabaseService } from '@/utils/supabase/service'
-import { Metadata } from 'next'
 
 type ProductStatus = 'active' | 'inactive' | 'sold' | 'draft'
 type PriceType = 'fixe' | 'negociable' | 'facilite'
@@ -116,83 +115,6 @@ async function getProductById(id: string): Promise<ProductRow | null> {
   }
 
   return data as ProductRow
-}
-
-/**
- * ✅ SEO : Génération des métadonnées dynamiques
- */
-export async function generateMetadata(props: {
-  params: Promise<{ slug: string }>
-}): Promise<Metadata> {
-  const { slug } = await props.params
-  const product = await getProductById(slug)
-
-  if (!product) {
-    return {
-      title: 'Produit introuvable - BZMarket',
-      description: 'Ce produit n\'existe pas ou a été supprimé.',
-    }
-  }
-
-  const displayPrice = getDisplayPrice(product)
-  const totalStock = getTotalStock(product)
-  const storeName = product.attributes?.store_name || 'BZMarket'
-  
-  // Description SEO optimisée
-  const description = product.description 
-    ? `${product.description.slice(0, 155)}...`
-    : `Achetez ${product.name} à ${displayPrice.toLocaleString('fr-DZ')} DZD sur ${storeName}. ${totalStock > 0 ? `${totalStock} en stock` : 'Stock limité'}.`
-
-  return {
-    title: `${product.name} - ${displayPrice.toLocaleString('fr-DZ')} DZD | ${storeName}`,
-    description,
-    keywords: [
-      product.name,
-      product.category,
-      'algérie',
-      'bzmarket',
-      'marketplace',
-      'achat en ligne',
-    ].filter(Boolean).join(', '),
-    
-    // Open Graph (Facebook, LinkedIn)
-    openGraph: {
-      title: product.name,
-      description,
-      images: product.images.slice(0, 4).map(url => ({
-        url,
-        width: 1200,
-        height: 630,
-        alt: product.name,
-      })),
-      type: 'website',
-      siteName: 'BZMarket',
-      locale: 'fr_DZ',
-    },
-
-    // Twitter Card
-    twitter: {
-      card: 'summary_large_image',
-      title: product.name,
-      description,
-      images: product.images[0] ? [product.images[0]] : [],
-    },
-
-    // Robots
-    robots: {
-      index: product.status === 'active',
-      follow: product.status === 'active',
-      googleBot: {
-        index: product.status === 'active',
-        follow: product.status === 'active',
-      },
-    },
-
-    // Alternates
-    alternates: {
-      canonical: `https://bzmarket.dz/products/${slug}`,
-    },
-  }
 }
 
 /**

@@ -3,6 +3,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// ✅ NOUVEAU : Type pour les variantes
+export type ProductVariant = {
+  color: string;
+  size: string;
+  sku: string;
+};
+
 export type CartItem = {
   cart_id?: string;
   product_id: string;
@@ -14,6 +21,7 @@ export type CartItem = {
   image_url: string | null;
   max_stock: number;
   quantity: number;
+  variant?: ProductVariant; // ✅ NOUVEAU : Optionnel (uniquement pour vêtements)
 };
 
 export type VendorCart = {
@@ -40,10 +48,17 @@ type CartState = {
 
   // mutations locales
   addItemLocally: (item: CartItem) => void;
-  updateItemLocally: (product_id: string, quantity: number) => void;
-  removeItemLocally: (product_id: string) => void;
+  updateItemLocally: (product_id: string, quantity: number, variant?: ProductVariant) => void;
+  removeItemLocally: (product_id: string, variant?: ProductVariant) => void;
   clear: () => void;
 };
+
+// ✅ NOUVEAU : Helper pour comparer 2 variantes
+function variantsMatch(v1?: ProductVariant, v2?: ProductVariant): boolean {
+  if (!v1 && !v2) return true; // Pas de variantes = même produit
+  if (!v1 || !v2) return false; // Une seule a une variante = différent
+  return v1.color === v2.color && v1.size === v2.size;
+}
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -61,17 +76,22 @@ export const useCartStore = create<CartState>()(
         });
       },
 
-      // ajoute ou incrémente un item
+      // ✅ MODIFIÉ : ajoute ou incrémente un item (avec support variantes)
       addItemLocally: (item) => {
         set((state) => {
+          // Cherche un item existant avec MÊME product_id ET MÊME variante
           const existing = state.items.find(
-            (i) => i.product_id === item.product_id
+            (i) =>
+              i.product_id === item.product_id &&
+              variantsMatch(i.variant, item.variant)
           );
 
           if (existing) {
+            // Incrémente la quantité
             return {
               items: state.items.map((i) =>
-                i.product_id === item.product_id
+                i.product_id === item.product_id &&
+                variantsMatch(i.variant, item.variant)
                   ? {
                       ...i,
                       quantity:
@@ -84,6 +104,7 @@ export const useCartStore = create<CartState>()(
             };
           }
 
+          // Ajoute un nouvel item
           return {
             items: [...state.items, item],
           };
@@ -129,18 +150,25 @@ export const useCartStore = create<CartState>()(
         return Array.from(map.values());
       },
 
-      // met à jour la quantité d’un produit
-      updateItemLocally: (product_id, quantity) => {
+      // ✅ MODIFIÉ : met à jour la quantité (avec support variantes)
+      updateItemLocally: (product_id, quantity, variant) => {
         set((state) => {
           if (quantity <= 0) {
             return {
-              items: state.items.filter((i) => i.product_id !== product_id),
+              items: state.items.filter(
+                (i) =>
+                  !(
+                    i.product_id === product_id &&
+                    variantsMatch(i.variant, variant)
+                  )
+              ),
             };
           }
 
           return {
             items: state.items.map((item) =>
-              item.product_id === product_id
+              item.product_id === product_id &&
+              variantsMatch(item.variant, variant)
                 ? {
                     ...item,
                     quantity:
@@ -152,10 +180,16 @@ export const useCartStore = create<CartState>()(
         });
       },
 
-      // supprime un produit
-      removeItemLocally: (product_id) => {
+      // ✅ MODIFIÉ : supprime un produit (avec support variantes)
+      removeItemLocally: (product_id, variant) => {
         set((state) => ({
-          items: state.items.filter((i) => i.product_id !== product_id),
+          items: state.items.filter(
+            (i) =>
+              !(
+                i.product_id === product_id &&
+                variantsMatch(i.variant, variant)
+              )
+          ),
         }));
       },
 

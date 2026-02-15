@@ -4,10 +4,24 @@ import { use, useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  ArrowLeft, Save, Loader2, Image as ImageIcon, Trash2, X, Upload,
-  Package, DollarSign, Tag, AlertCircle, CheckCircle2, Sparkles, Percent,
-  Eye, Clock, Truck
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  Image as ImageIcon,
+  Trash2,
+  X,
+  Upload,
+  Package,
+  DollarSign,
+  Tag,
+  AlertCircle,
+  CheckCircle2,
+  Sparkles,
+  Percent,
+  Eye,
+  Clock,
+  Truck,
 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import toast, { Toaster } from 'react-hot-toast'
@@ -15,6 +29,7 @@ import imageCompression from 'browser-image-compression'
 import SimpleVariantGrid, { SimpleVariant } from '@/components/product/SimpleVariantGrid'
 
 // ==================== TYPES ====================
+
 interface Product {
   id: string
   name: string
@@ -43,15 +58,11 @@ interface ProductImage {
 }
 
 // ==================== CATÉGORIES AVEC VARIANTES ====================
-const VARIANT_CATEGORIES = [
-  'vetement',
-  'sportswear',
-  'fete',
-  'mariage',
-  'chaussure',
-]
+
+const VARIANT_CATEGORIES = ['vetement', 'sportswear', 'fete', 'mariage', 'chaussure']
 
 // ==================== TAILLES PAR TYPE ====================
+
 const SIZE_PRESETS = {
   standard: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
   pants: ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56'],
@@ -60,6 +71,7 @@ const SIZE_PRESETS = {
 } as const
 
 // ==================== 44 CATÉGORIES BZMarket ====================
+
 const CATEGORIES = [
   { value: 'telephones_accessoires', label: '📱 Téléphones & Accessoires', icon: '📱' },
   { value: 'accessoires_auto_moto', label: '🏍️ Accessoires Auto & Moto', icon: '🏍️' },
@@ -77,18 +89,34 @@ const CATEGORIES = [
   { value: 'sante_beaute', label: '💄 Santé & Beauté', icon: '💄' },
   { value: 'cosmetiques', label: '💅 Cosmétiques', icon: '💅' },
   { value: 'salon_coiffure_homme', label: '💈 Salon de Coiffure – Homme', icon: '💈' },
-  { value: 'salon_coiffure_esthetique_femme', label: '💇 Salon de Coiffure & Esthétique – Femme', icon: '💇' },
-  { value: 'produits_naturels_herboristerie', label: '🌿 Produits Naturels & Herboristerie', icon: '🌿' },
+  {
+    value: 'salon_coiffure_esthetique_femme',
+    label: '💇 Salon de Coiffure & Esthétique – Femme',
+    icon: '💇',
+  },
+  {
+    value: 'produits_naturels_herboristerie',
+    label: '🌿 Produits Naturels & Herboristerie',
+    icon: '🌿',
+  },
   { value: 'meubles_maison', label: '🛋️ Meubles & Maison', icon: '🛋️' },
   { value: 'textiles_maison', label: '🛏️ Textiles Maison', icon: '🛏️' },
   { value: 'decoration_maison', label: '🎨 Décoration Maison', icon: '🎨' },
   { value: 'ustensiles_cuisine', label: '🍳 Ustensiles de Cuisine', icon: '🍳' },
   { value: 'services_alimentaires', label: '🍽️ Services Alimentaires', icon: '🍽️' },
   { value: 'equipement_magasin_pro', label: '🏪 Équipement Magasin & Pro', icon: '🏪' },
-  { value: 'cuisinistes_cuisines_completes', label: '🔧 Cuisinistes & Cuisines Complètes', icon: '🔧' },
+  {
+    value: 'cuisinistes_cuisines_completes',
+    label: '🔧 Cuisinistes & Cuisines Complètes',
+    icon: '🔧',
+  },
   { value: 'sport_materiel_sportif', label: '⚽ Sport & Matériel Sportif', icon: '⚽' },
   { value: 'bricolage', label: '🔨 Bricolage', icon: '🔨' },
-  { value: 'materiaux_equipements_construction', label: '🏗️ Matériaux & Équipements Construction', icon: '🏗️' },
+  {
+    value: 'materiaux_equipements_construction',
+    label: '🏗️ Matériaux & Équipements Construction',
+    icon: '🏗️',
+  },
   { value: 'pieces_detachees', label: '🔩 Pièces Détachées', icon: '🔩' },
   { value: 'equipement_bebe', label: '🍼 Équipement Bébé', icon: '🍼' },
   { value: 'artisanat', label: '🎭 Artisanat', icon: '🎭' },
@@ -98,27 +126,41 @@ const CATEGORIES = [
   { value: 'education', label: '📚 Éducation', icon: '📚' },
   { value: 'bijoux', label: '💎 Bijoux', icon: '💎' },
   { value: 'montres_lunettes', label: '⌚ Montres & Lunettes', icon: '⌚' },
-  { value: 'vape_cigarettes_electroniques', label: '💨 Vape & Cigarettes Électroniques', icon: '💨' },
+  {
+    value: 'vape_cigarettes_electroniques',
+    label: '💨 Vape & Cigarettes Électroniques',
+    icon: '💨',
+  },
   { value: 'materiel_medical', label: '⚕️ Matériel Médical', icon: '⚕️' },
   { value: 'promoteurs_immobiliers', label: '🏘️ Promoteurs Immobiliers', icon: '🏘️' },
   { value: 'engins_travaux_publics', label: '🚜 Engins de Travaux Publics', icon: '🚜' },
   { value: 'fete_mariage', label: '💒 Fête & Mariage', icon: '💒' },
   { value: 'kaba', label: '🕋 Kaba', icon: '🕋' },
-  { value: 'divers', label: '📦 Divers', icon: '📦' }
+  { value: 'divers', label: '📦 Divers', icon: '📦' },
 ]
 
 // ==================== COMPOSANT SKELETON ====================
+
 const PageSkeleton = () => (
   <div className="min-h-screen bg-[#0c0c0c] p-4 md:p-6 lg:p-8">
     <div className="max-w-4xl mx-auto">
       <div className="h-10 w-32 bg-white/5 rounded-lg mb-8 animate-pulse" />
-      
+
       <div className="flex items-center gap-3 mb-8">
         <div className="w-12 h-12 rounded-2xl bg-white/5 animate-pulse" />
         <div className="flex-1">
           <div className="h-8 w-64 bg-white/5 rounded-lg mb-2 animate-pulse" />
           <div className="h-4 w-48 bg-white/5 rounded-lg animate-pulse" />
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {[...Array(3)].map((_, i) => (
+          <div
+            key={i}
+            className="bg-[#161618] border border-white/10 rounded-3xl p-6 h-40 animate-pulse"
+          />
+        ))}
       </div>
 
       <div className="bg-[#161618] border border-white/10 rounded-3xl p-8">
@@ -136,7 +178,12 @@ const PageSkeleton = () => (
 )
 
 // ==================== COMPOSANT PRINCIPAL ====================
-export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+
+export default function EditProductPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const resolvedParams = use(params)
   const productId = resolvedParams.id
 
@@ -160,7 +207,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     category: '',
     subcategory: '',
     status: 'active' as 'active' | 'draft' | 'archived',
-    delivery_available: true  // ✅ NOUVEAU
+    delivery_available: true,
   })
   const [images, setImages] = useState<ProductImage[]>([])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
@@ -168,18 +215,31 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   // États pour les variantes
   const [hasVariants, setHasVariants] = useState(false)
   const [variants, setVariants] = useState<SimpleVariant[]>([])
+  const [colorImages, setColorImages] = useState<Record<string, File>>({})
+  const [existingImageMapping, setExistingImageMapping] = useState<
+    Record<string, string>
+  >({})
   const [basePrice, setBasePrice] = useState(2500)
   const [baseSKU] = useState('PROD')
   const [availableSizes, setAvailableSizes] = useState<string[]>([])
 
-  const discountPercent = formData.price && formData.old_price && parseFloat(formData.old_price) > 0
-    ? Math.round(((parseFloat(formData.old_price) - parseFloat(formData.price)) / parseFloat(formData.old_price)) * 100)
-    : 0
+  const discountPercent =
+    formData.price &&
+    formData.old_price &&
+    parseFloat(formData.old_price) > 0 &&
+    parseFloat(formData.price) > 0
+      ? Math.round(
+          ((parseFloat(formData.old_price) - parseFloat(formData.price)) /
+            parseFloat(formData.old_price)) *
+            100,
+        )
+      : 0
 
   // ==================== NETTOYAGE DES URLs AU DÉMONTAGE ====================
+
   useEffect(() => {
     return () => {
-      images.forEach(img => {
+      images.forEach((img) => {
         if (!img.isExisting && img.preview) {
           try {
             URL.revokeObjectURL(img.preview)
@@ -192,8 +252,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   }, [images])
 
   // ==================== CHARGEMENT DU PRODUIT ====================
+
   useEffect(() => {
     fetchProduct()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId])
 
   const fetchProduct = async () => {
@@ -202,8 +264,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       setError(null)
       const supabase = createSupabaseBrowserClient()
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
       if (authError || !user) {
         setError('Vous devez être connecté')
         setLoading(false)
@@ -240,23 +305,25 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         category: data.category || '',
         subcategory: data.subcategory || '',
         status: data.status || 'active',
-        delivery_available: data.delivery_available ?? true  // ✅ NOUVEAU
+        delivery_available: data.delivery_available ?? true,
       })
 
       if (data.images && Array.isArray(data.images) && data.images.length > 0) {
-        const existingImages: ProductImage[] = data.images.map((url: string, index: number) => ({
-          id: `existing-${index}-${Date.now()}`,
-          preview: url,
-          isExisting: true,
-          compressed: true
-        }))
+        const existingImages: ProductImage[] = data.images.map(
+          (url: string, index: number) => ({
+            id: `existing-${index}-${Date.now()}`,
+            preview: url,
+            isExisting: true,
+            compressed: true,
+          }),
+        )
         setImages(existingImages)
       }
 
       // Détection variantes
-      const hasMetadataVariants = 
-        data.metadata?.variants && 
-        Array.isArray(data.metadata.variants) && 
+      const hasMetadataVariants =
+        data.metadata?.variants &&
+        Array.isArray(data.metadata.variants) &&
         data.metadata.variants.length > 0
 
       const normalizedCategory = data.category
@@ -265,32 +332,30 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[_\s-]/g, '')
 
-      const isVariantCategory = VARIANT_CATEGORIES.some(cat => 
-        normalizedCategory?.includes(cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
-      )
-
-      console.log('🔍 Détection variantes:', { 
-        hasMetadataVariants, 
-        isVariantCategory,
-        category: data.category,
+      const isVariantCategory = VARIANT_CATEGORIES.some((cat) =>
         normalizedCategory
-      })
+          ?.includes(
+            cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+          ),
+      )
 
       if (hasMetadataVariants && isVariantCategory) {
         setHasVariants(true)
         setVariants(data.metadata.variants)
-        
+
         const prices = data.metadata.variants.map((v: SimpleVariant) => v.price)
-        setBasePrice(Math.min(...prices))
+        if (prices.length > 0) {
+          setBasePrice(Math.min(...prices))
+        }
 
         detectAvailableSizes(data.category, data.subcategory)
 
-        console.log('✅ Produit avec variantes détecté:', data.metadata.variants)
+        if (data.metadata.specifications?.imageMapping) {
+          setExistingImageMapping(data.metadata.specifications.imageMapping)
+        }
       } else {
         setHasVariants(false)
-        console.log('✅ Produit simple détecté')
       }
-
     } catch (error) {
       console.error('Erreur complète:', error)
       setError('Une erreur est survenue')
@@ -331,30 +396,31 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   }
 
   // ==================== COMPRESSION D'IMAGES ====================
+
   const compressImage = async (file: File): Promise<File> => {
     const options = {
       maxSizeMB: 0.29,
       maxWidthOrHeight: 1920,
       useWebWorker: true,
       initialQuality: 0.85,
-      fileType: 'image/jpeg'
+      fileType: 'image/jpeg',
     }
-    
+
     try {
       const compressedFile = await imageCompression(file, options)
-      console.log(`✅ Compression: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`)
       return compressedFile
     } catch (error) {
       console.error('❌ Erreur compression:', error)
-      toast.error('Erreur lors de la compression de l\'image')
+      toast.error("Erreur lors de la compression de l'image")
       return file
     }
   }
 
   // ==================== GESTION DES IMAGES ====================
+
   const handleImageUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
-    
+
     const remainingSlots = 5 - images.length
     if (remainingSlots === 0) {
       toast.error('⚠️ Maximum 5 photos atteint')
@@ -363,14 +429,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
     const fileArray = Array.from(files).slice(0, remainingSlots)
     setIsCompressing(true)
-    toast.loading(`📦 Compression de ${fileArray.length} image(s)...`, { id: 'compressing' })
+    toast.loading(`📦 Compression de ${fileArray.length} image(s)...`, {
+      id: 'compressing',
+    })
 
     try {
       const newImages: ProductImage[] = []
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i]
-        
+
         if (!file.type.startsWith('image/')) {
           toast.error(`❌ ${file.name} n'est pas une image valide`)
           continue
@@ -390,15 +458,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           preview,
           isExisting: false,
           compressed: true,
-          size: compressedFile.size
+          size: compressedFile.size,
         })
       }
 
-      setImages(prev => [...prev, ...newImages])
-      toast.success(
-        `✅ ${newImages.length} image(s) ajoutée(s) avec succès !`, 
-        { id: 'compressing', duration: 3000 }
-      )
+      setImages((prev) => [...prev, ...newImages])
+      toast.success(`✅ ${newImages.length} image(s) ajoutée(s) avec succès !`, {
+        id: 'compressing',
+        duration: 3000,
+      })
     } catch (error) {
       console.error('❌ Erreur traitement images:', error)
       toast.error('Erreur lors du traitement des images', { id: 'compressing' })
@@ -427,10 +495,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   }
 
   const removeImage = (imageId: string, imageUrl?: string) => {
-    const img = images.find(i => i.id === imageId)
-    
+    const img = images.find((i) => i.id === imageId)
+
     if (img?.isExisting && imageUrl) {
-      setImagesToDelete(prev => [...prev, imageUrl])
+      setImagesToDelete((prev) => [...prev, imageUrl])
       toast('🗑️ Image marquée pour suppression', { duration: 2000 })
     } else if (img?.preview && !img.isExisting) {
       try {
@@ -440,11 +508,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       }
       toast.success('✅ Image retirée', { duration: 2000 })
     }
-    
-    setImages(prev => prev.filter(i => i.id !== imageId))
+
+    setImages((prev) => prev.filter((i) => i.id !== imageId))
   }
 
   // ==================== VALIDATION ====================
+
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       toast.error('❌ Le nom du produit est obligatoire')
@@ -483,7 +552,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     const priceValue = hasVariants ? basePrice : parseFloat(formData.price)
 
     if (oldPriceValue > 0 && oldPriceValue <= priceValue) {
-      toast.error('❌ L\'ancien prix doit être supérieur au prix de vente pour activer la promotion')
+      toast.error(
+        "❌ L'ancien prix doit être supérieur au prix de vente pour activer la promotion",
+      )
       return false
     }
 
@@ -496,6 +567,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   }
 
   // ==================== SAUVEGARDE ====================
+
   const handleSave = async () => {
     if (!validateForm()) return
 
@@ -505,46 +577,57 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
     try {
       const supabase = createSupabaseBrowserClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
       if (authError || !user) {
         throw new Error('Vous devez être connecté pour modifier ce produit')
       }
 
+      // Suppression anciennes images
       if (imagesToDelete.length > 0) {
-        toast.loading(`🗑️ Suppression de ${imagesToDelete.length} ancienne(s) image(s)...`, { id: 'save' })
-        
+        toast.loading(
+          `🗑️ Suppression de ${imagesToDelete.length} ancienne(s) image(s)...`,
+          { id: 'save' },
+        )
+
         for (const imageUrl of imagesToDelete) {
           try {
             const urlParts = imageUrl.split('/products/')
             if (urlParts.length === 2) {
               const imagePath = urlParts[1]
-              
+
               const { error: deleteError } = await supabase.storage
                 .from('products')
                 .remove([imagePath])
-              
+
               if (deleteError) {
-                console.warn(`⚠️ Impossible de supprimer ${imagePath}:`, deleteError.message)
-              } else {
-                console.log(`✅ Image supprimée: ${imagePath}`)
+                console.warn(
+                  `⚠️ Impossible de supprimer ${imagePath}:`,
+                  deleteError.message,
+                )
               }
             }
           } catch (error) {
-            console.warn('⚠️ Erreur lors de la suppression d\'une image:', error)
+            console.warn("⚠️ Erreur lors de la suppression d'une image:", error)
           }
         }
       }
 
+      // Upload images globales
       const existingImageUrls = images
-        .filter(img => img.isExisting)
-        .map(img => img.preview)
+        .filter((img) => img.isExisting)
+        .map((img) => img.preview)
 
-      const newImages = images.filter(img => !img.isExisting && img.file)
+      const newImages = images.filter((img) => !img.isExisting && img.file)
       const uploadedUrls: string[] = []
-      
+
       if (newImages.length > 0) {
-        toast.loading(`📤 Upload de ${newImages.length} nouvelle(s) image(s)...`, { id: 'save' })
+        toast.loading(`📤 Upload de ${newImages.length} nouvelle(s) image(s)...`, {
+          id: 'save',
+        })
         const totalImages = newImages.length
 
         for (let i = 0; i < newImages.length; i++) {
@@ -554,30 +637,30 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           try {
             const fileExtension = img.file.type.split('/')[1] || 'jpg'
             const fileName = `${user.id}/${Date.now()}-${img.id}.${fileExtension}`
-            
+
             setUploadProgress(Math.round(((i + 0.5) / totalImages) * 100))
 
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
               .from('products')
               .upload(fileName, img.file, {
                 contentType: img.file.type,
                 cacheControl: '3600',
-                upsert: false
+                upsert: false,
               })
 
             if (uploadError) {
               console.error(`❌ Erreur upload image ${i + 1}:`, uploadError)
-              throw new Error(`Erreur lors de l'upload de l'image ${i + 1}: ${uploadError.message}`)
+              throw new Error(
+                `Erreur lors de l'upload de l'image ${i + 1}: ${uploadError.message}`,
+              )
             }
 
-            const { data: { publicUrl } } = supabase.storage
-              .from('products')
-              .getPublicUrl(fileName)
+            const {
+              data: { publicUrl },
+            } = supabase.storage.from('products').getPublicUrl(fileName)
 
             uploadedUrls.push(publicUrl)
-            console.log(`✅ Image ${i + 1}/${totalImages} uploadée: ${fileName}`)
             setUploadProgress(Math.round(((i + 1) / totalImages) * 100))
-
           } catch (error: any) {
             console.error(`❌ Échec upload image ${i + 1}:`, error)
             throw new Error(`Échec de l'upload de l'image ${i + 1}`)
@@ -591,11 +674,59 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         throw new Error('⚠️ Aucune image disponible pour le produit')
       }
 
+      // UPLOAD DES IMAGES DE COULEUR + imageMapping
+      const imageMapping: Record<string, string> = { ...existingImageMapping }
+
+      if (hasVariants && Object.keys(colorImages).length > 0) {
+        toast.loading(
+          `📸 Upload de ${Object.keys(colorImages).length} image(s) de couleur...`,
+          { id: 'color-upload' },
+        )
+
+        for (const [colorName, file] of Object.entries(colorImages)) {
+          try {
+            const compressedFile = await compressImage(file)
+            const fileExtension = compressedFile.type.split('/')[1] || 'jpg'
+            const fileName = `${user.id}/colors/${Date.now()}-${colorName
+              .toLowerCase()
+              .replace(/\s+/g, '-')}.${fileExtension}`
+
+            const { error: uploadError } = await supabase.storage
+              .from('products')
+              .upload(fileName, compressedFile, {
+                contentType: compressedFile.type,
+                cacheControl: '3600',
+                upsert: false,
+              })
+
+            if (uploadError) {
+              console.error(`❌ Erreur upload ${colorName}:`, uploadError)
+              continue
+            }
+
+            const {
+              data: { publicUrl },
+            } = supabase.storage.from('products').getPublicUrl(fileName)
+            imageMapping[colorName] = publicUrl
+          } catch (error) {
+            console.error(`❌ Échec upload ${colorName}:`, error)
+          }
+        }
+
+        if (Object.keys(colorImages).length > 0) {
+          toast.success(
+            `✅ ${Object.keys(colorImages).length} image(s) de couleur uploadées !`,
+            { id: 'color-upload' },
+          )
+        }
+      }
+
       toast.loading('💾 Enregistrement des modifications...', { id: 'save' })
 
-      const oldPriceValue = formData.old_price && parseFloat(formData.old_price) > 0 
-        ? parseFloat(formData.old_price) 
-        : null
+      const oldPriceValue =
+        formData.old_price && parseFloat(formData.old_price) > 0
+          ? parseFloat(formData.old_price)
+          : null
 
       const updateData: any = {
         name: formData.name.trim(),
@@ -604,45 +735,41 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         subcategory: formData.subcategory.trim() || null,
         old_price: oldPriceValue,
         status: formData.status,
-        delivery_available: formData.delivery_available,  // ✅ NOUVEAU
+        delivery_available: formData.delivery_available,
         images: finalImageUrls,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       }
 
       if (hasVariants && variants.length > 0) {
-        const prices = variants.map(v => v.price)
+        const prices = variants.map((v) => v.price)
         updateData.price = Math.min(...prices)
         updateData.stock = variants.reduce((sum, v) => sum + v.stock, 0)
 
-        const colors = Array.from(new Set(variants.map(v => v.color)))
-        const sizes = Array.from(new Set(variants.map(v => v.size)))
+        const colors = Array.from(new Set(variants.map((v) => v.color)))
+        const sizes = Array.from(new Set(variants.map((v) => v.size)))
 
         updateData.metadata = {
-          variants: variants.map(v => ({
+          variants: variants.map((v) => ({
             color: v.color,
             size: v.size,
             stock: v.stock,
             price: v.price,
-            sku: v.sku
+            sku: v.sku,
           })),
           specifications: {
             template: [
               { name: 'Couleur', values: colors },
-              { name: 'Taille', values: sizes }
-            ]
-          }
+              { name: 'Taille', values: sizes },
+            ],
+            imageMapping:
+              Object.keys(imageMapping).length > 0 ? imageMapping : undefined,
+          },
         }
-
-        console.log('💾 Sauvegarde en mode VARIANTES:', updateData.metadata)
       } else {
         updateData.price = parseFloat(formData.price)
         updateData.stock = parseInt(formData.stock) || 0
         updateData.metadata = product?.metadata || {}
-
-        console.log('💾 Sauvegarde en mode SIMPLE')
       }
-
-      console.log('📝 Données à mettre à jour:', updateData)
 
       const { data: updatedProduct, error: updateError } = await supabase
         .from('products')
@@ -658,18 +785,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       }
 
       if (!updatedProduct) {
-        throw new Error('⚠️ Le produit n\'a pas pu être mis à jour')
+        throw new Error("⚠️ Le produit n'a pas pu être mis à jour")
       }
 
-      console.log('✅ Produit mis à jour avec succès:', updatedProduct)
-
-      toast.success('🎉 Produit mis à jour avec succès !', { 
+      toast.success('🎉 Produit mis à jour avec succès !', {
         id: 'save',
-        duration: 3000
+        duration: 3000,
       })
 
       setTimeout(() => {
-        images.forEach(img => {
+        images.forEach((img) => {
           if (!img.isExisting && img.preview) {
             try {
               URL.revokeObjectURL(img.preview)
@@ -680,23 +805,22 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         })
         router.push('/dashboard/vendor/products')
       }, 1500)
-
     } catch (error: any) {
       console.error('❌ Erreur complète lors de la sauvegarde:', error)
-      
       const errorMessage = error.message || 'Une erreur inconnue est survenue'
-      
-      toast.error(`❌ ${errorMessage}`, { 
+
+      toast.error(`❌ ${errorMessage}`, {
         id: 'save',
-        duration: 6000
+        duration: 6000,
       })
-      
+
       setSaving(false)
       setUploadProgress(0)
     }
   }
 
   // ==================== AFFICHAGE ====================
+
   if (loading) {
     return <PageSkeleton />
   }
@@ -717,7 +841,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             <p className="text-gray-400 mb-6">
               {error === 'Vous devez être connecté'
                 ? 'Veuillez vous connecter pour continuer'
-                : 'Ce produit n\'existe pas ou vous n\'avez pas accès'}
+                : "Ce produit n'existe pas ou vous n'avez pas accès"}
             </p>
             <Link href="/dashboard/vendor/products">
               <motion.button
@@ -738,7 +862,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="min-h-screen bg-[#0c0c0c] p-4 md:p-6 lg:p-8">
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
           style: {
@@ -746,28 +870,28 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             color: '#fff',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '12px',
-            fontSize: '14px'
+            fontSize: '14px',
           },
           success: {
             iconTheme: {
               primary: '#10b981',
-              secondary: '#fff'
+              secondary: '#fff',
             },
-            duration: 3000
+            duration: 3000,
           },
           error: {
             iconTheme: {
               primary: '#ef4444',
-              secondary: '#fff'
+              secondary: '#fff',
             },
-            duration: 6000
+            duration: 6000,
           },
           loading: {
             iconTheme: {
               primary: '#3b82f6',
-              secondary: '#fff'
-            }
-          }
+              secondary: '#fff',
+            },
+          },
         }}
       />
 
@@ -781,7 +905,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             <motion.button
               whileHover={{ scale: 1.02, x: -5 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 
+              className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg.white/10 
                        text-white font-semibold rounded-xl border border-white/10 transition-all
                        shadow-lg shadow-black/20"
             >
@@ -798,22 +922,25 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           className="mb-8"
         >
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 
-                          flex items-center justify-center shadow-lg shadow-orange-500/30">
+            <div
+              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 
+                          flex items-center justify-center shadow-lg shadow-orange-500/30"
+            >
               <Package className="w-7 h-7 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl md:text-4xl font-black text-white mb-1">
+              <h1 className="text-3xl md:text-4xl font-black text.white mb-1">
                 Modifier le produit
               </h1>
               <p className="text-gray-400 text-sm flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                Dernière modification : {new Date(product.updated_at).toLocaleDateString('fr-FR', {
+                Dernière modification :{' '}
+                {new Date(product.updated_at).toLocaleDateString('fr-FR', {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric',
                   hour: '2-digit',
-                  minute: '2-digit'
+                  minute: '2-digit',
                 })}
               </p>
             </div>
@@ -865,10 +992,34 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               />
               <p className="text-xs text-gray-500 mt-2 flex items-center justify-between">
                 <span>Soyez précis pour attirer plus d'acheteurs</span>
-                <span className={formData.name.length > 100 ? 'text-orange-400 font-semibold' : ''}>
+                <span
+                  className={
+                    formData.name.length > 100 ? 'text-orange-400 font-semibold' : ''
+                  }
+                >
                   {formData.name.length}/120
                 </span>
               </p>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-bold text-gray-300 mb-3">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Décrivez votre produit en détail..."
+                rows={4}
+                disabled={saving}
+                className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                         placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                         focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
+                         resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              />
             </div>
 
             {/* Catégorie + Statut */}
@@ -880,22 +1031,24 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </label>
                 <select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
                   disabled={saving}
-                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text.white 
                            hover:border-white/20 focus:outline-none focus:border-orange-500 focus:ring-2 
                            focus:ring-orange-500/20 transition-all appearance-none cursor-pointer
                            disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 1.25rem center',
-                    backgroundSize: '1.5rem'
-                  }}
                 >
-                  <option value="" className="bg-[#161618]">Choisissez une catégorie...</option>
-                  {CATEGORIES.map(cat => (
-                    <option key={cat.value} value={cat.value} className="bg-[#161618] py-2">
+                  <option value="" className="bg-[#161618]">
+                    Choisissez une catégorie...
+                  </option>
+                  {CATEGORIES.map((cat) => (
+                    <option
+                      key={cat.value}
+                      value={cat.value}
+                      className="bg-[#161618] py-2"
+                    >
                       {cat.label}
                     </option>
                   ))}
@@ -909,27 +1062,32 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      status: e.target.value as 'active' | 'draft' | 'archived',
+                    })
+                  }
                   disabled={saving}
-                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                  className="w-full px-5 py-4 bg.white/5 border border-white/10 rounded-2xl text-white 
                            hover:border-white/20 focus:outline-none focus:border-orange-500 focus:ring-2 
                            focus:ring-orange-500/20 transition-all appearance-none cursor-pointer
                            disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 1.25rem center',
-                    backgroundSize: '1.5rem'
-                  }}
                 >
-                  <option value="active" className="bg-[#161618]">✅ Actif (visible sur BZMarket)</option>
-                  <option value="draft" className="bg-[#161618]">📝 Brouillon (non publié)</option>
-                  <option value="archived" className="bg-[#161618]">📦 Archivé (masqué)</option>
+                  <option value="active" className="bg-[#161618]">
+                    ✅ Actif (visible sur BZMarket)
+                  </option>
+                  <option value="draft" className="bg-[#161618]">
+                    📝 Brouillon (non publié)
+                  </option>
+                  <option value="archived" className="bg-[#161618]">
+                    📦 Archivé (masqué)
+                  </option>
                 </select>
               </div>
             </div>
 
-            {/* ✅ NOUVEAU : Livraison disponible */}
+            {/* Livraison */}
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -939,8 +1097,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   <div>
                     <p className="text-white font-bold text-lg">Livraison disponible</p>
                     <p className="text-sm text-gray-400">
-                      {formData.delivery_available 
-                        ? '✅ Les clients peuvent commander avec livraison' 
+                      {formData.delivery_available
+                        ? '✅ Les clients peuvent commander avec livraison'
                         : '❌ Livraison désactivée (retrait uniquement)'}
                     </p>
                   </div>
@@ -948,7 +1106,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, delivery_available: !formData.delivery_available })}
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      delivery_available: !formData.delivery_available,
+                    })
+                  }
                   disabled={saving}
                   className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#161618] disabled:opacity-50 disabled:cursor-not-allowed ${
                     formData.delivery_available ? 'bg-blue-600' : 'bg-gray-600'
@@ -963,7 +1126,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
 
-            {/* Affichage conditionnel selon le mode */}
+            {/* Mode variantes ou simple */}
             {hasVariants ? (
               <div className="border-t border-white/10 pt-7">
                 <SimpleVariantGrid
@@ -973,301 +1136,241 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   availableSizes={availableSizes}
                   onChange={setVariants}
                   initialVariants={variants}
+                  onImagesChange={(images) => setColorImages(images)}
+                  existingImageMapping={existingImageMapping}
                 />
 
                 <div className="mt-6">
-                  <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-yellow-400" />
-                    Ancien prix global (DA)
-                    <span className="text-xs text-gray-500 font-normal">(optionnel, pour afficher une promotion)</span>
+                  <label className="block text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
+                    <Percent className="w-4 h-4 text-yellow-400" />
+                    Ancien prix global (DZD)
+                    <span className="text-xs text-gray-500 font-normal">
+                      (optionnel, pour afficher une promotion)
+                    </span>
                   </label>
-                  <div className="flex gap-3 items-center">
+                  <div className="flex items-center gap-3">
                     <input
                       type="number"
                       value={formData.old_price}
-                      onChange={(e) => setFormData({ ...formData, old_price: e.target.value })}
-                      placeholder="15000"
+                      onChange={(e) =>
+                        setFormData({ ...formData, old_price: e.target.value })
+                      }
                       disabled={saving}
-                      className="flex-1 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
-                               text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
-                               focus:outline-none focus:border-orange-500 focus:ring-2 
-                               focus:ring-orange-500/20 transition-all
+                      className="w-40 px-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-white 
+                               placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                               focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
                                disabled:opacity-50 disabled:cursor-not-allowed"
                     />
-                    {formData.old_price && basePrice && (
-                      <div className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/60 text-emerald-400 font-semibold text-sm min-w-[90px] text-center">
-                        -{Math.max(0, Math.min(99, Math.round(((parseFloat(formData.old_price || '0') - basePrice) / parseFloat(formData.old_price || '1')) * 100)))}%
-                      </div>
+                    <span className="text-gray-400 font-semibold">DZD</span>
+                    {discountPercent > 0 && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/40 text-green-400 text-xs font-semibold">
+                        <Sparkles className="w-3 h-3" />
+                        -{discountPercent}%
+                      </span>
                     )}
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Si vous indiquez un ancien prix, la réduction sera calculée
+                    automatiquement.
+                  </p>
                 </div>
               </div>
             ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-                  <div className="md:col-span-5">
+              <div className="border-t border-white/10 pt-7">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
                     <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-emerald-400" />
-                      Prix de vente (DA) <span className="text-red-400">*</span>
+                      Prix de vente (DZD) <span className="text-red-400">*</span>
                     </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">
-                        DA
-                      </span>
+                    <div className="flex items-center gap-2">
                       <input
                         type="number"
                         value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        placeholder="0"
-                        min="0"
-                        step="100"
+                        onChange={(e) =>
+                          setFormData({ ...formData, price: e.target.value })
+                        }
                         disabled={saving}
-                        className="w-full pl-16 pr-5 py-4 bg-white/5 border border-white/10 rounded-2xl 
-                                 text-white text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
-                                 focus:outline-none focus:border-orange-500 focus:ring-2 
-                                 focus:ring-orange-500/20 transition-all
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text.white 
+                                 placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                                 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
                                  disabled:opacity-50 disabled:cursor-not-allowed"
                       />
+                      <span className="text-gray-400 font-semibold">DZD</span>
                     </div>
                   </div>
 
-                  <div className="md:col-span-5">
+                  <div>
                     <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-yellow-400" />
-                      Ancien prix (DA)
-                      <span className="text-xs text-gray-500 font-normal">(0 = pas de promo)</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">
-                        DA
+                      <Percent className="w-4 h-4 text-yellow-400" />
+                      Ancien prix (DZD)
+                      <span className="text-xs text-gray-500 font-normal">
+                        (optionnel, pour afficher une promotion)
                       </span>
+                    </label>
+                    <div className="flex items-center gap-2">
                       <input
                         type="number"
                         value={formData.old_price}
-                        onChange={(e) => setFormData({ ...formData, old_price: e.target.value })}
-                        placeholder="0"
-                        min="0"
-                        step="100"
+                        onChange={(e) =>
+                          setFormData({ ...formData, old_price: e.target.value })
+                        }
                         disabled={saving}
-                        className="w-full pl-16 pr-5 py-4 bg-white/5 border border-white/10 rounded-2xl 
-                                 text-white text-xl font-bold placeholder:text-gray-500 hover:border-white/20 
-                                 focus:outline-none focus:border-orange-500 focus:ring-2 
-                                 focus:ring-orange-500/20 transition-all
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text.white 
+                                 placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                                 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
                                  disabled:opacity-50 disabled:cursor-not-allowed"
                       />
+                      <span className="text-gray-400 font-semibold">DZD</span>
                     </div>
+                    {discountPercent > 0 && (
+                      <p className="mt-1 text-xs text-green-400 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        Promotion active : -{discountPercent}% affiché sur la fiche
+                        produit
+                      </p>
+                    )}
                   </div>
-
-                  {discountPercent > 0 && (
-                    <div className="md:col-span-2 flex items-end">
-                      <motion.div
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        className="w-full h-[56px] bg-gradient-to-br from-green-500/30 to-emerald-500/30 
-                                 border-2 border-green-500/50 rounded-2xl flex items-center justify-center 
-                                 gap-2 shadow-lg shadow-green-500/20"
-                      >
-                        <Percent className="w-6 h-6 text-green-400" />
-                        <span className="text-2xl font-black text-green-400">
-                          -{discountPercent}%
-                        </span>
-                      </motion.div>
-                    </div>
-                  )}
                 </div>
 
-                <div className="md:w-1/2">
+                <div className="mt-5">
                   <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
                     <Package className="w-4 h-4 text-blue-400" />
-                    Quantité en stock
+                    Stock disponible
                   </label>
                   <input
                     type="number"
                     value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    min="0"
-                    step="1"
+                    onChange={(e) =>
+                      setFormData({ ...formData, stock: e.target.value })
+                    }
                     disabled={saving}
-                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
-                             text-lg font-semibold hover:border-white/20 focus:outline-none focus:border-orange-500 
-                             focus:ring-2 focus:ring-orange-500/20 transition-all
+                    className="w-40 px-4 py-2.5 bg.white/5 border border-white/10 rounded-2xl text-white 
+                             placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                             focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
                              disabled:opacity-50 disabled:cursor-not-allowed"
                   />
-                  <p className="text-xs text-gray-500 mt-2">
-                    {parseInt(formData.stock) === 0 ? '⚠️ Rupture de stock' : 
-                     parseInt(formData.stock) < 5 ? '⚠️ Stock faible' : 
-                     '✅ Stock disponible'}
-                  </p>
                 </div>
-              </>
+              </div>
             )}
 
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-purple-400" />
-                Description du produit
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Décrivez en détail votre produit : état, caractéristiques, avantages, défauts éventuels..."
-                rows={6}
-                maxLength={2000}
-                disabled={saving}
-                className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
-                         placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                         focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all resize-none
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <p className="text-xs text-gray-500 mt-2 flex items-center justify-between">
-                <span>Une description détaillée augmente les chances de vente</span>
-                <span className={formData.description.length > 1800 ? 'text-orange-400 font-semibold' : ''}>
-                  {formData.description.length}/2000
-                </span>
-              </p>
-            </div>
-
-            {/* Images */}
+            {/* Images produit */}
             <div className="border-t border-white/10 pt-7">
-              <label className="block text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-pink-400" />
+              <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-pink-400" />
                 Photos du produit <span className="text-red-400">*</span>
-                <span className="text-xs text-gray-500 font-normal ml-2">
-                  ({images.length}/5 photos • La 1ère sera l'image principale)
-                </span>
               </label>
 
               <div
+                className={`mt-2 border-2 border-dashed rounded-2xl p-5 transition-all ${
+                  isDragging
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-white/10 bg-white/5'
+                }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => images.length < 5 && !isCompressing && !saving && fileInputRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-3xl p-12 text-center cursor-pointer 
-                         transition-all duration-300 ${
-                  isDragging 
-                    ? 'border-orange-500 bg-orange-500/10 scale-[1.02] shadow-lg shadow-orange-500/20' 
-                    : images.length >= 5
-                      ? 'border-white/10 bg-white/5 opacity-50 cursor-not-allowed'
-                      : 'border-white/20 hover:border-orange-500/50 bg-white/5 hover:bg-orange-500/5'
-                } ${saving ? 'pointer-events-none opacity-50' : ''}`}
               >
-                {isCompressing ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="w-16 h-16 text-orange-500 animate-spin" />
-                    <div>
-                      <p className="text-white font-bold text-lg mb-1">Compression intelligente en cours...</p>
-                      <p className="text-gray-400 text-sm">Optimisation pour des performances maximales</p>
-                    </div>
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                  <div className="flex-1">
+                    <p className="text-gray-300 text-sm mb-1">
+                      Glissez-déposez vos images ici ou
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={saving || isCompressing}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Choisir des images
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      JPG ou PNG, max 10 Mo par image. Jusqu'à 5 photos.
+                    </p>
                   </div>
-                ) : (
-                  <>
-                    <Upload className="w-20 h-20 mx-auto text-gray-400 mb-4" />
-                    <p className="text-white font-bold text-xl mb-2">
-                      {images.length >= 5 
-                        ? '✅ Maximum de 5 photos atteint' 
-                        : '📸 Glissez vos images ici ou cliquez'}
-                    </p>
-                    <p className="text-gray-400 text-sm max-w-md mx-auto">
-                      Formats: JPG, PNG, WebP • Taille max: 10 Mo par image
-                      <br />
-                      <span className="text-orange-400 font-semibold">
-                        ✨ Compression automatique pour un chargement ultra-rapide
-                      </span>
-                    </p>
-                  </>
-                )}
-                
+
+                  <div className="flex flex-wrap gap-3 justify-start">
+                    {images.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10"
+                      >
+                        <img
+                          src={img.preview}
+                          alt="Product"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(img.id, img.isExisting ? img.preview : undefined)}
+                          className="absolute top-1 right-1 bg-black/70 rounded-full p-1 hover:bg-black text-white"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <input
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
+                  hidden
                   onChange={(e) => handleImageUpload(e.target.files)}
-                  className="hidden"
-                  disabled={images.length >= 5 || isCompressing || saving}
                 />
               </div>
-
-              {images.length > 0 && (
-                <div className="mt-6">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {images.map((img, index) => (
-                      <motion.div
-                        key={img.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-white/10 hover:border-orange-500/50 transition-all"
-                      >
-                        <img
-                          src={img.preview}
-                          alt={`Photo ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        {index === 0 && (
-                          <div className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-bold shadow-lg">
-                            Principale
-                          </div>
-                        )}
-                        {img.size && (
-                          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded">
-                            {(img.size / 1024).toFixed(0)} KB
-                          </div>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeImage(img.id, img.preview)
-                          }}
-                          disabled={saving}
-                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Bouton Sauvegarder */}
-            <div className="border-t border-white/10 pt-7 flex justify-end gap-4">
-              <Link href="/dashboard/vendor/products">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={saving}
-                  className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl 
-                           border border-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Annuler
-                </motion.button>
-              </Link>
-
-              <motion.button
-                whileHover={{ scale: saving ? 1 : 1.02 }}
-                whileTap={{ scale: saving ? 1 : 0.98 }}
-                onClick={handleSave}
-                disabled={saving}
-                className="px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 
-                         hover:to-red-700 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 
-                         transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Sauvegarde en cours...
-                    {uploadProgress > 0 && ` (${uploadProgress}%)`}
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Enregistrer les modifications
-                  </>
+            {/* Bouton sauvegarde */}
+            <div className="pt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/10 mt-6">
+              <div className="flex items.center gap-3">
+                {saving && (
+                  <div className="flex items-center gap-2 text-sm text-gray-300">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Mise à jour en cours...</span>
+                    {uploadProgress > 0 && (
+                      <span className="text-gray-400">
+                        ({uploadProgress}% upload images)
+                      </span>
+                    )}
+                  </div>
                 )}
-              </motion.button>
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <Link href="/dashboard/vendor/products" className="w-full md:w-auto">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    className="w-full md:w-auto px-5 py-3 border border-white/20 rounded-xl text-sm font-semibold text-gray-200 hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Annuler
+                  </button>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sauvegarde...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Enregistrer les modifications
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>
