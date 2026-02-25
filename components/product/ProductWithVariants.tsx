@@ -578,9 +578,7 @@ export default function ProductWithVariants({
             )}
           </section>
 
-          {/* RIGHT COLUMN – identique à la version précédente */}
-          {/* (je laisse tel quel car il est déjà SEO + responsive + PWA friendly) */}
-
+          {/* RIGHT COLUMN */}
           <section className="mt-10 lg:mt-0 lg:sticky lg:top-32 h-fit">
             <div className="mb-6">
               <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">

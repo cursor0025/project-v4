@@ -9,6 +9,8 @@ import ModeSpecificationsForm from '@/components/product/ModeSpecificationsForm'
 import type { AttributeField, ProductAttributes } from '@/types/product-attributes'
 import SimpleVariantGrid, { SimpleVariant } from '@/components/product/SimpleVariantGrid'
 import DynamicTemplateFields from '@/components/product/DynamicTemplateFields'
+// ✅ AJOUT : Import depuis size-config
+import { detectSizeType, getSizesForType, type SizeType } from '@/lib/config/size-config'
 
 /* --------- Icônes locales --------- */
 
@@ -71,13 +73,6 @@ const VARIANT_CATEGORIES = [
   'chaussures',
 ]
 
-const SIZE_PRESETS = {
-  standard: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
-  pants: ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56'],
-  shoes: ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'],
-  kids: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
-} as const
-
 interface Category {
   id: number
   name: string
@@ -126,10 +121,11 @@ export default function CreateProductPage() {
 
   const [hasVariants, setHasVariants] = useState(false)
   const [variants, setVariants] = useState<SimpleVariant[]>([])
-  const [variantImages, setVariantImages] = useState<Record<string, File>>({}) // ✅ Images par couleur
+  const [variantImages, setVariantImages] = useState<Record<string, File>>({})
   const [basePrice, setBasePrice] = useState(2500)
   const [baseSKU] = useState('PROD')
   const [availableSizes, setAvailableSizes] = useState<string[]>([])
+  const [sizeType, setSizeType] = useState<SizeType>('letters') // ✅ AJOUT
 
   /* --------- Chargement catégories --------- */
 
@@ -148,62 +144,40 @@ export default function CreateProductPage() {
     if (!selectedCategoryId) {
       setHasVariants(false)
       setAvailableSizes([])
+      setSizeType('letters') // ✅ AJOUT
       return
     }
 
-    const currentCategory = categories.find(
-      (c) => c.id === Number(selectedCategoryId),
-    )
+    const currentCategory = categories.find((c) => c.id === Number(selectedCategoryId))
     if (!currentCategory) return
 
     const categorySlug = currentCategory.slug.toLowerCase()
-    const catName = currentCategory.name.toLowerCase()
 
     const isClothingCategory = VARIANT_CATEGORIES.some((keyword) =>
-      categorySlug.includes(keyword),
+      categorySlug.includes(keyword)
     )
 
     setHasVariants(isClothingCategory)
 
     if (!isClothingCategory) {
       setAvailableSizes([])
+      setSizeType('letters') // ✅ AJOUT
       return
     }
 
     const currentSubcategory = subcategories.find(
-      (s) => s.id === Number(selectedSubcategoryId),
+      (s) => s.id === Number(selectedSubcategoryId)
     )
 
-    const subName = (currentSubcategory?.name || '').toLowerCase()
-    const subSlug = (currentSubcategory?.slug || '').toLowerCase()
+    // ✅ REMPLACEMENT : Utilisation de detectSizeType depuis size-config
+    const detectedType = detectSizeType(
+      currentSubcategory?.name || '',
+      currentSubcategory?.slug || '',
+      currentCategory.name
+    )
 
-    if (
-      subName.includes('chaussure') ||
-      subName.includes('basket') ||
-      subName.includes('botte') ||
-      subSlug.includes('chaussure') ||
-      subSlug.includes('basket')
-    ) {
-      setAvailableSizes(SIZE_PRESETS.shoes as unknown as string[])
-    } else if (
-      subName.includes('pantalon') ||
-      subName.includes('jean') ||
-      subName.includes('jogging') ||
-      subName.includes('short')
-    ) {
-      setAvailableSizes(SIZE_PRESETS.pants as unknown as string[])
-    } else if (
-      catName.includes('bébé') ||
-      catName.includes('bebe') ||
-      catName.includes('enfant') ||
-      subName.includes('bébé') ||
-      subName.includes('bebe') ||
-      subName.includes('enfant')
-    ) {
-      setAvailableSizes(SIZE_PRESETS.kids as unknown as string[])
-    } else {
-      setAvailableSizes(SIZE_PRESETS.standard as unknown as string[])
-    }
+    setSizeType(detectedType)
+    setAvailableSizes(getSizesForType(detectedType))
   }, [selectedCategoryId, selectedSubcategoryId, categories, subcategories])
 
   /* --------- Supabase helpers --------- */
@@ -266,7 +240,7 @@ export default function CreateProductPage() {
         } catch {
           return file
         }
-      }),
+      })
     )
 
     setImages((prev) => [...prev, ...compressedFiles])
@@ -279,8 +253,8 @@ export default function CreateProductPage() {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
             reader.readAsDataURL(file)
-          }),
-      ),
+          })
+      )
     )
 
     setImagePreviews((prev) => [...prev, ...newPreviews])
@@ -292,30 +266,21 @@ export default function CreateProductPage() {
     setImageSizes((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const uploadImages = async (
-    files: File[],
-    path = 'products',
-  ): Promise<string[]> => {
+  const uploadImages = async (files: File[], path = 'products'): Promise<string[]> => {
     const uploadedUrls: string[] = []
 
     for (const file of files) {
-      const fileName = `${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(7)}.jpg`
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`
       const filePath = `${path}/${fileName}`
 
-      const { data, error } = await supabase.storage
-        .from('products')
-        .upload(filePath, file)
+      const { data, error } = await supabase.storage.from('products').upload(filePath, file)
 
       if (error) {
         console.error('Supabase upload error:', error)
         continue
       }
 
-      const { data: publicData } = supabase.storage
-        .from('products')
-        .getPublicUrl(filePath)
+      const { data: publicData } = supabase.storage.from('products').getPublicUrl(filePath)
 
       uploadedUrls.push(publicData.publicUrl)
     }
@@ -371,7 +336,7 @@ export default function CreateProductPage() {
 
       if (hasVariants && Object.keys(variantImages).length > 0) {
         toast.loading('Upload des images de couleur...')
-        
+
         for (const [color, file] of Object.entries(variantImages)) {
           const fileName = `${Date.now()}-${color.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(7)}.jpg`
           const filePath = `variant-images/${fileName}`
@@ -396,9 +361,7 @@ export default function CreateProductPage() {
         toast.success(`${Object.keys(imageMapping).length} images de couleur uploadées`)
       }
 
-      const selectedCategory = categories.find(
-        (c) => c.id === Number(selectedCategoryId),
-      )
+      const selectedCategory = categories.find((c) => c.id === Number(selectedCategoryId))
 
       const finalProductData: any = {
         vendor_id: user.id,
@@ -426,21 +389,22 @@ export default function CreateProductPage() {
         const sizes = Array.from(new Set(variants.map((v) => v.size)))
 
         finalProductData.metadata = {
+          sizeType, // ✅ AJOUT : Sauvegarde du type de taille
           specifications: {
             template: [
               { name: 'Couleur', values: colors },
               { name: 'Taille', values: sizes },
             ],
-            imageMapping, // ✅ Mapping couleur → URL image
+            imageMapping,
           },
-          variants: variants.map(v => ({
+          variants: variants.map((v) => ({
             color: v.color,
             size: v.size,
             stock: v.stock,
             price: v.price,
-            sku: v.sku
+            sku: v.sku,
           })),
-          template_fields: templateFields
+          template_fields: templateFields,
         }
         finalProductData.attributes = {}
       } else {
@@ -451,7 +415,7 @@ export default function CreateProductPage() {
         finalProductData.stock = parseInt(productData.stock)
         finalProductData.attributes = productAttributes
         finalProductData.metadata = {
-          template_fields: templateFields
+          template_fields: templateFields,
         }
       }
 
@@ -464,7 +428,7 @@ export default function CreateProductPage() {
         console.error('Message:', error.message)
         console.error('Code:', error.code)
         console.error('Details:', error.details)
-        
+
         toast.error(`Erreur: ${error.message}`)
         setIsSubmitting(false)
         return
@@ -519,9 +483,7 @@ export default function CreateProductPage() {
           </div>
           <div className="flex justify-between text-sm text-gray-500 px-1">
             <span className={currentStep >= 1 ? 'text-blue-400' : ''}>Infos</span>
-            <span className={currentStep >= 2 ? 'text-purple-400' : ''}>
-              Spécifications
-            </span>
+            <span className={currentStep >= 2 ? 'text-purple-400' : ''}>Spécifications</span>
             <span className={currentStep >= 3 ? 'text-pink-400' : ''}>Images</span>
           </div>
         </div>
@@ -529,9 +491,7 @@ export default function CreateProductPage() {
         {/* Étape 1 */}
         {currentStep === 1 && (
           <div className="bg-gray-900/60 rounded-2xl border border-gray-700/60 shadow-2xl p-8 space-y-6">
-            <h2 className="text-2xl font-bold text-white">
-              Étape 1 : Informations de base
-            </h2>
+            <h2 className="text-2xl font-bold text-white">Étape 1 : Informations de base</h2>
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
@@ -575,9 +535,7 @@ export default function CreateProductPage() {
               <input
                 type="text"
                 value={productData.name}
-                onChange={(e) =>
-                  setProductData({ ...productData, name: e.target.value })
-                }
+                onChange={(e) => setProductData({ ...productData, name: e.target.value })}
                 className={inputClass}
                 placeholder="Ex : Robe élégante"
               />
@@ -587,9 +545,7 @@ export default function CreateProductPage() {
               <label className={labelClass}>Description</label>
               <textarea
                 value={productData.description}
-                onChange={(e) =>
-                  setProductData({ ...productData, description: e.target.value })
-                }
+                onChange={(e) => setProductData({ ...productData, description: e.target.value })}
                 rows={4}
                 className={inputClass}
                 placeholder="Décrivez votre produit..."
@@ -604,12 +560,7 @@ export default function CreateProductPage() {
                     <input
                       type="number"
                       value={productData.price}
-                      onChange={(e) =>
-                        setProductData({
-                          ...productData,
-                          price: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setProductData({ ...productData, price: e.target.value })}
                       className={inputClass}
                       placeholder="5000"
                     />
@@ -619,12 +570,7 @@ export default function CreateProductPage() {
                     <input
                       type="number"
                       value={productData.stock}
-                      onChange={(e) =>
-                        setProductData({
-                          ...productData,
-                          stock: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setProductData({ ...productData, stock: e.target.value })}
                       className={inputClass}
                       placeholder="10"
                     />
@@ -634,20 +580,13 @@ export default function CreateProductPage() {
                 <div className="mt-4">
                   <label className={labelClass}>
                     Ancien prix (DA){' '}
-                    <span className="text-xs text-gray-500">
-                      (optionnel, pour afficher une promo)
-                    </span>
+                    <span className="text-xs text-gray-500">(optionnel, pour afficher une promo)</span>
                   </label>
                   <div className="flex gap-3 items-center">
                     <input
                       type="number"
                       value={productData.old_price}
-                      onChange={(e) =>
-                        setProductData({
-                          ...productData,
-                          old_price: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setProductData({ ...productData, old_price: e.target.value })}
                       className={`${inputClass} flex-1`}
                       placeholder="15000"
                     />
@@ -661,9 +600,9 @@ export default function CreateProductPage() {
                                 ((parseFloat(productData.old_price || '0') -
                                   parseFloat(productData.price || '0')) /
                                   parseFloat(productData.old_price || '1')) *
-                                  100,
-                              ),
-                            ),
+                                  100
+                              )
+                            )
                           )}`
                         : '% 0'}
                     </div>
@@ -675,11 +614,7 @@ export default function CreateProductPage() {
             <div className="flex justify-end pt-6">
               <button
                 onClick={() => setCurrentStep(2)}
-                disabled={
-                  !productData.name ||
-                  !selectedCategoryId ||
-                  !selectedSubcategoryId
-                }
+                disabled={!productData.name || !selectedCategoryId || !selectedSubcategoryId}
                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 font-medium shadow-lg transition-all"
               >
                 Suivant →
@@ -691,9 +626,7 @@ export default function CreateProductPage() {
         {/* Étape 2 */}
         {currentStep === 2 && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white mb-2">
-              Étape 2 : Spécifications
-            </h2>
+            <h2 className="text-2xl font-bold text-white mb-2">Étape 2 : Spécifications</h2>
 
             {hasVariants && (
               <div className="rounded-2xl bg-gradient-to-r from-purple-700 via-fuchsia-600 to-blue-600 p-[1px] mb-4">
@@ -703,14 +636,9 @@ export default function CreateProductPage() {
                       <SparklesIcon className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-white font-semibold">
-                        Mode Variantes Intelligent
-                      </p>
+                      <p className="text-white font-semibold">Mode Variantes Intelligent</p>
                       <p className="text-xs text-gray-300">
-                        Tailles détectées :{' '}
-                        {availableSizes.length
-                          ? availableSizes.join(', ')
-                          : 'XS, S, M, L, XL, XXL, 3XL'}
+                        Tailles détectées : {availableSizes.length ? availableSizes.join(', ') : 'XS, S, M, L, XL, XXL, 3XL'}
                       </p>
                     </div>
                   </div>
@@ -735,12 +663,9 @@ export default function CreateProductPage() {
                       <InfoIcon className="w-5 h-5 text-gray-200" />
                     </div>
                     <div>
-                      <h3 className="text-white font-semibold text-lg">
-                        Produit simple (pas de grille)
-                      </h3>
+                      <h3 className="text-white font-semibold text-lg">Produit simple (pas de grille)</h3>
                       <p className="text-sm text-gray-400">
-                        Cette catégorie n&apos;utilise pas encore les variantes. Remplissez les
-                        spécifications classiques.
+                        Cette catégorie n&apos;utilise pas encore les variantes. Remplissez les spécifications classiques.
                       </p>
                     </div>
                   </div>
@@ -754,7 +679,7 @@ export default function CreateProductPage() {
 
                 {selectedCategoryId && (
                   <DynamicTemplateFields
-                    category={categories.find(c => c.id === Number(selectedCategoryId))?.slug || ''}
+                    category={categories.find((c) => c.id === Number(selectedCategoryId))?.slug || ''}
                     values={templateFields}
                     onChange={setTemplateFields}
                     disabled={isSubmitting}
@@ -768,20 +693,13 @@ export default function CreateProductPage() {
                 <div>
                   <label className={labelClass}>
                     Ancien prix global (DA){' '}
-                    <span className="text-xs text-gray-500">
-                      (optionnel, pour afficher une promotion)
-                    </span>
+                    <span className="text-xs text-gray-500">(optionnel, pour afficher une promotion)</span>
                   </label>
                   <div className="flex gap-3 items-center">
                     <input
                       type="number"
                       value={productData.old_price}
-                      onChange={(e) =>
-                        setProductData({
-                          ...productData,
-                          old_price: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setProductData({ ...productData, old_price: e.target.value })}
                       className={`${inputClass} flex-1`}
                       placeholder="15000"
                     />
@@ -792,12 +710,11 @@ export default function CreateProductPage() {
                             Math.min(
                               99,
                               Math.round(
-                                ((parseFloat(productData.old_price || '0') -
-                                  Number(basePrice || 0)) /
+                                ((parseFloat(productData.old_price || '0') - Number(basePrice || 0)) /
                                   parseFloat(productData.old_price || '1')) *
-                                  100,
-                              ),
-                            ),
+                                  100
+                              )
+                            )
                           )}`
                         : '% 0'}
                     </div>
@@ -806,9 +723,7 @@ export default function CreateProductPage() {
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-gray-300">
-                      Livraison
-                    </span>
+                    <span className="text-sm font-medium text-gray-300">Livraison</span>
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
@@ -822,9 +737,7 @@ export default function CreateProductPage() {
                         <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-600 text-white text-lg">
                           🚚
                         </span>
-                        <span className="text-sm font-semibold">
-                          Disponible
-                        </span>
+                        <span className="text-sm font-semibold">Disponible</span>
                       </button>
 
                       <button
@@ -839,9 +752,7 @@ export default function CreateProductPage() {
                         <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-600 text-white text-lg">
                           🚚
                         </span>
-                        <span className="text-sm font-semibold">
-                          Non disponible
-                        </span>
+                        <span className="text-sm font-semibold">Non disponible</span>
                       </button>
                     </div>
                   </div>
@@ -850,11 +761,7 @@ export default function CreateProductPage() {
                     <label className={labelClass}>Type de prix</label>
                     <select
                       value={priceType}
-                      onChange={(e) =>
-                        setPriceType(
-                          e.target.value as 'fixe' | 'negociable' | 'facilite',
-                        )
-                      }
+                      onChange={(e) => setPriceType(e.target.value as 'fixe' | 'negociable' | 'facilite')}
                       className={inputClass}
                     >
                       <option value="fixe">Prix fixe</option>
@@ -865,8 +772,8 @@ export default function CreateProductPage() {
                 </div>
 
                 <p className="text-xs text-amber-300 mt-2">
-                  Pour les vêtements et chaussures, le prix de base utilisé pour la
-                  promotion est celui défini dans la grille (prix de base global).
+                  Pour les vêtements et chaussures, le prix de base utilisé pour la promotion est celui défini dans la grille
+                  (prix de base global).
                 </p>
               </div>
             )}
@@ -899,9 +806,7 @@ export default function CreateProductPage() {
           <div className="bg-gray-900/60 rounded-2xl border border-gray-700/60 shadow-2xl p-8 space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-white">
-                  Étape 3 : Images & publication
-                </h2>
+                <h2 className="text-2xl font-bold text-white">Étape 3 : Images & publication</h2>
                 <p className="text-sm text-gray-400 mt-1">
                   Ajoutez jusqu&apos;à 5 photos de haute qualité ({images.length}/5)
                 </p>
@@ -918,13 +823,7 @@ export default function CreateProductPage() {
                 <span className="text-blue-400 hover:text-blue-300 font-medium text-lg">
                   Glissez vos images ici ou cliquez
                 </span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
+                <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
               </label>
               <p className="text-sm text-gray-500 mt-2">
                 Formats acceptés : JPG, PNG, WebP • Poids max par image: 10 Mo
@@ -937,9 +836,7 @@ export default function CreateProductPage() {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <p className="text-sm font-medium text-gray-300">
-                  Images ajoutées ({images.length})
-                </p>
+                <p className="text-sm font-medium text-gray-300">Images ajoutées ({images.length})</p>
               </div>
               <div className="grid grid-cols-5 gap-4">
                 {[...Array(5)].map((_, index) => {
@@ -992,9 +889,7 @@ export default function CreateProductPage() {
             <div className="bg-blue-900/20 border border-blue-700/40 rounded-xl p-4 flex items-start gap-3">
               <span className="text-2xl">💡</span>
               <div>
-                <p className="text-sm font-semibold text-blue-300 mb-1">
-                  Conseil: Ajoutez plus de photos
-                </p>
+                <p className="text-sm font-semibold text-blue-300 mb-1">Conseil: Ajoutez plus de photos</p>
                 <p className="text-xs text-gray-400">
                   Les produits avec 4-5 photos génèrent en moyenne 3x plus de vues et se vendent 2x plus rapidement.
                 </p>

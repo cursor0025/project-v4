@@ -28,8 +28,6 @@ import toast, { Toaster } from 'react-hot-toast'
 import imageCompression from 'browser-image-compression'
 import SimpleVariantGrid, { SimpleVariant } from '@/components/product/SimpleVariantGrid'
 
-// ==================== TYPES ====================
-
 interface Product {
   id: string
   name: string
@@ -57,11 +55,8 @@ interface ProductImage {
   size?: number
 }
 
-// ==================== CATÉGORIES AVEC VARIANTES ====================
-
+// catégories où on autorise le mode variantes
 const VARIANT_CATEGORIES = ['vetement', 'sportswear', 'fete', 'mariage', 'chaussure']
-
-// ==================== TAILLES PAR TYPE ====================
 
 const SIZE_PRESETS = {
   standard: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
@@ -70,7 +65,7 @@ const SIZE_PRESETS = {
   kids: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
 } as const
 
-// ==================== 44 CATÉGORIES BZMarket ====================
+type SizePresetKey = keyof typeof SIZE_PRESETS
 
 const CATEGORIES = [
   { value: 'telephones_accessoires', label: '📱 Téléphones & Accessoires', icon: '📱' },
@@ -139,13 +134,10 @@ const CATEGORIES = [
   { value: 'divers', label: '📦 Divers', icon: '📦' },
 ]
 
-// ==================== COMPOSANT SKELETON ====================
-
 const PageSkeleton = () => (
   <div className="min-h-screen bg-[#0c0c0c] p-4 md:p-6 lg:p-8">
     <div className="max-w-4xl mx-auto">
       <div className="h-10 w-32 bg-white/5 rounded-lg mb-8 animate-pulse" />
-
       <div className="flex items-center gap-3 mb-8">
         <div className="w-12 h-12 rounded-2xl bg-white/5 animate-pulse" />
         <div className="flex-1">
@@ -153,7 +145,6 @@ const PageSkeleton = () => (
           <div className="h-4 w-48 bg-white/5 rounded-lg animate-pulse" />
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {[...Array(3)].map((_, i) => (
           <div
@@ -162,7 +153,6 @@ const PageSkeleton = () => (
           />
         ))}
       </div>
-
       <div className="bg-[#161618] border border-white/10 rounded-3xl p-8">
         <div className="space-y-6">
           {[...Array(8)].map((_, i) => (
@@ -176,8 +166,6 @@ const PageSkeleton = () => (
     </div>
   </div>
 )
-
-// ==================== COMPOSANT PRINCIPAL ====================
 
 export default function EditProductPage({
   params,
@@ -212,7 +200,6 @@ export default function EditProductPage({
   const [images, setImages] = useState<ProductImage[]>([])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
 
-  // États pour les variantes
   const [hasVariants, setHasVariants] = useState(false)
   const [variants, setVariants] = useState<SimpleVariant[]>([])
   const [colorImages, setColorImages] = useState<Record<string, File>>({})
@@ -222,6 +209,7 @@ export default function EditProductPage({
   const [basePrice, setBasePrice] = useState(2500)
   const [baseSKU] = useState('PROD')
   const [availableSizes, setAvailableSizes] = useState<string[]>([])
+  const [sizeType, setSizeType] = useState<SizePresetKey>('standard')
 
   const discountPercent =
     formData.price &&
@@ -234,8 +222,6 @@ export default function EditProductPage({
             100,
         )
       : 0
-
-  // ==================== NETTOYAGE DES URLs AU DÉMONTAGE ====================
 
   useEffect(() => {
     return () => {
@@ -250,8 +236,6 @@ export default function EditProductPage({
       })
     }
   }, [images])
-
-  // ==================== CHARGEMENT DU PRODUIT ====================
 
   useEffect(() => {
     fetchProduct()
@@ -320,7 +304,6 @@ export default function EditProductPage({
         setImages(existingImages)
       }
 
-      // Détection variantes
       const hasMetadataVariants =
         data.metadata?.variants &&
         Array.isArray(data.metadata.variants) &&
@@ -343,12 +326,18 @@ export default function EditProductPage({
         setHasVariants(true)
         setVariants(data.metadata.variants)
 
+        if (data.metadata.sizeType) {
+          const st = data.metadata.sizeType as SizePresetKey
+          setSizeType(st)
+          setAvailableSizes(SIZE_PRESETS[st] as unknown as string[])
+        } else {
+          detectAvailableSizes(data.category, data.subcategory)
+        }
+
         const prices = data.metadata.variants.map((v: SimpleVariant) => v.price)
         if (prices.length > 0) {
           setBasePrice(Math.min(...prices))
         }
-
-        detectAvailableSizes(data.category, data.subcategory)
 
         if (data.metadata.specifications?.imageMapping) {
           setExistingImageMapping(data.metadata.specifications.imageMapping)
@@ -373,6 +362,7 @@ export default function EditProductPage({
       subName.includes('basket') ||
       subName.includes('botte')
     ) {
+      setSizeType('shoes')
       setAvailableSizes(SIZE_PRESETS.shoes as unknown as string[])
     } else if (
       subName.includes('pantalon') ||
@@ -380,6 +370,7 @@ export default function EditProductPage({
       subName.includes('jogging') ||
       subName.includes('short')
     ) {
+      setSizeType('pants')
       setAvailableSizes(SIZE_PRESETS.pants as unknown as string[])
     } else if (
       catName.includes('bébé') ||
@@ -389,13 +380,13 @@ export default function EditProductPage({
       subName.includes('bebe') ||
       subName.includes('enfant')
     ) {
+      setSizeType('kids')
       setAvailableSizes(SIZE_PRESETS.kids as unknown as string[])
     } else {
+      setSizeType('standard')
       setAvailableSizes(SIZE_PRESETS.standard as unknown as string[])
     }
   }
-
-  // ==================== COMPRESSION D'IMAGES ====================
 
   const compressImage = async (file: File): Promise<File> => {
     const options = {
@@ -415,8 +406,6 @@ export default function EditProductPage({
       return file
     }
   }
-
-  // ==================== GESTION DES IMAGES ====================
 
   const handleImageUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -512,8 +501,6 @@ export default function EditProductPage({
     setImages((prev) => prev.filter((i) => i.id !== imageId))
   }
 
-  // ==================== VALIDATION ====================
-
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       toast.error('❌ Le nom du produit est obligatoire')
@@ -566,8 +553,6 @@ export default function EditProductPage({
     return true
   }
 
-  // ==================== SAUVEGARDE ====================
-
   const handleSave = async () => {
     if (!validateForm()) return
 
@@ -586,7 +571,6 @@ export default function EditProductPage({
         throw new Error('Vous devez être connecté pour modifier ce produit')
       }
 
-      // Suppression anciennes images
       if (imagesToDelete.length > 0) {
         toast.loading(
           `🗑️ Suppression de ${imagesToDelete.length} ancienne(s) image(s)...`,
@@ -616,7 +600,6 @@ export default function EditProductPage({
         }
       }
 
-      // Upload images globales
       const existingImageUrls = images
         .filter((img) => img.isExisting)
         .map((img) => img.preview)
@@ -674,7 +657,6 @@ export default function EditProductPage({
         throw new Error('⚠️ Aucune image disponible pour le produit')
       }
 
-      // UPLOAD DES IMAGES DE COULEUR + imageMapping
       const imageMapping: Record<string, string> = { ...existingImageMapping }
 
       if (hasVariants && Object.keys(colorImages).length > 0) {
@@ -749,6 +731,7 @@ export default function EditProductPage({
         const sizes = Array.from(new Set(variants.map((v) => v.size)))
 
         updateData.metadata = {
+          sizeType,
           variants: variants.map((v) => ({
             color: v.color,
             size: v.size,
@@ -818,8 +801,6 @@ export default function EditProductPage({
       setUploadProgress(0)
     }
   }
-
-  // ==================== AFFICHAGE ====================
 
   if (loading) {
     return <PageSkeleton />
@@ -905,7 +886,7 @@ export default function EditProductPage({
             <motion.button
               whileHover={{ scale: 1.02, x: -5 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg.white/10 
+              className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 
                        text-white font-semibold rounded-xl border border-white/10 transition-all
                        shadow-lg shadow-black/20"
             >
@@ -929,7 +910,7 @@ export default function EditProductPage({
               <Package className="w-7 h-7 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl md:text-4xl font-black text.white mb-1">
+              <h1 className="text-3xl md:text-4xl font-black text-white mb-1">
                 Modifier le produit
               </h1>
               <p className="text-gray-400 text-sm flex items-center gap-2">
@@ -972,7 +953,6 @@ export default function EditProductPage({
           className="bg-[#161618] border border-white/10 rounded-3xl p-6 md:p-10 shadow-2xl"
         >
           <div className="space-y-7">
-            {/* Nom */}
             <div>
               <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
                 <Tag className="w-4 h-4 text-blue-400" />
@@ -1002,7 +982,6 @@ export default function EditProductPage({
               </p>
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-sm font-bold text-gray-300 mb-3">
                 Description
@@ -1022,7 +1001,6 @@ export default function EditProductPage({
               />
             </div>
 
-            {/* Catégorie + Statut */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
@@ -1035,7 +1013,7 @@ export default function EditProductPage({
                     setFormData({ ...formData, category: e.target.value })
                   }
                   disabled={saving}
-                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text.white 
+                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
                            hover:border-white/20 focus:outline-none focus:border-orange-500 focus:ring-2 
                            focus:ring-orange-500/20 transition-all appearance-none cursor-pointer
                            disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1069,7 +1047,7 @@ export default function EditProductPage({
                     })
                   }
                   disabled={saving}
-                  className="w-full px-5 py-4 bg.white/5 border border-white/10 rounded-2xl text-white 
+                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
                            hover:border-white/20 focus:outline-none focus:border-orange-500 focus:ring-2 
                            focus:ring-orange-500/20 transition-all appearance-none cursor-pointer
                            disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1087,7 +1065,25 @@ export default function EditProductPage({
               </div>
             </div>
 
-            {/* Livraison */}
+            <div>
+              <label className="block text-sm font-bold text-gray-300 mb-3">
+                Sous‑catégorie (ex: baskets, bottes, jean, manteau...)
+              </label>
+              <input
+                type="text"
+                value={formData.subcategory}
+                onChange={(e) =>
+                  setFormData({ ...formData, subcategory: e.target.value })
+                }
+                disabled={saving}
+                className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-2xl text-white 
+                         placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                         focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="Ex : baskets, bottes, sandales, jean slim..."
+              />
+            </div>
+
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1126,9 +1122,44 @@ export default function EditProductPage({
               </div>
             </div>
 
-            {/* Mode variantes ou simple */}
             {hasVariants ? (
-              <div className="border-t border-white/10 pt-7">
+              <div className="border-t border-white/10 pt-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    Ancien prix (optionnel, pour promo)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="number"
+                      value={formData.old_price}
+                      onChange={(e) =>
+                        setFormData({ ...formData, old_price: e.target.value })
+                      }
+                      placeholder="Ex: 3000"
+                      disabled={saving}
+                      className="flex-1 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                               text-lg placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                               focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    {formData.old_price && parseFloat(formData.old_price) > basePrice && (
+                      <div className="flex items-center gap-2 px-5 py-4 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl">
+                        <Percent className="w-5 h-5 text-emerald-400" />
+                        <span className="text-emerald-400 font-bold text-xl">
+                          -
+                          {Math.round(
+                            ((parseFloat(formData.old_price) - basePrice) /
+                              parseFloat(formData.old_price)) *
+                              100,
+                          )}
+                          %
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <SimpleVariantGrid
                   basePrice={basePrice}
                   setBasePrice={setBasePrice}
@@ -1136,107 +1167,36 @@ export default function EditProductPage({
                   availableSizes={availableSizes}
                   onChange={setVariants}
                   initialVariants={variants}
-                  onImagesChange={(images) => setColorImages(images)}
+                  onImagesChange={setColorImages}
                   existingImageMapping={existingImageMapping}
                 />
-
-                <div className="mt-6">
-                  <label className="block text-sm font-bold text-gray-300 mb-2 flex items-center gap-2">
-                    <Percent className="w-4 h-4 text-yellow-400" />
-                    Ancien prix global (DZD)
-                    <span className="text-xs text-gray-500 font-normal">
-                      (optionnel, pour afficher une promotion)
-                    </span>
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      value={formData.old_price}
-                      onChange={(e) =>
-                        setFormData({ ...formData, old_price: e.target.value })
-                      }
-                      disabled={saving}
-                      className="w-40 px-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-white 
-                               placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                               focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
-                               disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <span className="text-gray-400 font-semibold">DZD</span>
-                    {discountPercent > 0 && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/40 text-green-400 text-xs font-semibold">
-                        <Sparkles className="w-3 h-3" />
-                        -{discountPercent}%
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Si vous indiquez un ancien prix, la réduction sera calculée
-                    automatiquement.
-                  </p>
-                </div>
               </div>
             ) : (
-              <div className="border-t border-white/10 pt-7">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-emerald-400" />
-                      Prix de vente (DZD) <span className="text-red-400">*</span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={formData.price}
-                        onChange={(e) =>
-                          setFormData({ ...formData, price: e.target.value })
-                        }
-                        disabled={saving}
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text.white 
-                                 placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                                 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
-                                 disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                      <span className="text-gray-400 font-semibold">DZD</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                      <Percent className="w-4 h-4 text-yellow-400" />
-                      Ancien prix (DZD)
-                      <span className="text-xs text-gray-500 font-normal">
-                        (optionnel, pour afficher une promotion)
-                      </span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={formData.old_price}
-                        onChange={(e) =>
-                          setFormData({ ...formData, old_price: e.target.value })
-                        }
-                        disabled={saving}
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text.white 
-                                 placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
-                                 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
-                                 disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                      <span className="text-gray-400 font-semibold">DZD</span>
-                    </div>
-                    {discountPercent > 0 && (
-                      <p className="mt-1 text-xs text-green-400 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        Promotion active : -{discountPercent}% affiché sur la fiche
-                        produit
-                      </p>
-                    )}
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    Prix de vente (DA) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, price: e.target.value })
+                    }
+                    placeholder="Ex: 2500"
+                    disabled={saving}
+                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                             text-lg placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                             focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
                 </div>
 
-                <div className="mt-5">
+                <div>
                   <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
                     <Package className="w-4 h-4 text-blue-400" />
-                    Stock disponible
+                    Stock disponible <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="number"
@@ -1244,133 +1204,186 @@ export default function EditProductPage({
                     onChange={(e) =>
                       setFormData({ ...formData, stock: e.target.value })
                     }
+                    placeholder="Ex: 10"
+                    min="0"
                     disabled={saving}
-                    className="w-40 px-4 py-2.5 bg.white/5 border border-white/10 rounded-2xl text-white 
-                             placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                             text-lg placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
                              focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
                              disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    Ancien prix (optionnel, pour promo)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="number"
+                      value={formData.old_price}
+                      onChange={(e) =>
+                        setFormData({ ...formData, old_price: e.target.value })
+                      }
+                      placeholder="Ex: 3000"
+                      disabled={saving}
+                      className="flex-1 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-white 
+                               text-lg placeholder:text-gray-500 hover:border-white/20 focus:outline-none 
+                               focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    {discountPercent > 0 && (
+                      <div className="flex items-center gap-2 px-5 py-4 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl">
+                        <Percent className="w-5 h-5 text-emerald-400" />
+                        <span className="text-emerald-400 font-bold text-xl">
+                          -{discountPercent}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Images produit */}
             <div className="border-t border-white/10 pt-7">
-              <label className="block text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+              <label className="block text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4 text-pink-400" />
-                Photos du produit <span className="text-red-400">*</span>
+                Photos du produit ({images.length}/5){' '}
+                <span className="text-red-400">*</span>
               </label>
 
               <div
-                className={`mt-2 border-2 border-dashed rounded-2xl p-5 transition-all ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-white/10 bg-white/5'
-                }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
+                  isDragging
+                    ? 'border-orange-500 bg-orange-500/10'
+                    : 'border-white/20 bg-white/5 hover:border-orange-500/50 hover:bg-white/10'
+                } ${images.length >= 5 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                onClick={() => images.length < 5 && fileInputRef.current?.click()}
               >
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                  <div className="flex-1">
-                    <p className="text-gray-300 text-sm mb-1">
-                      Glissez-déposez vos images ici ou
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={saving || isCompressing}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Upload className="w-4 h-4" />
-                      Choisir des images
-                    </button>
-                    <p className="text-xs text-gray-500 mt-2">
-                      JPG ou PNG, max 10 Mo par image. Jusqu'à 5 photos.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3 justify-start">
-                    {images.map((img) => (
-                      <div
-                        key={img.id}
-                        className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10"
-                      >
-                        <img
-                          src={img.preview}
-                          alt="Product"
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(img.id, img.isExisting ? img.preview : undefined)}
-                          className="absolute top-1 right-1 bg-black/70 rounded-full p-1 hover:bg-black text-white"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 <input
                   ref={fileInputRef}
                   type="file"
                   multiple
                   accept="image/*"
-                  hidden
                   onChange={(e) => handleImageUpload(e.target.files)}
+                  className="hidden"
+                  disabled={images.length >= 5 || saving}
                 />
-              </div>
-            </div>
 
-            {/* Bouton sauvegarde */}
-            <div className="pt-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/10 mt-6">
-              <div className="flex items.center gap-3">
-                {saving && (
-                  <div className="flex items-center gap-2 text-sm text-gray-300">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Mise à jour en cours...</span>
-                    {uploadProgress > 0 && (
-                      <span className="text-gray-400">
-                        ({uploadProgress}% upload images)
-                      </span>
-                    )}
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-white font-bold text-lg mb-2">
+                  {images.length >= 5
+                    ? '✅ Maximum atteint (5 photos)'
+                    : isDragging
+                      ? '📥 Déposez vos images ici'
+                      : '📸 Cliquez ou glissez vos images'}
+                </p>
+                <p className="text-sm text-gray-400">
+                  Formats acceptés : JPG, PNG, WebP • Max 10 Mo par image
+                </p>
+                {isCompressing && (
+                  <div className="mt-4 flex items-center justify-center gap-2 text-blue-400">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm font-semibold">Compression en cours...</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <Link href="/dashboard/vendor/products" className="w-full md:w-auto">
-                  <button
-                    type="button"
-                    disabled={saving}
-                    className="w-full md:w-auto px-5 py-3 border border-white/20 rounded-xl text-sm font-semibold text-gray-200 hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              <AnimatePresence mode="popLayout">
+                {images.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    Annuler
-                  </button>
-                </Link>
+                    {images.map((img, index) => (
+                      <motion.div
+                        key={img.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-white/10 hover:border-orange-500/50 transition-all bg-white/5"
+                      >
+                        <img
+                          src={img.preview}
+                          alt={`Photo ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
 
-                <button
-                  type="button"
-                  onClick={handleSave}
+                        {index === 0 && (
+                          <div className="absolute top-2 left-2 px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded">
+                            Principal
+                          </div>
+                        )}
+
+                        {img.size && (
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
+                            {(img.size / 1024).toFixed(0)} Ko
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => removeImage(img.id, img.isExisting ? img.preview : undefined)}
+                          disabled={saving}
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 
+                                   rounded-full flex items-center justify-center opacity-0 
+                                   group-hover:opacity-100 transition-all disabled:opacity-50 
+                                   disabled:cursor-not-allowed shadow-lg"
+                        >
+                          <X className="w-4 h-4 text-white" />
+                        </button>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-4 pt-6 border-t border-white/10">
+              <Link href="/dashboard/vendor/products" className="flex-1">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   disabled={saving}
-                  className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-6 py-4 bg-white/5 hover:bg-white/10 text-white 
+                           font-bold rounded-2xl border border-white/10 transition-all 
+                           disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Sauvegarde...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Enregistrer les modifications
-                    </>
-                  )}
-                </button>
-              </div>
+                  Annuler
+                </motion.button>
+              </Link>
+
+              <motion.button
+                whileHover={{ scale: saving ? 1 : 1.02 }}
+                whileTap={{ scale: saving ? 1 : 0.98 }}
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-orange-500 to-red-600 
+                         hover:from-orange-600 hover:to-red-700 text-white font-bold 
+                         rounded-2xl transition-all shadow-lg shadow-orange-500/30 
+                         disabled:opacity-50 disabled:cursor-not-allowed flex items-center 
+                         justify-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {uploadProgress > 0 && uploadProgress < 100
+                      ? `Upload ${uploadProgress}%`
+                      : 'Enregistrement...'}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Enregistrer les modifications
+                  </>
+                )}
+              </motion.button>
             </div>
           </div>
         </motion.div>

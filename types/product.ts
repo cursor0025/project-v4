@@ -1,36 +1,60 @@
 // types/product.ts
+import { SizeType } from '@/lib/config/size-config'
+
 export interface Product {
-  id: string;
-  vendor_id: string; // ✅ ajouté pour ProductCard
-  name: string;
-  description: string | null;
-  price: number;
-  old_price: number | null;
-  category: string;
-  subcategory: string | null;
-  stock: number;
-  images: string[];
-  metadata: Record<string, any>;
-  delivery_available: boolean;
-  price_type: 'fixe' | 'negociable' | 'facilite';
-  status: 'active' | 'inactive' | 'sold' | 'draft';
-  created_at: string;
-  updated_at: string;
-  views?: number;
-  rating?: number;
-  reviews_count?: number;
-  weight?: number | null; // ✅ ajouté pour ProductCard
+  id: string
+  vendor_id: string
+  name: string
+  description: string | null
+  price: number
+  old_price: number | null
+  category: string
+  subcategory: string | null
+  stock: number
+  images: string[]
+  metadata: ProductMetadata
+  delivery_available: boolean
+  price_type: 'fixe' | 'negociable' | 'facilite'
+  status: 'active' | 'inactive' | 'sold' | 'draft'
+  created_at: string
+  updated_at: string
+  views?: number
+  rating?: number
+  reviews_count?: number
+  weight?: number | null
+}
+
+// ✅ Nouveau : Structure typée de metadata
+export interface ProductMetadata {
+  sizeType?: SizeType // ✅ Type de taille utilisé (letters, numbers, shoes, kids)
+  variants?: ProductVariant[]
+  specifications?: {
+    template: Array<{
+      name: string
+      values: string[]
+    }>
+    imageMapping?: Record<string, string>
+  }
+  template_fields?: Record<string, any>
+}
+
+export interface ProductVariant {
+  color: string
+  size: string
+  stock: number
+  price: number
+  sku: string
 }
 
 export interface ProductFilters {
-  wilaya?: string;
-  etat?: string;
-  priceType?: 'fixe' | 'negociable' | 'facilite';
-  minPrice?: number;
-  maxPrice?: number;
-  category?: string;
-  sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
-  search?: string; // ✅ champ de recherche texte
+  wilaya?: string
+  etat?: string
+  priceType?: 'fixe' | 'negociable' | 'facilite'
+  minPrice?: number
+  maxPrice?: number
+  category?: string
+  sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'popular'
+  search?: string
 }
 
 // Liste complète et officielle des 58 wilayas d'Algérie (2024)
@@ -93,4 +117,4 @@ export const WILAYAS = [
   { code: '56', name: 'Djanet' },
   { code: '57', name: "El M'Ghair" },
   { code: '58', name: 'El Meniaa' },
-];
+]
